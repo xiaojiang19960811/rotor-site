@@ -134,6 +134,27 @@ def site_css():
     m = re.search(r"<style>(.*?)</style>", s, re.S)
     return m.group(1)
 
+CURSOR_JS = """<script>
+(function(){
+  if(matchMedia('(hover:none)').matches) return;
+  var dot=document.getElementById('cdot'),ring=document.getElementById('cring');
+  var trails=[document.getElementById('ctrail1'),document.getElementById('ctrail2'),document.getElementById('ctrail3')].filter(Boolean);
+  var lag=[.12,.08,.05],mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+  var tp=trails.map(function(){return {x:mx,y:my}});
+  addEventListener('mousemove',function(e){
+    mx=e.clientX;my=e.clientY;
+    dot.style.left=mx+'px';dot.style.top=my+'px';
+    document.body.classList.toggle('link-hover',!!e.target.closest('a,button'));
+  });
+  (function loop(){
+    rx+=(mx-rx)*.16;ry+=(my-ry)*.16;
+    ring.style.left=rx+'px';ring.style.top=ry+'px';
+    trails.forEach(function(el,i){var p=tp[i];p.x+=(mx-p.x)*lag[i];p.y+=(my-p.y)*lag[i];el.style.left=p.x+'px';el.style.top=p.y+'px';});
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>"""
+
 PAGE_TMPL = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -159,6 +180,11 @@ PAGE_TMPL = """<!DOCTYPE html>
 </style>
 </head>
 <body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
 <nav class="art-nav">
   <a class="logo" href="/">rotor<sup>®</sup></a>
   <div class="mid">
@@ -205,6 +231,7 @@ document.getElementById('btn-zh').onclick = ()=>{{ LANG='zh'; localStorage.setIt
 document.getElementById('btn-en').onclick = ()=>{{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); }};
 render();
 </script>
+{cursor_js}
 </body>
 </html>
 """
@@ -235,6 +262,11 @@ LIST_TMPL = """<!DOCTYPE html>
 </style>
 </head>
 <body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
 <nav class="art-nav">
   <a class="logo" href="/">rotor<sup>&reg;</sup></a>
   <div class="mid">
@@ -307,6 +339,7 @@ document.getElementById('btn-zh').onclick = ()=>{{ LANG='zh'; localStorage.setIt
 document.getElementById('btn-en').onclick = ()=>{{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); }};
 render();
 </script>
+{cursor_js}
 </body>
 </html>
 """
@@ -366,7 +399,7 @@ def main():
         page = PAGE_TMPL.format(
             title_zh=a["t"]["zh"], desc_zh=a["d"]["zh"],
             css=css, data_json=json.dumps(payload, ensure_ascii=False),
-            col_zh=col_zh, col_en=col_en, column_zh=column_zh, column_en=column_en)
+            col_zh=col_zh, col_en=col_en, column_zh=column_zh, column_en=column_en, cursor_js=CURSOR_JS)
         assert "</script" not in a["body"]["zh"] and "</script" not in a["body"]["en"]
         fn = f"{OUTDIR}/{a['id']}-{a['slug']}.html"
         open(fn, "w", encoding="utf-8").write(page)
@@ -388,7 +421,7 @@ def main():
         css=css, sub_zh="从知识库里长出来的文章：只写有来源的东西，不编故事。",
         sub_en="Articles grown from the knowledge base: sourced claims only, no fiction.",
         articles_json=json.dumps(slim, ensure_ascii=False),
-        cols_json=cols_json)
+        cols_json=cols_json, cursor_js=CURSOR_JS)
     open(f"{OUTDIR}/index.html", "w", encoding="utf-8").write(list_page)
     print("list page:", f"{OUTDIR}/index.html", len(list_page), "bytes")
 

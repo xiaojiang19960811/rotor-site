@@ -99,12 +99,17 @@ footer{display:flex;justify-content:space-between;align-items:center;gap:16px;fl
 /* ---------- progress bar ---------- */
 #progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--lime);z-index:300}
 /* ---------- custom cursor ---------- */
-.cursor-dot,.cursor-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:400;border-radius:50%}
-.cursor-dot{width:8px;height:8px;background:var(--lime);transform:translate(-50%,-50%)}
-.cursor-ring{width:36px;height:36px;border:1px solid rgba(216,255,62,.55);transform:translate(-50%,-50%);
+.cursor-dot,.cursor-ring,.cursor-trail{position:fixed;top:0;left:0;pointer-events:none;border-radius:50%}
+.cursor-dot{z-index:400;width:8px;height:8px;background:var(--lime);transform:translate(-50%,-50%)}
+.cursor-ring{z-index:400;width:36px;height:36px;border:1px solid rgba(216,255,62,.55);transform:translate(-50%,-50%);
   transition:width .25s,height .25s,border-color .25s}
+.cursor-trail{z-index:399;background:var(--lime);transform:translate(-50%,-50%)}
+#ctrail1{width:6px;height:6px;opacity:.45}
+#ctrail2{width:4px;height:4px;opacity:.28}
+#ctrail3{width:3px;height:3px;opacity:.15}
 body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
-@media (hover:none),(max-width:760px){.cursor-dot,.cursor-ring{display:none}}
+@media (hover:none),(max-width:760px){.cursor-dot,.cursor-ring,.cursor-trail{display:none}}
+@media (hover:hover) and (pointer:fine){*{cursor:none!important}}
 /* ---------- hero entrance ---------- */
 .hero h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(4deg);
   animation:chIn .9s cubic-bezier(.2,.7,.2,1) forwards}
@@ -267,6 +272,11 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
 </style>
 </head>
 <body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
 <nav class="art-nav">
   <a class="logo" href="/">rotor<sup>®</sup></a>
   <div class="mid">
@@ -312,6 +322,26 @@ function render(){
 document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
 document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
 render();
+</script>
+<script>
+(function(){
+  if(matchMedia('(hover:none)').matches) return;
+  var dot=document.getElementById('cdot'),ring=document.getElementById('cring');
+  var trails=[document.getElementById('ctrail1'),document.getElementById('ctrail2'),document.getElementById('ctrail3')].filter(Boolean);
+  var lag=[.12,.08,.05],mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+  var tp=trails.map(function(){return {x:mx,y:my}});
+  addEventListener('mousemove',function(e){
+    mx=e.clientX;my=e.clientY;
+    dot.style.left=mx+'px';dot.style.top=my+'px';
+    document.body.classList.toggle('link-hover',!!e.target.closest('a,button'));
+  });
+  (function loop(){
+    rx+=(mx-rx)*.16;ry+=(my-ry)*.16;
+    ring.style.left=rx+'px';ring.style.top=ry+'px';
+    trails.forEach(function(el,i){var p=tp[i];p.x+=(mx-p.x)*lag[i];p.y+=(my-p.y)*lag[i];el.style.left=p.x+'px';el.style.top=p.y+'px';});
+    requestAnimationFrame(loop);
+  })();
+})();
 </script>
 </body>
 </html>
