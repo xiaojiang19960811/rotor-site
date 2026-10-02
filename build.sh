@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 # Build rotor-site into dist/ (deploy-ready static files).
 #
+# Layout:
+#   index.html          homepage (references /assets/*, inline ARTICLES data)
+#   assets/site.css     shared stylesheet — single source of truth
+#   assets/cursor.js    shared custom cursor
+#   writing/gen.py      article pages + list page + sitemap.xml generator
+#   writing/drafts/     bilingual markdown sources
+#   robots.txt, sitemap.xml
+#
 # Usage:
 #   ./build.sh
 #
 # What it does:
-#   1. Runs writing/gen.py -> generates article pages, list page, /tmp/articles.js
+#   1. Runs writing/gen.py -> generates article pages, list page, sitemap.xml, /tmp/articles.js
 #   2. Injects /tmp/articles.js into a copy of index.html
 #   3. Assembles dist/ with only the files needed for deployment
 #
@@ -20,7 +28,7 @@ echo "    articles.js: $(python3 -c "print(len(open('/tmp/articles.js').read()))
 
 echo "==> [2/3] assembling dist/"
 rm -rf "$DIST"
-mkdir -p "$DIST/writing"
+mkdir -p "$DIST/writing" "$DIST/assets"
 python3 - "$ROOT" "$DIST" <<'EOF'
 import re, sys, shutil, os
 root, dist = sys.argv[1], sys.argv[2]
@@ -29,7 +37,10 @@ new = open("/tmp/articles.js", encoding="utf-8").read().strip()
 s2, n = re.subn(r'const ARTICLES = \[.*?\]', lambda m: new, s, count=1, flags=re.S)
 assert n == 1, "ARTICLES block not found in index.html"
 open(os.path.join(dist, "index.html"), "w", encoding="utf-8").write(s2)
-shutil.copy(os.path.join(root, "og.png"), dist)
+for fn in ["og.png", "robots.txt", "sitemap.xml"]:
+    shutil.copy(os.path.join(root, fn), dist)
+for fn in ["site.css", "cursor.js"]:
+    shutil.copy(os.path.join(root, "assets", fn), os.path.join(dist, "assets", fn))
 w = os.path.join(root, "writing")
 for fn in sorted(os.listdir(w)):
     if fn == "index.html" or (fn[:1].isdigit() and fn.endswith(".html")):

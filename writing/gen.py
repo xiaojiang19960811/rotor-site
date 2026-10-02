@@ -130,30 +130,8 @@ def md_to_html(path):
     return "\n".join(out)
 
 def site_css():
-    s = open(f"{ROOT}/index.html", encoding="utf-8").read()
-    m = re.search(r"<style>(.*?)</style>", s, re.S)
-    return m.group(1)
-
-CURSOR_JS = """<script>
-(function(){
-  if(matchMedia('(hover:none)').matches) return;
-  var dot=document.getElementById('cdot'),ring=document.getElementById('cring');
-  var trails=[document.getElementById('ctrail1'),document.getElementById('ctrail2'),document.getElementById('ctrail3')].filter(Boolean);
-  var lag=[.12,.08,.05],mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
-  var tp=trails.map(function(){return {x:mx,y:my}});
-  addEventListener('mousemove',function(e){
-    mx=e.clientX;my=e.clientY;
-    dot.style.left=mx+'px';dot.style.top=my+'px';
-    document.body.classList.toggle('link-hover',!!e.target.closest('a,button'));
-  });
-  (function loop(){
-    rx+=(mx-rx)*.16;ry+=(my-ry)*.16;
-    ring.style.left=rx+'px';ring.style.top=ry+'px';
-    trails.forEach(function(el,i){var p=tp[i];p.x+=(mx-p.x)*lag[i];p.y+=(my-p.y)*lag[i];el.style.left=p.x+'px';el.style.top=p.y+'px';});
-    requestAnimationFrame(loop);
-  })();
-})();
-</script>"""
+    # 统一样式唯一来源: assets/site.css（首页与 writing 页共用）
+    return open(f"{ROOT}/assets/site.css", encoding="utf-8").read()
 
 PAGE_TMPL = """<!DOCTYPE html>
 <html lang="zh-CN">
@@ -162,22 +140,7 @@ PAGE_TMPL = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title_zh} — rotor</title>
 <meta name="description" content="{desc_zh}">
-<style>{css}
-.art-nav{{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}}
-.art-nav .logo{{font-weight:700;font-size:20px;color:var(--ink);text-decoration:none}}
-.art-nav .logo sup{{color:var(--lime);font-size:10px}}
-.art-nav .mid{{display:flex;gap:18px;align-items:center}}
-.art-nav a.lnk{{color:var(--muted);text-decoration:none;font-size:14px}}
-.art-nav a.lnk:hover{{color:var(--lime)}}
-.art-wrap{{max-width:760px;margin:0 auto;padding:clamp(40px,6vh,72px) clamp(22px,5vw,40px) 40px}}
-.prev-next{{display:flex;justify-content:space-between;gap:16px;margin-top:64px;padding-top:28px;border-top:1px solid var(--line)}}
-.prev-next a{{color:var(--muted);text-decoration:none;font-size:15px;max-width:44%}}
-.prev-next a:hover{{color:var(--lime)}}
-.prev-next a span{{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;color:var(--lime)}}
-.prev-next .nx{{text-align:right;margin-left:auto}}
-.art-foot{{max-width:760px;margin:0 auto;padding:0 clamp(22px,5vw,40px) 80px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}}
-.soon-banner{{display:inline-block;margin-left:10px;padding:3px 12px;border:1px dashed var(--lime);border-radius:20px;color:var(--lime);font-size:12px;letter-spacing:.08em}}
-</style>
+<link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 <div class="cursor-dot" id="cdot"></div>
@@ -235,7 +198,7 @@ document.getElementById('btn-zh').onclick = ()=>{{ LANG='zh'; localStorage.setIt
 document.getElementById('btn-en').onclick = ()=>{{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); }};
 render();
 </script>
-{cursor_js}
+<script src="/assets/cursor.js" defer></script>
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </body>
 </html>
@@ -248,23 +211,7 @@ LIST_TMPL = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Writing — rotor</title>
 <meta name="description" content="{desc_zh}">
-<style>{css}
-.art-nav{{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}}
-.art-nav .logo{{font-weight:700;font-size:20px;color:var(--ink);text-decoration:none}}
-.art-nav .logo sup{{color:var(--lime);font-size:10px}}
-.art-nav .mid{{display:flex;gap:18px;align-items:center}}
-.art-nav a.lnk{{color:var(--muted);text-decoration:none;font-size:14px}}
-.art-nav a.lnk:hover{{color:var(--lime)}}
-.list-head{{max-width:1200px;margin:0 auto;padding:clamp(48px,7vh,84px) clamp(22px,5vw,40px) 8px}}
-.list-head h1{{font-size:clamp(44px,7vw,96px);font-weight:700;letter-spacing:-.03em;line-height:1}}
-.list-head h1 .stroke{{color:transparent;-webkit-text-stroke:1.5px var(--lime)}}
-.list-head p{{color:var(--muted);max-width:640px;margin:18px 0 30px;font-size:clamp(14px,1.6vw,17px)}}
-.filters{{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px}}
-.f-chip{{font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--line);border-radius:99px;padding:8px 18px;color:var(--muted);background:none;cursor:pointer}}
-.f-chip.on{{border-color:var(--lime);color:var(--lime)}}
-.list-wrap{{max-width:1200px;margin:0 auto;padding:0 clamp(22px,5vw,40px) 60px}}
-.list-foot{{max-width:1200px;margin:0 auto;padding:0 clamp(22px,5vw,40px) 80px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;border-top:1px solid var(--line);padding-top:24px}}
-</style>
+<link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
 <div class="cursor-dot" id="cdot"></div>
@@ -344,7 +291,7 @@ document.getElementById('btn-zh').onclick = ()=>{{ LANG='zh'; localStorage.setIt
 document.getElementById('btn-en').onclick = ()=>{{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); }};
 render();
 </script>
-{cursor_js}
+<script src="/assets/cursor.js" defer></script>
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </body>
 </html>
@@ -392,7 +339,7 @@ def main():
     print("articles.js:", len(slim), "articles")
 
     # 2) 文章二级页面（已发布 + 已写稿未发布的都生成）
-    css = site_css()
+    site_css()  # 校验 assets/site.css 可读（样式已外链，不再内联）
     for a in arts:
         if not a["live"]:
             continue
@@ -404,10 +351,9 @@ def main():
                 payload[k] = a[k]
         page = PAGE_TMPL.format(
             title_zh=a["t"]["zh"], desc_zh=a["d"]["zh"],
-            css=css, data_json=json.dumps(payload, ensure_ascii=False),
+            data_json=json.dumps(payload, ensure_ascii=False),
             col_zh=col_zh, col_en=col_en, column_zh=column_zh, column_en=column_en,
-            title_zh_esc=html.escape(a["t"]["zh"]), body_zh=a["body"]["zh"],
-            cursor_js=CURSOR_JS)
+            title_zh_esc=html.escape(a["t"]["zh"]), body_zh=a["body"]["zh"])
         assert "</script" not in a["body"]["zh"] and "</script" not in a["body"]["en"]
         fn = f"{OUTDIR}/{a['id']}-{a['slug']}.html"
         open(fn, "w", encoding="utf-8").write(page)
@@ -426,10 +372,10 @@ def main():
         ]], ensure_ascii=False)
     list_page = LIST_TMPL.format(
         desc_zh="rotor 的写作存档：建造复盘、知识花园、实验日志。",
-        css=css, sub_zh="从知识库里长出来的文章：只写有来源的东西，不编故事。",
+        sub_zh="从知识库里长出来的文章：只写有来源的东西，不编故事。",
         sub_en="Articles grown from the knowledge base: sourced claims only, no fiction.",
         articles_json=json.dumps(slim, ensure_ascii=False),
-        cols_json=cols_json, cursor_js=CURSOR_JS)
+        cols_json=cols_json)
     open(f"{OUTDIR}/index.html", "w", encoding="utf-8").write(list_page)
     print("list page:", f"{OUTDIR}/index.html", len(list_page), "bytes")
 
