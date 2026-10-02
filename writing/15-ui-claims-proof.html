@@ -239,6 +239,24 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
 .reader-body hr{border:0;border-top:1px solid var(--line);margin:44px 0}
 /* ---------- magnetic ---------- */
 .magnet{display:inline-block;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+/* ---------- mobile menu ---------- */
+.menu-btn{display:none;background:none;border:0;padding:12px;cursor:pointer;flex:none}
+.menu-btn span{display:block;width:26px;height:2px;background:var(--ink);margin:6px 0;transition:transform .3s,opacity .3s}
+.menu-btn.open span:nth-child(1){transform:translateY(8px) rotate(45deg)}
+.menu-btn.open span:nth-child(2){opacity:0}
+.menu-btn.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+.menu-panel{position:fixed;top:0;left:0;right:0;z-index:99;
+  padding:92px clamp(20px,4vw,56px) 30px;background:rgba(11,11,12,.96);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  transform:translateY(-12px);opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .3s,transform .3s,visibility .3s}
+.menu-panel.open{transform:none;opacity:1;visibility:visible;pointer-events:auto}
+.menu-panel a{display:flex;align-items:baseline;gap:14px;font-size:clamp(26px,7vw,34px);
+  font-weight:700;letter-spacing:-.01em;text-transform:uppercase;
+  padding:14px 0;border-top:1px solid var(--line)}
+.menu-panel a:last-child{border-bottom:1px solid var(--line)}
+.menu-panel a .m-idx{font-family:var(--font-m);font-size:11px;color:var(--lime);letter-spacing:.2em}
 @media (max-width:760px){
   .about-grid{grid-template-columns:1fr}
   .rules{grid-template-columns:1fr}
@@ -274,6 +292,8 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   a,button{-webkit-tap-highlight-color:transparent}
   /* hero 留白 */
   .badge-spin{width:76px;height:76px}
+  .menu-btn{display:block}
+  footer a{padding:10px 0}
 }
 
 .art-nav{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}

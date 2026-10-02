@@ -250,6 +250,24 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
 .reader-body hr{border:0;border-top:1px solid var(--line);margin:44px 0}
 /* ---------- magnetic ---------- */
 .magnet{display:inline-block;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+/* ---------- mobile menu ---------- */
+.menu-btn{display:none;background:none;border:0;padding:12px;cursor:pointer;flex:none}
+.menu-btn span{display:block;width:26px;height:2px;background:var(--ink);margin:6px 0;transition:transform .3s,opacity .3s}
+.menu-btn.open span:nth-child(1){transform:translateY(8px) rotate(45deg)}
+.menu-btn.open span:nth-child(2){opacity:0}
+.menu-btn.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
+.menu-panel{position:fixed;top:0;left:0;right:0;z-index:99;
+  padding:92px clamp(20px,4vw,56px) 30px;background:rgba(11,11,12,.96);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  transform:translateY(-12px);opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .3s,transform .3s,visibility .3s}
+.menu-panel.open{transform:none;opacity:1;visibility:visible;pointer-events:auto}
+.menu-panel a{display:flex;align-items:baseline;gap:14px;font-size:clamp(26px,7vw,34px);
+  font-weight:700;letter-spacing:-.01em;text-transform:uppercase;
+  padding:14px 0;border-top:1px solid var(--line)}
+.menu-panel a:last-child{border-bottom:1px solid var(--line)}
+.menu-panel a .m-idx{font-family:var(--font-m);font-size:11px;color:var(--lime);letter-spacing:.2em}
 @media (max-width:760px){
   .about-grid{grid-template-columns:1fr}
   .rules{grid-template-columns:1fr}
@@ -285,6 +303,8 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   a,button{-webkit-tap-highlight-color:transparent}
   /* hero 留白 */
   .badge-spin{width:76px;height:76px}
+  .menu-btn{display:block}
+  footer a{padding:10px 0}
 }
 </style>
 </head>
@@ -309,7 +329,16 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
       <button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button>
     </div>
   </div>
+  <button class="menu-btn" id="menu-btn" aria-label="Menu"><span></span><span></span><span></span></button>
 </nav>
+<div class="menu-panel" id="menu-panel">
+  <a href="#works"><span class="m-idx">01</span><span data-i18n="nav_works">作品</span></a>
+  <a href="#journey"><span class="m-idx">02</span><span data-i18n="nav_journey">历程</span></a>
+  <a href="#about"><span class="m-idx">03</span><span data-i18n="nav_principles">原则</span></a>
+  <a href="#now"><span class="m-idx">04</span><span data-i18n="nav_now">现在</span></a>
+  <a href="#writing"><span class="m-idx">05</span><span data-i18n="nav_writing">写作</span></a>
+  <a href="#contact"><span class="m-idx">06</span><span data-i18n="nav_contact">联系</span></a>
+</div>
 
 <header class="hero" id="top">
   <div class="hero-kicker rv"><b>●</b>&nbsp;&nbsp;<span data-i18n="hero_kicker">独立开发者 — 作品集 2026</span></div>
@@ -819,6 +848,19 @@ function gotoCollection(key){
   location.href = '/writing/#col-' + key;
 }
 document.getElementById('btn-zh').onclick = ()=>applyLang('zh');
+/* mobile menu */
+(function(){
+  const mb=document.getElementById('menu-btn'), mp=document.getElementById('menu-panel');
+  if(!mb||!mp) return;
+  mb.addEventListener('click',()=>{
+    const o=mp.classList.toggle('open');
+    mb.classList.toggle('open',o);
+    mb.setAttribute('aria-label', o?'Close menu':'Menu');
+  });
+  mp.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
+    mp.classList.remove('open'); mb.classList.remove('open'); mb.setAttribute('aria-label','Menu');
+  }));
+})();
 document.getElementById('btn-en').onclick = ()=>applyLang('en');
 /* ================= reveal on scroll ================= */
 let io;
