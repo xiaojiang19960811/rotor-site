@@ -326,8 +326,22 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>界面只讲能证明的话</h1><p>我们的视频工作台资产库做 V8 改版时，定了一条看起来很笨的规矩：不引入统一的资产状态字段。页面只能展示当前数据对象能够证明的事实。生成过程、分镜复核、项目阶段、导出产物，分开表达，绝不混成一个漂亮的&quot;已完成&quot;。</p>
+<h2>为什么不要统一状态</h2>
+<p>资产库同时管两类东西：影视作品下的复合资产，和可以独立保存的单项资产（图片、视频、声音、小说、剧本、提示词、角色、数字人、场景、道具、分镜、成片）。每一类资产的&quot;状态&quot;含义都不同，硬套一个全库统一的&quot;待确认/已交付&quot;，等于用界面语言虚构业务事实。</p>
+<p>收口后的规则是：每个对象只展示它这个类型能证明的事实。</p>
+<h2>状态边界表</h2>
+<table><thead><tr><th>对象</th><th>可以展示</th><th>不展示</th></tr></thead><tbody><tr><td>普通资产</td><td>已入库、来源、作品归属、版本、只读派生</td><td>处理中、待确认、已交付</td></tr><tr><td>小说</td><td>草稿、可用、建议修改、合规阻断、投稿体检结果</td><td>已确认、已交付</td></tr><tr><td>剧本</td><td>草稿、生成中、可用、失败、版本号</td><td>已确认、已交付</td></tr><tr><td>分镜渲染</td><td>待生成、生成中、已生成、生成失败；需复核</td><td>需复核只属于对应分镜，不扩散到整部作品</td></tr><tr><td>任务记录</td><td>排队中、进行中、已完成、失败</td><td>任务完成不等于资产确认</td></tr><tr><td>导出产物</td><td>合成中、成片已生成、导出失败、可下载</td><td>可下载不等于用户验收</td></tr><tr><td>音频资产</td><td>已准备、版权待确认、仅项目内使用、可商用</td><td>&quot;待确认&quot;只用于版权语境</td></tr></tbody></table>
+<p>三句最容易写错的话，被明确钉死：任务完成不等于资产确认；可下载不等于用户验收；项目的&quot;已完成&quot;只表示制作阶段，不解释为已交付。</p>
+<h2>不虚构统一接口</h2>
+<p>同一条规矩也管住了交互设计：页面之间的跳转只引用前端已有的真实入口，不虚构统一的资产详情接口。评审时按三条泳道标注点击去向——入口与页面跳转、资产详情与关系、任务与导出事实——每条路径都能在现有路由里找到对应，没有&quot;将来会有的&quot;占位链接。</p>
+<p>关系说明图里写清楚五类记录的边界：资产记录是已保存内容，任务记录是生成过程，分镜记录是生成结果与复核，项目记录是制作阶段，导出产物是成片是否已生成——用户验收当前系统未记录，就老老实实写&quot;未记录&quot;，而不是编一个状态填上。</p>
+<h2>全量扫描验证</h2>
+<p>改版完成后做了一次全量文案扫描：全库找不到&quot;待确认&quot;&quot;已交付&quot;&quot;可发布&quot;&quot;已确认&quot;这类状态词。唯一的例外是声音资产的&quot;版权待确认&quot;，而且它只出现在版权字段的语境里。</p>
+<p>设计稿里的数量和示例内容是演示数据，接入实现时必须替换为接口返回值——连演示数据都不许假装成真实状态。</p>
+<h2>小结</h2>
+<p>界面文案的诚实只有一句话：数据能证明什么，就说什么；证明不了的，宁可不说，也不编一个好听的状态。这条规矩笨，但它让每一句界面上的话都能在数据库里找到出处。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +354,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +364,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

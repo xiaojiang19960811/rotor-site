@@ -326,8 +326,24 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>AI 应用的安全审计：内容过滤只是最后一环</h1><p>很多人理解的 AI 安全，就是模型输出后做一次内容过滤。这是最后一环，不是全部。完整的安全审计要覆盖请求内容、模型路由、身份权限、响应、计费和人工复核——过滤只是其中离用户最近的一道。</p>
+<h2>审计是一条事件链</h2>
+<p>一次调用的审计，应该把这些串成可关联的事件链：调用身份、路由账号、模型、请求类型、延迟阶段、token 分类、费用。这样出问题时才能区分：是用户请求写错了，是上游故障，是调度问题，还是计费问题。只看过滤结果，等于只看终点线的照片。</p>
+<p>提示词审计本身可以包含同步阻断、异步队列、事件、指标、管理端复核和筛选删除，但必须纳入既有的权限域——不能因为新增一个审计页面，就隐式扩大了 RBAC 的范围。</p>
+<h2>提示词快照是高敏证据</h2>
+<p>完整提示词或响应快照属于高敏审计证据：限制谁能访问、保留多久、提供删除入口。普通业务日志不应默认保存全部正文。需要排障，不能成为长期保存完整提示词的理由。</p>
+<h2>异常不等于命中：fail-open 与 fail-closed 的取舍</h2>
+<p>安全审核服务自己出故障，和&quot;内容命中违规&quot;是两种完全不同的状态，绝不能混为一谈。我们的多模型网关为此做了明确的策略选择：</p>
+<ul><li><strong>仅观察模式</strong>：始终放行请求，审核服务异常只记错误日志和运行指标。</li><li><strong>前置拦截模式</strong>：可配置异常策略。选放行（fail-open），异常时继续放行；选拦截（fail-closed），全部审核尝试失败后终止请求，返回 503，错误码和用户文案固定为&quot;审核服务暂时不可用&quot;，且明确标识为可重试的服务异常——不得标记为内容违规，也不得触发违规累计或自动禁用。</li></ul>
+<p>基础设施故障不记为用户违规。这条写进了协议边界：不同入口用各自的错误格式，但原因字段保留统一错误码，审计日志的处置字段记录真实动作（异常拦截记拦截、异常放行记放行），<code>error</code> 字段继续保留服务故障本身。</p>
+<h2>一个真实的去重教训</h2>
+<p>异常记录的去重也出过真问题：客户端收到 503 后约每 14 秒重试一次，而原有阻断去重 TTL 只有 10 秒，导致每次重试都重新调用故障的审核服务并重复落库。修复方案是独立的 1 分钟异常冷却，覆盖用户 Key、分组、端点和协议——冷却期内请求仍返回 503，但不再重复调用审核服务；并发首次失败用原子登记保证只写一条记录。</p>
+<p>连&quot;故障时少打点日志&quot;这种细节都有明确规则：普通命中沿用原来的短 TTL，不被延长；异常绝不能写入命中的缓存，否则管理员修好配置后还会被旧的 503 继续拦截。</p>
+<h2>健康检查证明不了安全</h2>
+<p>生产健康检查只能证明服务可用。安全和计费的结论，仍然需要真实请求、权限边界和端到端日志来验证。一次 200 的健康检查，证明不了任何一条审计链路是通的。</p>
+<h2>小结</h2>
+<p>AI 应用的安全审计只有一句话：从请求进来到响应出去，每个关键事件都可追踪、可复核；敏感内容少存、短期存；服务故障永远不要伪装成用户违规。内容过滤是最后一环，不是第一环，更不是唯一一环。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +356,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +366,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

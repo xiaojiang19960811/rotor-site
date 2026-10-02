@@ -326,8 +326,25 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>团队空间看到了别人的项目：一次越权复盘</h1><p>视频工作台有次越权：切到团队空间，项目列表里混进了个人项目和其他平台的数据；团队管理员新建的短剧项目没有团队归属，生成完跳转过去，页面提示&quot;个人项目不可在团队空间访问&quot;。自己建的东西，自己进不去——归属在创建那一刻就丢了。</p>
+<h2>两个根因，都在&quot;默认可见&quot;上</h2>
+<p>第一，项目和系列的列表接口把组织管理员直接当成全量可见。管理员确实该看得多，但&quot;看得多&quot;不等于&quot;看全部&quot;——跨组织的资源不该出现在列表里。</p>
+<p>第二，对空组织 ID 的历史个人数据保留了 owner 回退。老数据没有组织 ID，代码为了兼容，用所有者关系兜底，结果兜底逻辑把个人项目兜进了团队视图。兼容历史数据的善意，变成了越权的入口。</p>
+<p>第三个缺口在写入侧：短剧 Agent 创建项目时，没有从当前请求的所有者上下文写入组织 ID。读侧越权、写侧丢归属，两边一夹，团队空间就乱了。</p>
+<h2>修复：精确匹配，不再回退</h2>
+<p>读侧：团队请求只返回组织 ID 与当前组织精确匹配的项目和系列；空组织资源继续留在个人空间，不再参与回退。平台管理员的跨组织能力单独保留，走独立路径验证。</p>
+<p>写侧：Agent 草稿、最终落库、自动建系列，统一继承当前请求的团队组织 ID；异步任务通过任务快照继续传递归属。归属在创建时写入，不事后补。</p>
+<p>权限侧：项目内的创建能力按项目编辑权限求交集——owner 和 editor 能新增内容，团队 viewer 和 reviewer 仍然不能写。权限抽屉里补回了隐式的项目 owner，标成&quot;原始所有者&quot;，owner 不再因为成员表没显式登记就在 UI 里消失。</p>
+<p>验证：组织隔离的定向测试 13 项通过；追加的能力测试 16 项、前端权限与布局测试 10 项通过；后端重启后用真机浏览器实测，团队管理员的新增按钮正常启用。防复发的验收标准也写死了：团队管理员进短剧页，列表里不许出现空组织或别的组织的资源；新建项目一句话生成完，跳转必须留在团队空间，不能再弹个人项目的门禁错误。</p>
+<h2>追加问题：403 了，页面还在&quot;加载中&quot;</h2>
+<p>修完主问题，测出一个关联 bug：普通成员直接打开其他组织项目的 URL，服务端已经返回 403，但项目子页只等 <code>project</code> 对象，页面长期卡在&quot;加载分镜…&quot;，并发的子页请求还重复触发 403。</p>
+<p>修法：请求函数在非 2xx 错误上保留状态码；布局层遇到 403/404 就清理项目状态、导航回组织项目列表，其他错误显示&quot;项目暂时不可用&quot;。权限拒绝要有明确的 UI 终点，不能停在无限加载。</p>
+<h2>多租户的两个经典坑</h2>
+<p>这次复盘沉淀下来两条：</p>
+<ol><li>&quot;管理员可见全部&quot;必须翻译成&quot;管理员可见本组织全部&quot;，差三个字，差一个越权。</li><li>空组织 ID 的历史数据，默认归属应该是&quot;个人空间&quot;，而不是&quot;按所有者回退到处可见&quot;。回退逻辑每多一层，隔离就多一个洞。</li></ol>
+<h2>小结</h2>
+<p>多租户隔离的检查清单很短：列表按组织精确过滤、新建资源在创建时写入归属、拒绝访问要有明确终点。短的原因是，每一条背后都至少有一次真实的越权。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +357,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Lab Log", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +367,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

@@ -326,8 +326,26 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">多端业务</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>H5 底座：比脚手架多一层，比业务少一层</h1><p>脚手架解决&quot;从零到能跑&quot;，业务解决&quot;从能跑到上线&quot;。H5 底座卡在中间：带一层轻业务骨架，团队开箱即用。每个新项目不用重写登录、tabbar、请求封装，这些&quot;每个 H5 都会做一遍&quot;的东西，固化下来。</p>
+<h2>多出来的那一层是什么</h2>
+<p>这个底座不是纯脚手架。纯脚手架给你空目录和构建配置；它多给了一层常规 H5 项目的业务骨架：登录页、首页、任务页、我的页四个默认页面，底部 tabbar，悬浮回首页按钮，登录态守卫。</p>
+<p>技术栈是 Vue 3、Vite 3、TypeScript、Vue Router 4、Pinia、Vant 3、Axios。建议 Node 16.18.0、npm 8.x，版本用 nvm 切换。开箱即用的意思很具体：拉下来，登录流程、页面切换、tabbar 都是现成的，业务从第五个页面开始写。</p>
+<h2>路由 meta 承载页面语义</h2>
+<p>底座最关键的一个约定：页面语义收敛到路由 <code>meta</code>，不散落在各页面里。页面标题、缓存策略、登录校验、游客页面、tabbar 显示、悬浮回首页按钮，全部由路由 meta 声明。</p>
+<p>这样做的好处是新页面接入时不需要读懂整个项目：照着 meta 填几项，标题、鉴权、缓存行为就都有了。页面组件只关心自己长什么样，&quot;这个页面在系统里是什么角色&quot;由路由层统一回答。</p>
+<h2>三个&quot;统一走&quot;，不许散落</h2>
+<p>底座用三条硬约定防止代码随时间散开：</p>
+<ol><li><strong>登录态统一走 store</strong>：<code>src/stores/base.ts</code> 负责基础登录态。页面不许自己散落清理 <code>localStorage</code>，状态变更只经过 store。</li><li><strong>请求统一走 request.ts</strong>：请求实例、重复请求取消、全局 loading、错误提示、<code>401/403</code> 登录失效处理、token 注入，全部收敛在一个文件。业务代码只调接口，不碰这些。</li><li><strong>接口常量统一放 list.ts</strong>：只放接口常量，外加一个&quot;不弹 Toast&quot;的白名单。哪个接口静默失败、哪个要提示，看这一个文件就够了。</li></ol>
+<p>三条约定的共同点：把&quot;每个页面都可能各写一套&quot;的东西，收到一个唯一入口。散落是熵增，底座的价值就是对抗熵增。</p>
+<h2>怎么证明底座是好的</h2>
+<p>底座带了一条手动验证路径，六步走完才算可用：打开 <code>/#/home</code> 未登录应跳登录页；登录页点登录进首页；首页、任务页、我的页之间切换，tabbar 正常；从任务页或我的页切换时，右下角出现悬浮回首页按钮；退出登录后返回登录页，受保护页面再次被拦截；跑 <code>npm run build</code>，生产构建能输出 <code>dist</code>。</p>
+<p>这条路径的意义不在于步骤多，而在于它把&quot;底座承诺的东西&quot;变成了可执行的检查清单。每个派生项目接手时先跑一遍，底座有没有被改坏，六步之内见分晓。</p>
+<h2>底座也会腐化</h2>
+<p>底座最大的风险不是设计不好，是派生项目慢慢不遵守约定。Wiki 里专门记了一条待确认：具体派生项目是否仍完全遵循底座约定，需要逐个读取源码确认。</p>
+<p>这很诚实。底座的价值在于约束，而约束是会被绕过的——赶工期的项目可能直接在页面里写请求、自己清 localStorage。底座发布时就要想好：约定是靠 review 守，还是靠 lint 守，还是靠&quot;跑一遍六步验证&quot;守。没有守护机制的约定，退化成普通目录只是时间问题。</p>
+<h2>小结</h2>
+<p>好的底座不炫技，它只做一件事：把每个项目都会重复写的部分，写成不需要再写的东西。脚手架给你起点，底座给你起跑线。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +358,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Multi-platform", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +368,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

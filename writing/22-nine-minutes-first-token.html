@@ -326,8 +326,27 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>首字等了 9 分钟：一次网关超时复盘</h1><p>网关超时复盘里最反直觉的发现：慢请求的耗时 95% 以上集中在&quot;首个有效输出&quot;之前，首字出来之后通常很快完成。所以超时预算不该按总耗时算，而该按&quot;首有效输出&quot;算。盯着总耗时调超时，调的是错的指标。</p>
+<h2>现象：首字决定一切</h2>
+<p>生产环境出现过分钟级的首字等待（TTFT）。拆开看，慢样本的形态高度一致：首字耗时占总耗时 95% 以上，首字一旦出现，后面很快收尾。上游官方也有过首字 9 分 19 秒、总耗时 9 分 32 秒的样本——9 分钟里，9 分 19 秒都在等第一个字。</p>
+<p>这个形态直接决定了预算该怎么设：如果 95% 的时间花在首字前，那么&quot;总耗时 10 分钟超时&quot;这种规则几乎拦不住任何东西，该拦的是一直不吐首字的请求。</p>
+<h2>两个容易踩错的坑</h2>
+<p><strong>坑一：连接保活修的是另一种死法。</strong> 上游有个修复处理 HTTP/2 连接完全无帧的死连接：15 秒无帧就 PING，再等 15 秒无 ACK 才回收。但它处理不了我们遇到的长尾——连接活着，持续有 PING ACK 或 SSE 状态帧，就是迟迟没有首个有效输出。把慢归因到&quot;保活修复没生效&quot;，方向就错了：连接没死，是语义输出没来。</p>
+<p><strong>坑二：还有一层 WS 前置降级等待。</strong> 复盘发现，WS 失败后会重连多次再回退 HTTP，这段等待不进入普通 HTTP 的用量统计，也不受 HTTP 首输出预算约束。只看 HTTP 侧的日志，会发现一段&quot;凭空消失&quot;的时间——它藏在 WS 降级链里。</p>
+<h2>上线的预算规则</h2>
+<p>确认后的规则已经上线，核心是三段预算：</p>
+<ul><li>单账号单次尝试上限 90 秒；</li><li>因该超时最多换号 1 次；</li><li>从首次转发开始累计总预算 180 秒，覆盖账号选择、并发槽等待、token 刷新、换号和第二次尝试。</li></ul>
+<p>首个真实文本、推理或工具输出出现后，预算限制解除——后面慢是正常的生成耗时，不该再被首字预算约束。</p>
+<p>配套的一个关键定义：什么算&quot;有效输出&quot;。<code>response.created</code>、<code>in_progress</code>、SSE 注释心跳、只有 role 没有 content 的帧、空 content、<code>usage</code>、终止事件，这些都不算。只有真实的文本、推理或工具输出才算数。否则一个心跳帧就能把预算无限续上，门禁形同虚设。</p>
+<p>超时前允许向下游发中性 keepalive 保活，但不能因此阻断内部 failover——保活是安抚客户端的，故障转移是保护系统的，两件事。</p>
+<h2>上线之后还在观察</h2>
+<p>预算规则已经随版本发布到生产，但复盘没有就此关闭。Wiki 里记的待观察项很实在：继续按时间窗口看 TTFT 分布、预算触发次数、换号成功率和内部 failover 的实际效果；WS 前置降级要不要灰度禁用、要不要接入服务端预算，还是待确认。</p>
+<p>这符合第 9 篇的证据观：上线只证明&quot;规则已部署&quot;，不证明&quot;问题已解决&quot;。预算有没有真的拦住长尾，要看连续生产数据，不是看发布成功。</p>
+<h2>排查时先拆阶段</h2>
+<p>复盘留下的排查提示很实用：不要只看总耗时，优先把一次请求拆成三段——首字前、首字后、路由/上游阶段。慢样本如果带有状态帧或心跳，别往连接保活的方向查；如果 HTTP 侧时间对不上，先去看 WS 前置降级链。</p>
+<h2>小结</h2>
+<p>首字是网关场景下最诚实的健康指标：它之前的时间全是等待，全是风险。预算卡在首有效输出上，而不是总耗时上——卡对地方，一次就够。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +359,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +369,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

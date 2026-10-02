@@ -326,8 +326,25 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">个人建造</span><span class="col-tag">建造复盘</span></div>
+  <div class="reader-body" id="reader-body"><h1>AI 视频管线：v2 到 v4 的迭代</h1><p>小红书日更的 AI 资讯视频，管线从 v2 走到 v4。每一次版本号变化，都是一次用户评审返工。复盘下来，视频生产的坑不在画面多好看，而在交付清单里那些&quot;以为当然有&quot;的东西。</p>
+<h2>v2：能跑的生产管线</h2>
+<p>v2 是第一条跑通的生产管线：1080×1920 竖屏，50 多秒，脚本一键渲染出成片。日更就靠它：单日发视频、双日发图文，视频渲染失败自动降级图文。内容侧有两条铁律：新闻必须双来源核实后才能进视频；选题要去重，前一天发过的第二天避开。一条 60 秒的视频背后，是&quot;验证-去重-渲染-检查&quot;四步，不是&quot;跑个脚本&quot;。</p>
+<p>v2 解决的是&quot;有没有&quot;。画面动起来了，流程跑通了，但它是工程师审美：信息都摆上去了，节奏和包装都没讲究。</p>
+<h2>v3：按用户评审修包装</h2>
+<p>v3 样片交付后按评审意见改了一批包装问题：黄金 3 秒钩子、自合成无版权 BGM、关键词高亮、下条预告、结尾关注引导；顺手修了标题裁切、段首空屏、tag 空框、右侧按钮遮挡。</p>
+<p>这些全是&quot;看一眼成片才发现&quot;的问题。分镜描述里它们都不存在——标题会不会被裁，只有渲染出来才知道；按钮会不会挡字，只有叠上 UI 才知道。模板评审必须看成片，不看方案描述。</p>
+<p>v3 样片验证通过，但生产日更没切过去：等用户拍板。生产管线不因为&quot;新版更好看&quot;就切换，切换是另一个决策。</p>
+<h2>生产事故：字幕和 BGM 漏了</h2>
+<p>v2 在一次正式生产中翻车：交稿后用户反馈&quot;没有中文字幕和 BGM&quot;。查下来，渲染脚本只有画面，最终组装漏了字幕烧录和 BGM 混音——管线里根本没把这两步当成必经环节。</p>
+<p>返工出了重压版，补上字幕和 BGM。这次的教训写进了硬性要求：字幕和声音是交付清单的一部分，不是&quot;后期加上就行&quot;。用户要的是中文字幕，这条此后每次评审都先确认。</p>
+<h2>v4：换设计语言，再返工一次</h2>
+<p>用户要求换成获奖设计风格，v4 按这个方向交付：深黑底、电光绿、巨型描边序号、标题逐字上浮、等宽字体 kicker、手绘风可视化、胶片颗粒、底部进度条，视觉和个人站同源。</p>
+<p>评审时用户指出两点：中文字幕又没了，&quot;少了一点感觉&quot;。第一条是交付清单问题，第二条是审美问题——都没法在动工前一次说清，只能看片返工。修订后用户批准 v4 为正式生产模板，替换 v2 接入日更管线。</p>
+<h2>三条生产纪律</h2>
+<ol><li><strong>交付清单先行</strong>：字幕、声音、封面是必检项，不在&quot;画面&quot;之后。漏一项就是一次返工。</li><li><strong>评审看成片</strong>：标题裁切、按钮遮挡、空屏，所有排版问题只存在于渲染结果里。方案评审代替不了成片评审。</li><li><strong>生产切换单独决策</strong>：新版验证通过 ≠ 立刻替换生产管线。v3 样片 OK，但日更继续走 v2，直到用户明确拍板 v4。</li></ol>
+<h2>小结</h2>
+<p>视频管线迭代的本质是把&quot;以为当然有&quot;变成&quot;清单上必须有&quot;。v2 证明能跑，v3 修包装，v4 换语言，每一次返工都来自一次真实评审。自动化生产最怕的不是慢，是没人看成片。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +357,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Solo Builds", column:"Build Notes", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +367,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

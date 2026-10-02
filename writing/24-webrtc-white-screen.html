@@ -326,8 +326,24 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>WebRTC 白屏：先别急着上 TURN</h1><p>实时对话项目有次公网白屏：页面能建会话，一度显示&quot;已连接&quot;，但舞台始终没有远端视频，服务端最终记 ICE 失败。第一反应往往是&quot;上 TURN&quot;，但这次开 TURN 解决不了任何问题——根因是 SDP 里发布了错误的地址，TURN 中继救不了一个从起点就错的候选地址。</p>
+<h2>真正的根因</h2>
+<p>媒体服务跑在容器里，生成的 SDP answer 带的是容器私网 host candidate。公网浏览器根本访问不到那个私网地址，ICE 候选对永远建不起来。这台部署本来就没用 TURN，开放 TURN 端口不会自动修正错误的 host candidate。</p>
+<p>排查还发现第二个坑：系统临时端口范围是 UDP 32768–60999，安全组只开了 40000–60000。即使地址改写对了，随机选到 40000 以下的端口时照样间歇失败。</p>
+<p>两个教训：页面可访问、API 健康检查正常，证明不了媒体链路可用；看到 ICE 失败先读 SDP 和候选地址，别先加中继。</p>
+<h2>修复：改写地址，而不是加中继</h2>
+<p>修法是加一个环境变量配置公网 IP：只改写 SDP 里私网、回环、链路本地或未指定的 host candidate，以及连接地址和 RTCP 地址；relay candidate 保持不动。安全组按系统实际的临时端口范围重开——端口范围要去读机器的实际配置，不拍脑袋写一段。这次是把部署文档里的端口段改成了&quot;按系统实际输出配置&quot;，下次换机器不用重新踩坑。</p>
+<p>前端也改了：WebRTC 持续断线或失败后，不再卡在&quot;已连接&quot;状态，而是释放会话，并给出准确的公网 IP / UDP 端口检查提示。状态诚实是排障的第一步。</p>
+<p>验证用的是真机：公网浏览器启动一次真实会话，视频元素就绪、画面有尺寸、服务端日志出现 ICE completed。只看 HTTP 健康检查，不算验收。</p>
+<h2>复发了两次，都是环境变量没进进程</h2>
+<p>修完之后这问题还复发过两次，原因如出一辙：配置没进实际跑起来的进程。</p>
+<p>第一次是只改了仓库里的 <code>.env</code>，但适配器读的是进程环境，answer 里躺的还是私网地址。第二次是排障时直接起了二进制，绕开了统一的启动脚本和 env 文件，进程环境里根本没有公网 IP。</p>
+<p>防复发的闭环：生产启动入口固定为唯一的持久化脚本，它把 env 文件显式传给进程；启动时校验公网 IP 是全球可路由地址，复用已有进程时比对环境，不一致就失败。健康检查接口暴露公网 IP 配置状态，部署验收必须先查它，再跑一次真实浏览器会话。</p>
+<h2>什么时候才需要 TURN</h2>
+<p>复杂 NAT、多出口、企业内网这些场景，确实可能需要 STUN/TURN。但那是看完 ICE 日志、搞清网络拓扑之后的结论，不是第一反应。把 TURN 当万能药，会掩盖真正的地址发布问题，还多出一组要维护的中继。</p>
+<h2>小结</h2>
+<p>WebRTC 连不上的排查顺序：先看 SDP 里的候选地址对不对，再看 UDP 端口范围开没开齐，最后才考虑要不要中继。以及，环境变量写进文件不算数，进了进程才算数。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +356,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +366,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

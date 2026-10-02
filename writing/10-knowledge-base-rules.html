@@ -326,8 +326,29 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>给知识库立规矩：什么算数，什么不算</h1><p>知识库最大的敌人不是信息太少，是真假混在一起。AI 整理资料又快又顺，把推断写成事实的时候，语气比人还肯定。攒了 230 多页之后，我们定了条规矩：先分清什么算数，什么不算。</p>
+<h2>什么算数：正式规则的五个来源</h2>
+<p>一条规则能进&quot;正式规则&quot;区，必须来自以下之一：</p>
+<ol><li>用户明确确认</li><li>项目源码、配置或测试体现的现有行为</li><li>仓库内的 AGENTS.md</li><li>仓库内正式 docs/ 文档</li><li>已确认的接口文档或业务说明</li></ol>
+<p>不在这五个里面的，再有道理，也先进候选区。</p>
+<h2>什么不算：候选区的五类内容</h2>
+<p>以下内容只能写进候选/待确认区：</p>
+<ul><li>AI 推断</li><li>基于项目名称、目录结构或历史经验的猜测</li><li>未确认的业务规则</li><li>建议方案</li><li>待确认的状态流转、权限逻辑或规则判断</li></ul>
+<h2>写作纪律</h2>
+<ul><li>页面里用标题明确区分&quot;正式规则&quot;和&quot;候选/待确认&quot;，不能混在一起。</li><li>不能把候选信息写成确定语气的业务规则。&quot;应该是&quot;和&quot;是&quot;，差了一个证据。</li><li>候选信息后来被确认了，移动到正式规则区，并补充来源。转正要留痕。</li></ul>
+<h2>原始资料：快照，不是二手转述</h2>
+<p>知识库是三层结构：不可变的原始资料 → AI 维护的 Wiki 页面 ← Schema 约束。原始资料层由&quot;外部权威来源&quot;和&quot;raw 不可变快照&quot;共同组成。</p>
+<p>进 raw/ 的：用户提供的独立资料、可能变化或下线的网页、会议记录、截图、导出报告、任务结束后难以重建的关键证据。采集时允许新增，进入后不可变，每个文件配同名 <code>.source.md</code>，记录来源、日期、采集原因和 SHA-256。</p>
+<p>不进 raw/ 的：整仓副本、依赖、构建产物、可稳定重建的文件、含敏感信息的资料。受 Git 版本控制的源码、配置和文档保留在业务仓库，用绝对路径、commit/tag、可核验位置和核验日期追踪——不复制，只引用。</p>
+<h2>一个反直觉的规定</h2>
+<p>raw 为空可以通过验证。不以文件数量作为质量指标，也不允许制造伪原始资料。</p>
+<p>这条是故意的。指标一旦变成&quot;快照数量&quot;，就会有人为了凑数把能重建的东西也塞进来。空着，说明这个阶段没有易失性资料需要抢救——这是正常状态，不是缺失。</p>
+<h2>来源怎么写</h2>
+<p>Wiki 里每条结论的&quot;来源&quot;，不能只写任务名称。要写：来源类型、路径或 URL、版本、位置、日期。缺了这些，后人没法复核，来源就只是个装饰。</p>
+<h2>小结</h2>
+<p>知识库的规矩就三句话：来源分级，正式和候选分开写；原始资料快照存证，不确定的不进正式区；数量不是质量，空着不丢人。</p>
+<p>规矩立完，AI 才敢放手去整理——因为它知道，拿不准的东西有地方放，不用硬编成确定的。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +361,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +371,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

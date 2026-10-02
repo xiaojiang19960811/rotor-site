@@ -193,8 +193,8 @@ PAGE_TMPL = """<!DOCTYPE html>
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">{col_zh}</span><span class="col-tag">{column_zh}</span></div>
+  <div class="reader-body" id="reader-body"><h1>{title_zh_esc}</h1>{body_zh}</div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -207,6 +207,7 @@ const STR = {{
   en: {{back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"{col_en}", column:"{column_en}", soon:"Coming soon"}}
 }};
 function esc(s){{ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }}
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){{
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -216,10 +217,13 @@ function render(){{
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   }});
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){{
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }}
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
@@ -401,7 +405,9 @@ def main():
         page = PAGE_TMPL.format(
             title_zh=a["t"]["zh"], desc_zh=a["d"]["zh"],
             css=css, data_json=json.dumps(payload, ensure_ascii=False),
-            col_zh=col_zh, col_en=col_en, column_zh=column_zh, column_en=column_en, cursor_js=CURSOR_JS)
+            col_zh=col_zh, col_en=col_en, column_zh=column_zh, column_en=column_en,
+            title_zh_esc=html.escape(a["t"]["zh"]), body_zh=a["body"]["zh"],
+            cursor_js=CURSOR_JS)
         assert "</script" not in a["body"]["zh"] and "</script" not in a["body"]["en"]
         fn = f"{OUTDIR}/{a['id']}-{a['slug']}.html"
         open(fn, "w", encoding="utf-8").write(page)
@@ -426,6 +432,20 @@ def main():
         cols_json=cols_json, cursor_js=CURSOR_JS)
     open(f"{OUTDIR}/index.html", "w", encoding="utf-8").write(list_page)
     print("list page:", f"{OUTDIR}/index.html", len(list_page), "bytes")
+
+    # 4) sitemap.xml（中文默认,lastmod 取发布日期）
+    base = "https://www.rotor1996.top"
+    sm_urls = [("", max(DATES.values())), ("writing/", max(DATES.values()))]
+    for a in arts:
+        if a["live"]:
+            sm_urls.append((f"writing/{a['id']}-{a['slug']}", DATES.get(a["id"], "")))
+    sm = ['<?xml version="1.0" encoding="UTF-8"?>',
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path, lastmod in sm_urls:
+        sm.append(f"<url><loc>{base}/{path}</loc><lastmod>{lastmod}</lastmod></url>")
+    sm.append("</urlset>")
+    open(f"{ROOT}/sitemap.xml", "w", encoding="utf-8").write("\n".join(sm))
+    print("sitemap:", f"{ROOT}/sitemap.xml", len(sm_urls), "urls")
 
 if __name__ == "__main__":
     main()

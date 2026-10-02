@@ -326,8 +326,25 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">多端业务</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>公开能看，不等于能爬</h1><p>浏览器里能打开的页面，不等于可以用程序自动去抓。反过来，个人非商业的自建采集器，也不等于当然违法。公开资讯自动化的合规，落在一条很具体的线上：你用什么方式、拿什么字段、频率多高。</p>
+<h2>红黄绿三级准入</h2>
+<p>我们用的准入模型分三级：</p>
+<ol><li><strong>绿色</strong>：来源方明确提供且允许相应用途的官方 RSS/API、产品权限内的 Web Search、使用者主动提供的材料。直接用。</li><li><strong>黄色</strong>：无登录即可访问的公开列表页、公告页或 RSSHub route。只有同时满足三个条件才可低频采集元数据：<code>robots.txt</code> 未禁止目标路径、法律声明未明确禁止相应用途、实现不使用登录态或私有接口。</li><li><strong>红色</strong>：明确禁止通用机器人或相应自动化使用的来源，以及需要登录、Cookie、验证码、付费墙、签名、频控绕过、代理轮换或私有接口的 route。永久不由自建采集器直连。</li></ol>
+<p>输出默认只保留标题、机构、日期、原始链接和许可范围内的短摘要，不保存媒体正文、图片或评论。</p>
+<h2>永久禁止项</h2>
+<p>以下六条是用户明确确认的硬边界，不是&quot;首期暂缓&quot;，而是后续实现的验收失败条件：</p>
+<ol><li>媒体全文抓取</li><li>登录态、Cookie、个人账号或共享账号采集</li><li>付费墙、验证码、访问频控、签名校验和反自动化措施绕过</li><li>未公开、未授权或通过逆向发现的私有接口</li><li>伪装浏览器、轮换代理或规避封禁</li><li>与资讯简报无关的个人信息采集</li></ol>
+<h2>真实核验过的例子</h2>
+<p>规则不是空想，是逐站核验出来的：中国人民银行的 <code>robots.txt</code> 对通用机器人设置了 <code>Disallow: /</code>，法律声明也限制未经许可的下载使用——直接自动化抓取不应准入。中国证监会的法律声明确认网站信息版权归属并限制未经许可的更改、销售或租赁。上海证券交易所允许符合声明的非商业浏览、下载，但限制以牟利为目的的电子抓取、存储和传播。</p>
+<p>注意一个常见误解：<code>robots.txt</code> 不存在、为空或请求失败，只能说明没发现机器可读声明，不能当成自动化授权。</p>
+<h2>技术边界</h2>
+<p>服务端固定来源白名单，模型和客户端不能传入任意 URL；遇到 <code>401/403/429</code>、验证码或反自动化页面立即停止；默认单来源每 30-60 分钟最多检查一次、并发为 1；普通 Feed 响应上限 2MiB/12 秒，超限取消读取且不截断解析。</p>
+<p>还有一条容易被忽视的：人工发现和自动采集要分开建模。人工浏览只负责发现标题，代码只读本地整理结果，不访问人工来源网页——人和机器的责任边界在代码层面就要分开。</p>
+<h2>质量同样是准入条件</h2>
+<p>合规之外，质量门禁也淘汰过来源：一个免费资讯 API 前 20 条相关率只有 35%、跨查询组重复约 50%；另一个供应商 145 条候选中官方发布日期命中目标日期的只有六分之一。官方域名限制不能替代发布日期核验，可达性也不能替代条款授权。</p>
+<h2>小结</h2>
+<p>公开资讯自动化的合规只有一句话：只拿允许拿的，只用允许的方式，拿不到就放弃这个来源。命中明确禁止项的直接排除；规则不清的保持默认关闭，完成逐站记录后再决定。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +357,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Multi-platform", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +367,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

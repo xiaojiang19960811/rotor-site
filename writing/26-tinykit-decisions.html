@@ -326,8 +326,25 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">个人建造</span><span class="col-tag">建造复盘</span></div>
+  <div class="reader-body" id="reader-body"><h1>TinyKit：一个工具站的决策链</h1><p>TinyKit 是个英文微型工具站，目标是广告变现。它不是一次规划出来的，而是一条决策链：先验证痛点真实存在，再做工具；工具被反复复用，抽象成 API；API 的逻辑能被 AI 直接调用，包成 MCP。每一步都是前一步的自然延伸。</p>
+<h2>第一步：先找痛点，不先做工具</h2>
+<p>2026-10-01 做了两路痛点调研：一路是小红书 16 篇高赞笔记的评论区，另一路是 V2EX、知乎、Reddit 等公开来源。10 个候选痛点里，需求信号最强的是&quot;AI 味改写&quot;（已经有完整付费赛道，用户在为降 AI 率付费）和&quot;跨 AI 上下文交接&quot;（新鲜、高共鸣、零成本可做）。</p>
+<p>决策：先上&quot;去 AI 味&quot;工具。但有两个约束：一是高质量改写需要大模型，纯前端规则改写的上限明显，所以先上规则版，诚实标注局限，看流量信号再决定要不要做 BYOK（用户自备 key）真改写；二是主力场景之一是&quot;论文过查重&quot;，属学术诚信灰色地带，定位必须避开&quot;论文降重&quot;口径，只做自媒体文案去 AI 味、防平台限流。</p>
+<p>不追热度，追&quot;已经有人付费&quot;的证据；不碰灰色地带，哪怕它是需求最强的场景。</p>
+<h2>第二步：工具站 27 → 31</h2>
+<p>痛点调研直接长出 4 个新工具：token 估算、结构化 prompt 生成、对话转 Markdown、去 AI 味改写，工具总数从 27 到 31。同时补了中英双语基础设施：语言切换、浏览器语言自动检测、记忆用户选择。</p>
+<p>这里的取舍是：新工具全部围绕 AI 助手用户，不发散。工具站最忌&quot;什么都有一点&quot;，31 个工具里每一个都能说出它对应哪个痛点，说不出的不做。</p>
+<h2>第三步：工具逻辑复用多了，抽象成 API</h2>
+<p>工具的前端逻辑被复用多次之后，抽象成 API 是自然的一步：24 个端点，每个 IP 每天 1000 次限流，预留了 API key 的付费升级位。部署上取了巧：API 直接跑在 Pages 的 _worker.js 里，<code>/api/*</code> 走函数，其他走静态资源，一次部署同时上线网站和接口。</p>
+<p>定价先定后验证：免费额度先行，有真实用量再开付费墙。没用量的时候谈价格是空想。</p>
+<h2>第四步：API 逻辑包成 MCP</h2>
+<p>MCP server 没有重写逻辑：Node + MCP SDK，stdio 传输，直接 import API 的纯函数，23 个工具一次暴露。后来 API 加到 24 个端点，MCP 跟着到 24 个工具，冒烟测试全过。</p>
+<p>没发布到任何 registry——发布需要用户账号授权，这条线停在&quot;代码就绪&quot;。能做的都做了，做不了的不硬做。</p>
+<h2>变现线：域名与 AdSense 的两次折返</h2>
+<p>AdSense 不接受子域名，<code>tinykit.rotor1996.top</code> 的申请路走不通。决策：注册顶级域 <code>gettinykit.top</code>，原域名保留做备用。AdSense 已提交审核，审核通过前不展示广告——没通过就挂广告位，是拿账号开玩笑。</p>
+<h2>小结</h2>
+<p>这条决策链的方法只有一句话：每一步只解决上一步已经证明存在的问题。痛点调研证明需求，工具证明形态，API 证明复用，MCP 证明可组合。没被证明的下一步，不提前做。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +357,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Solo Builds", column:"Build Notes", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +367,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

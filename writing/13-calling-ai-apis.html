@@ -326,8 +326,24 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>调 AI 接口，不能只看“通没通”</h1><p>一次 AI 调用返回 200，不等于这次调用是健康的。真实的一次调用要经过 8 个语义阶段，任何只看&quot;通没通、总耗时、总费用&quot;的观测，都会在出问题时两眼一抹黑。</p>
+<h2>8 个语义阶段</h2>
+<ol><li>请求接收与校验</li><li>用户并发、全局并发或任务队列等待</li><li>模型路由、账号选择、账号槽等待和凭据刷新</li><li>上游连接与响应头等待</li><li>首个语义输出等待</li><li>持续生成、流读取或异步任务轮询</li><li>完成、失败、取消或客户端提前断开</li><li>用量解析、定价、费用计算、持久化、聚合与展示</li></ol>
+<p>一次真实的复盘证明了分阶段的必要：最终成功那次尝试的 TTFT（首 token 时间）很好看，但它掩盖了前序的排队、失败尝试和 failover——用户端的总等待远长于这个数字。没有独立记录的阶段，就等于没发生过。</p>
+<h2>传输存活不等于语义进展</h2>
+<p>HTTP 连接还在、SSE 心跳正常、收到了 <code>response.created</code>，都不等于用户收到了有效内容。&quot;首个有效输出&quot;必须按协议定义为真实的语义事件：一段文本、一次推理、一次工具调用。role-only 的空包、空 content、usage 事件，都只是传输层面的心跳。</p>
+<p>这个区分有实际后果：首轮请求在尚无语义输出时，可以按预算直接 failover；但有状态的后续轮次如果只见到了前导事件就回放初始请求，可能破坏会话语义或产生重复的上游计费。流空闲超时、响应头超时、首语义输出预算、完整生成时长是四种不同的约束，不能互相替代。</p>
+<h2>重试的代价要单独记</h2>
+<p>每次上游尝试都可能占用并发、产生计算和费用。只保存最终成功的那次尝试，会同时低估真实成本和失败率。自动重试必须区分四种情况：幂等读取、可重复创建的任务、不可重复的外部写入、可能计费的生成请求——它们的重试策略完全不同。</p>
+<p>客户端提前断开也不等于上游停了：取消有没有传播、上游是否继续计算、费用归谁，都需要独立观测。</p>
+<h2>计费是一条证据链，不是一个公式</h2>
+<p>计费要逐层核验：Provider 返回的原始用量 → 解析器保留原始分类并归一化 → 定价服务按模型、渠道、分组、时间选价 → 计费服务按文本输入输出、缓存读写、图片、视频时长分桶 → usage 记录保存数量、单价、倍率、币种 → 聚合口径与管理端、用户端一致 → 生产环境用真实请求核对。</p>
+<p>真实踩过的坑证明&quot;公式对了&quot;远远不够：一次缓存写入重复计费，根因是 token 分类、解析、定价、计费、日志、聚合六个环节没端到端覆盖，只修公式或只改 UI 都补不上；一次图片输出费用归零，是因为&quot;空值继承默认价&quot;和&quot;显式 0 免费&quot;是两种语义，代码混为一谈；还有一次视频计费被前端误分类成图片——展示层不得重新猜测后端已经明确给出的计费模式。</p>
+<h2>异步任务：创建成功只是开始</h2>
+<p>媒体生成这类异步任务，&quot;创建成功&quot;只表示任务已提交，不表示媒体已生成或可下载。<code>queued</code>、<code>in_progress</code>、<code>completed</code> 要在适配边界归一化，但不能丢掉原始状态和任务标识。浏览器能播放不代表服务端代理能读取；接口返回 200 也不能替代对媒体字节和内容类型的验证。</p>
+<h2>小结</h2>
+<p>调 AI 接口的观测只有一句话：按语义阶段记录，按证据链计费。凡是被&quot;最终成功&quot;掩盖的排队、重试和失败，都会在账单或客诉里重新出现。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +356,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +366,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

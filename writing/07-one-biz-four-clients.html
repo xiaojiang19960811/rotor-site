@@ -326,8 +326,26 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">多端业务</span><span class="col-tag">建造复盘</span></div>
+  <div class="reader-body" id="reader-body"><h1>一个业务四个端，怎么组织代码</h1><p>一个业务四个端：后台管理端、客户端 H5、经销商端 H5、代理商端 H5。业务域相同，用户角色不同，交互流程差异明显。代码怎么组织？按技术栈分，还是按端分？我们的答案：目录第一层按端语义命名，不用技术栈做第一层。</p>
+<h2>为什么按端分，不按技术栈分</h2>
+<p>四个端的主要使用者和职责完全不同：后台端是运营、管理、审核、财务等内部角色，管配置、审核、订单账务；客户端 H5 面向客户，走商品、认证、下单、签约、还款全流程；经销商端管申请认证、签约、收益、提现；代理商端管营销业绩、收益、经销商管理。</p>
+<p>按技术栈分（比如 <code>vue/</code>、<code>react/</code>、<code>admin/</code>），分出来的是&quot;用什么写的&quot;，不是&quot;给谁用的&quot;。新人找代码时想的是&quot;我要改经销商提现页&quot;，不是&quot;我要找 Vue3 写的 H5&quot;。目录结构应该回答业务问题，不回答技术问题。</p>
+<h2>四个端，四种视角</h2>
+<p>同一个业务，四个端看到的是完全不同的切面。后台端看的是全局：配置、审核、订单、账务、设备、产品，所有后台能力收拢在这里。客户端 H5 看的是自己的事：商品、认证、下单、签约、验收、还款、支付、发票，一条完整的用户旅程。经销商端看的是生意：申请认证、签约、收益、服务费、提现、交易记录。代理商端看的是规模：营销业绩、收益、提现、银行卡、经销商管理。</p>
+<p>&quot;业务域相同&quot;不等于&quot;做一样的事&quot;。四个端的交互流程差异明显，硬塞进同一套页面模板，省的是代码，丢的是体验。按端拆分首先承认差异，其次才是复用——复用的是底座和变量，不是页面。</p>
+<h2>三条工程规则</h2>
+<ol><li><strong>根目录是业务集合目录</strong>：新增端工程优先继续放在同一集合目录内，不另起炉灶。四个端是一个业务，不是四个项目。</li><li><strong>子目录名体现端语义</strong>：第一层目录叫&quot;后台管理端&quot;&quot;客户端 H5&quot;，不叫&quot;vue3-admin&quot;&quot;h5-vite&quot;。技术栈会换，端语义不会。</li><li><strong>模板遗留名称只作线索</strong>：脚手架带下来的名字不能直接当业务名称用，看到要改，不要将就。</li></ol>
+<p>还有一条元规则：项目级 <code>AGENTS.md</code> 优先于工作区通用规则——离代码最近的规则最有发言权。没有项目级规则的端，参考同业务集合内更近的明确规则，但推断永远不能写成正式规则。&quot;隔壁端是这么做的&quot;可以当起点，不能当依据。</p>
+<h2>前端实现纪律</h2>
+<p>页面层只负责编排、跳转和状态分发；字段清洗、状态文案、接口兼容，优先下沉到 adapter/mapper 层。页面里不写&quot;如果后端返回 A 就显示甲，返回 B 就显示乙&quot;的兼容屎山。</p>
+<p>接口字段以已确认的文档为准，不为同一语义主动保留多套猜测字段名。&quot;可能是 userName 也可能是 username，先都写上&quot;——这种代码一出现，字段语义就永远确认不了了。</p>
+<p>样式用语义变量：主题、按钮、边框、阴影，优先走变量，不新增硬编码。四个端视觉要统一，靠的不是&quot;大家自觉写一样&quot;，是变量只有一套。新端接入时，先继承变量，再谈定制。</p>
+<p>还有一条 AI 协作纪律：AI 生成的代码、候选建议、未确认的状态流转和未确认的字段语义，只能以候选/待确认方式沉淀，不能直接写成正式实现。AI 补的代码越顺，越要有人把&quot;已确认&quot;和&quot;待确认&quot;分开。</p>
+<h2>没确认的不写死</h2>
+<p>这套模式目前还有四个待确认问题：四端是否共用统一服务端、租户模型和鉴权机制；代理商、经销商、客户之间的正式关系模型；收益、提现、订单、还款等状态流转的正式定义。没确认之前，代码里按&quot;各端独立&quot;写，不提前做统一假设——假设写进代码，就成了事实上的架构。&quot;先各端独立，以后再统一&quot;听起来像拖延，但它是诚实：统一的前提是关系模型先确认。在模型确认之前写统一代码，省的是今天的时间，欠的是明天的重构。</p>
+<h2>小结</h2>
+<p>多端代码组织就三句话：第一层目录按端语义，不按技术栈；页面只做编排，清洗下沉 adapter；没确认的关系不写死。目录是给人看的，先让人找到，再让机器跑通。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +358,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Multi-platform", column:"Build Notes", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +368,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

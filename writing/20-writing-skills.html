@@ -326,8 +326,33 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>Skill 怎么写才有人用</h1><p>Skill 是&quot;可复用任务工作流的作者格式&quot;，不是提示词收藏夹。动笔之前先回答一个问题：这个任务值得被复用吗？一次性、低复用、用户能描述清楚的任务，写条提示词就够了，不配拥有 Skill。</p>
+<h2>先判断配不配</h2>
+<p>适合沉淀为 Skill 的任务有四个特征：高频、跨人复用、有稳定流程、需要资源/脚本/模板/验证。四个里面占得越多，越值得写。</p>
+<p>反过来，一次性的任务、用户一句话能描述清楚的任务，优先直接写提示词。把什么都做成 Skill，结果就是一堆没人触发的目录——Skill 的目录状态、安装状态和&quot;真的有人用&quot;是三件不同的事。</p>
+<h2>一个 Skill 只解决一个清晰任务</h2>
+<p>这是第一原则。Skill 的 <code>description</code> 是触发入口，必须写清两件事：什么时候使用，以及不适用边界。写不清边界的 Skill，触发时机就是随机的，等于没写。</p>
+<p><code>SKILL.md</code> 保持短，只放核心流程；详细规范放 <code>references/</code>。能靠指令稳定完成的部分，优先 instruction-only，不要为了放脚本而放脚本；只有重复且易错的步骤，才值得进 <code>scripts/</code>。</p>
+<p>面向多人共享的 Skill，还要区分&quot;核心运行前提&quot;和&quot;可选加速器&quot;。能由 Agent 文件操作完成的流程，不应仅因本机缺少 Python/Node 就阻断；也不得未经确认自动安装运行时。共享的前提是低门槛，不是&quot;你先装好全套环境&quot;。</p>
+<h2>推荐结构</h2>
+<pre><code class="language-text">skill-name/
+├── SKILL.md
+├── agents/
+│   └── openai.yaml
+├── references/
+├── scripts/
+└── assets/</code></pre>
+<p>只有 <code>SKILL.md</code> 是必需的。<code>agents/openai.yaml</code> 用于在客户端里展示名称、短描述、默认 prompt 和隐式触发策略。</p>
+<h2>和其它表面的边界</h2>
+<p>AI 编程助手有好几个&quot;放东西&quot;的地方，别放错：</p>
+<ul><li><strong>AGENTS.md</strong>：放长期协作规则、项目约束、验证要求。</li><li><strong>Skill</strong>：放某类可复用任务的执行流程、检查清单、引用资料、脚本。</li><li><strong>Plugin</strong>：当 Skill 需要分发、组合多个 Skill、绑定 MCP/app/资源时，再封装成 Plugin。</li><li><strong>MCP</strong>：接入外部系统、私有数据或可调用工具。</li><li><strong>Hook</strong>：机械化拦截，或在工具调用前后强制执行规则。</li><li><strong>Automation</strong>：定时检查、提醒、监控、后续跟进。</li></ul>
+<p>分不清的时候问一句：这是&quot;怎么做一类任务&quot;（Skill），还是&quot;和项目长期相处的规矩&quot;（AGENTS.md）？前者可复用，后者常驻。</p>
+<h2>写完要拿真实任务测</h2>
+<p>复杂 Skill 不能只靠 review。必须用真实任务前向测试：观察它在缺少额外上下文时，能不能稳定触发、能不能走完流程。触发不稳定，说明 description 的边界没写清；走不完，说明流程里有隐含假设。</p>
+<p>另外注意：推荐提示词只是唤起使用 Skill 的入口文案，不等于 Skill 本身。入口文案写得再好，流程站不住也没用。</p>
+<h2>小结</h2>
+<p>Skill 有人用的条件只有三个：任务值得复用、触发边界清晰、流程经真实任务验证。少一条，它就是目录里的摆设。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +365,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +375,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

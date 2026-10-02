@@ -326,8 +326,28 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>AI 写代码越快，人越要负责判断</h1><p>AI 写代码越快，开发人员越不能当甩手掌柜。规格驱动开发（SDD）不是用文档取代 Vibe Coding，而是给 Vibe Coding 加一份稳定、可评审、可验证的上下文。<code>spec/design/tasks</code> 的初稿、拆分、格式整理、持续回写都可以交给 AI——开发人员不需要成为文档录入员，需要成为判断的人。</p>
+<h2>AI 干活，人判断</h2>
+<p>AI 适合干的：扫描源码整理现状、起草 spec/design、拆 tasks、建追踪关系、实施代码补测试、回写结果。这些解决的是信息整理和执行速度。</p>
+<p>开发人员真正要参与的七件事：</p>
+<ol><li><strong>指认事实来源</strong>：哪个入口、模块、接口文档或测试代表当前行为；原型只能说明页面目标，不能证明业务规则。</li><li><strong>揪出 AI 偷偷补的假设</strong>：接口字段、状态值、权限、兜底逻辑有没有依据；没依据的进待确认项，不自己编答案。</li><li><strong>确认方案适合现有系统</strong>：分层、依赖、兼容、性能、安全、回滚有没有漏；复杂度是否与风险匹配。</li><li><strong>决定哪些风险先关闭</strong>：会改变数据结构、接口契约、核心流程的，必须先确认；其余可以隔离推进。</li><li><strong>检查任务拆分可执行</strong>：依赖顺序对不对、每项能否独立验证、不把&quot;全面测试&quot;这种大词当任务。</li><li><strong>判断证据够不够</strong>：构建、单测、Mock 各自证明了什么；不能把低等级证据自动升级成高等级结论。</li><li><strong>对最终状态负责</strong>：实现与规格是否一致、设计是否还反映代码、是&quot;已实现&quot;还是&quot;已验证&quot;、剩余风险带到哪。</li></ol>
+<p>同一个人可以兼多个角色，但每一类结论都要知道依据来自哪里。</p>
+<h2>Token 不保证更少</h2>
+<p>直接说结论：SDD 不保证第一轮 Token 更少。写规格、评审规格本身就是新增消耗。</p>
+<pre><code>传统总 Token = 初始 Prompt + 实现对话 + 重复解释 + 纠错返工
+SDD 总 Token  = 规格与评审 + 实现对话 + 规格回写 + 少量纠错</code></pre>
+<p>只有&quot;减少的重复解释和返工&quot;大于&quot;新增的规格成本&quot;，SDD 才真正省 Token。跨会话、多人协作、接口状态权限约束多的任务更可能省；几分钟能改完的小改动、一次性原型，大概率更费。</p>
+<h2>效率看整条链，不看写代码的速度</h2>
+<p>只看开工第一小时，SDD 往往更慢——传统方式已经开写代码了，SDD 还在整理待确认项。</p>
+<p>效率应该按完整链路衡量：</p>
+<pre><code>需求进入 → 规则确认 → 实现 → 测试与联调 → 验收 → 返工 → 最终验证</code></pre>
+<p>代码生成更快，但联调、验收、返工更慢，不算提效。SDD 的收益来自更早发现问题和减少返工，不是来自文档格式本身。</p>
+<h2>三档选择，不搞一刀切</h2>
+<ul><li><strong>直接 Vibe</strong>：小文案、局部样式、一次性探索、可丢弃原型，能立即验证、失败成本很低。</li><li><strong>轻量记录</strong>：单页面局部功能、边界明确的单点 Bug，有少量旧行为要保护。</li><li><strong>完整 SDD</strong>：跨模块改动、接口契约变化、权限状态持久化、支付审批外部写入等高风险流程、多人或多次会话。</li></ul>
+<p>任务影响扩大时，从低档往高档升。Plan 模式解决&quot;这一次任务准备怎么做&quot;，SDD 解决&quot;团队依据什么做、哪些规则已确认、做到什么才算验证完成&quot;——前者是单次执行方案，后者是长期依据。</p>
+<h2>小结</h2>
+<p>AI 越能写，人越要守住判断：事实来源、隐藏假设、方案取舍、风险排序、证据等级。文档可以 AI 写，判断不行。SDD 省不省 Token、提不提效，不看写代码的速度，看整条交付链少走了多少弯路。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +360,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +370,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

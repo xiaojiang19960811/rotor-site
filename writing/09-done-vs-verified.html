@@ -326,8 +326,31 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>“已完成”不等于“已验证”</h1><p>AI 工程里，&quot;代码完成、测试通过、可发布、已部署、生产可用、持续健康&quot;是六个不同的结论。每个结论都需要绑定目标版本、环境、身份权限、样本、验证方法和未覆盖边界。低层检查、单次成功或健康接口，不能替代真实业务、生产观察和恢复能力证据。</p>
+<h2>六个结论，不能互相替代</h2>
+<table><thead><tr><th>结论</th><th>可以说明</th><th>不能自动说明</th></tr></thead><tbody><tr><td>代码完成</td><td>实现已落到指定工作树或提交</td><td>已构建、已测试、已发布</td></tr><tr><td>测试通过</td><td>指定版本在列出的检查、环境和样本下满足断言</td><td>未列出的真实链路、角色和长期质量</td></tr><tr><td>可发布</td><td>发布前检查、产物标识、风险与回滚准备已满足</td><td>已部署或生产流量正常</td></tr><tr><td>已部署</td><td>指定产物和配置已进入目标环境</td><td>入口已切流、用户流程可用</td></tr><tr><td>生产可用</td><td>生产入口、关键依赖和本批用户流程在指定时间点通过</td><td>所有用户、所有能力、未来持续健康</td></tr><tr><td>持续健康</td><td>约定窗口内错误、延迟、费用、资源和用户结果在范围内</td><td>永久不退化、无需再次验证</td></tr></tbody></table>
+<p>证据支持的是具体声明，不是笼统的&quot;完成&quot;。类型检查通过只能支持可分析性，Mock 通过只能支持模拟条件下的前端行为，生产健康只能支持服务存活。</p>
+<h2>证据必须绑定对象和范围</h2>
+<p>一次验证要能成立，至少回答九个问题：</p>
+<ol><li><strong>验证对象</strong>：测的是源码、提交、镜像、模型、Prompt、配置、迁移，还是生产实例？</li><li><strong>声明</strong>：这次要证明的是正确性、兼容性、性能、费用、部署，还是恢复能力？</li><li><strong>环境</strong>：本地、Mock、测试环境、canary、蓝绿槽位，还是生产？</li><li><strong>身份与权限</strong>：用的哪个角色？管理员的成功不能当成普通用户的可用。</li><li><strong>输入与样本</strong>：样本量、正反例、外部依赖是什么？</li><li><strong>方法与预期</strong>：执行了什么检查，期望看到什么？</li><li><strong>实际结果</strong>：数量、状态、失败、降级分别是什么？</li><li><strong>时间与来源</strong>：何时执行，证据在哪？</li><li><strong>未覆盖边界</strong>：哪些真实链路、角色、时段没有验证？</li></ol>
+<p>代码提交、模型版本、Prompt、配置、数据版本变化后，旧证据只保留历史价值。</p>
+<h2>验证层级：由弱到强，但不互相覆盖</h2>
+<ol><li>静态与结构检查（lint、类型、Schema、秘密扫描）</li><li>确定性局部测试（单元测试、计费公式、路由、权限判断）</li><li>隔离组合验证（Mock、干净安装、服务间组合）</li><li>真实依赖与业务 E2E（真实 Provider、真实数据、真实用户流程）</li><li>候选环境验证（canary / 蓝绿 inactive slot）</li><li>发布后核验（切流后的真实请求、费用、日志）</li><li>跨时间观察（多日样本、分位数、失败率、质量漂移）</li><li>恢复验证（回滚、备份恢复、幂等重试）</li></ol>
+<p>层级高不自动覆盖低层断言。一次真实生产请求的保真度很高，但覆盖和持续性可能很低；大量 Mock 测试覆盖很高，但真实依赖保真度低。两类证据互补，不互相替代。</p>
+<p>低风险文案不需要机械走完八层；支付、权限、持久化、模型计费、外部写入、生产迁移，不能只凭静态或 Mock 证据收口。</p>
+<h2>AI 评测的特殊处理</h2>
+<p>AI 输出是非确定的，不能拿&quot;字符串完全一致&quot;做回归，也不能凭&quot;看起来不错&quot;通过：</p>
+<ul><li>能固定的先固定：输入、Prompt 模板、模型版本、参数、工具、数据窗口。</li><li>评测维度明确写出来：结构合法、事实可核验、引用与日期、拒答/降级、延迟、费用、人工实质改写。</li><li>正例、反例、失败、降级样本同时保留。只存最佳输出会隐藏真实分布。</li><li>单次链路成功、多样本质量、长期稳定性，分开表述。</li><li>有阈值记录分子、分母、原样本结果。整改后通过，不能把原始失败改写成通过。</li></ul>
+<h2>失败也是证据：一个真实案例</h2>
+<p>资讯简报的质量门禁实践中，自动评测 10 个样本只过了 3 个（<code>3/10 = 30%</code>）。整改、复验、人工确认之后通过。但 <code>3/10</code> 这个数字在报告里原样保留，没有删掉。</p>
+<p>理由：失败和未验证项界定的是当前能力边界。整改后通过，记录方式是&quot;原失败 + 根因 + 变更 + 复验&quot;，形成可审计的&quot;整改后通过&quot;，而不是覆盖历史。删掉失败记录，等于删掉了边界本身。</p>
+<h2>AI 的参与边界</h2>
+<p>AI 可以整理测试清单、生成候选用例、执行已授权检查、汇总结果、指出缺口。但不能：</p>
+<ul><li>把未执行、失败、超时、无权访问的检查写成通过；</li><li>用低层证据推导高层业务或生产结论；</li><li>自行确定评分、阈值、有效期、审批人；</li><li>因自动测试通过而批准生产切流或外部状态变更；</li><li>删除失败证据，或把&quot;整改后通过&quot;改写为&quot;原样本通过&quot;。</li></ul>
+<h2>小结</h2>
+<p>&quot;完成&quot;是形容词，&quot;验证&quot;是动词。前者描述状态，后者要求证据。</p>
+<p>以后听到&quot;做完了&quot;，问五个问题就够了：在哪个环境、用什么身份、拿什么样本、什么时候、证明了什么。答不上来，不算数。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +363,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +373,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

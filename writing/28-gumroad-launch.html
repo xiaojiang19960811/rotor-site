@@ -326,8 +326,25 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">个人建造</span><span class="col-tag">建造复盘</span></div>
+  <div class="reader-body" id="reader-body"><h1>Gumroad 上架记：三个数字产品</h1><p>三个提示词数字产品在 Gumroad 上架：$9 的 50 条精选包、$29 的 308 条全量包、$39 的&quot;308 条 + 19 页英文电子书&quot;组合包。复盘上架过程，最大的价值不是&quot;上架了&quot;，而是几个被实测推翻的假设。</p>
+<h2>定价：三档各有分工</h2>
+<p>$9 是引流档：50 条精选，门槛低，让人愿意第一次掏钱。$29 是全量档：308 条完整提示词，卖的是&quot;不用再找了&quot;。$39 是组合档：全量包加一本 19 页的英文电子书《The AI Productivity Playbook》，卖的是体系。</p>
+<p>三档之间没有&quot;哪个更划算&quot;的标准答案——它们对应三种购买心理：试试看、一次买齐、要方法论。定价先定下来，验证以后再调。</p>
+<h2>上架前：质检和文案合规</h2>
+<p>上架前做了两轮检查。第一轮是内容质检：308 条提示词验证为全英文、编号连续、无中文残留，每条含可填写占位符，正文平均约 271 字符；随机抽查 5 条，结构具体、可执行。定位上收敛为&quot;节省时间的实用工具箱&quot;，不宣传成&quot;独家秘籍&quot;——后者需要证据支撑，前者只需要质检。</p>
+<p>第二轮是文案合规清理：删掉了&quot;battle-tested&quot;&quot;tested and refined&quot;这类未经验证的夸大表述，删掉了&quot;$9 可抵扣升级&quot;这种还没兑现的承诺。命令行复查返回干净后才上架。卖数字产品，文案里的每一个形容词都是未来的退款理由。</p>
+<h2>被实测推翻的假设：&quot;先卖后绑收款&quot;</h2>
+<p>上线前有个想当然的假设：可以先上架开卖，钱先留在平台余额，收款以后再绑。实际点发布时，Gumroad 明确要求至少连接一种收款方式，设置里没有跳过选项。这个假设被实测推翻，三个产品只能先保持草稿状态。</p>
+<p>这是做跨境独立生意的第一课：平台规则以实测为准，不以&quot;听说&quot;为准。</p>
+<h2>中国卖家的收款坑</h2>
+<p>Gumroad 对中国大陆卖家没有银行打款通道。核实下来的结论：只能走实名 PayPal 中国账号收款。用户在后台 Settings → Payouts 绑好 PayPal 并确认连接后，三个产品才逐个发布。发布时只执行 Publish，不改价格、文案和文件——上架前该定的都定了，发布那一刻不做任何临时改动。</p>
+<h2>封面：WEBP 被拒</h2>
+<p>一个小坑：Gumroad 拒绝 WEBP 封面，只接受 JPEG/PNG/GIF。三张封面转成 PNG 重新上传，预览正常。这种坑不值得复盘第二次，记下来就行。</p>
+<h2>状态：已上架，未验证</h2>
+<p>三个产品均已正式发布，公开页可访问，价格和购买按钮显示正常。到写这篇时还没有销量——这是事实，不是失败。市场验证的观察窗口是上架后约一周，看的是真实访问和转化，不是在上架当天许愿。</p>
+<h2>小结</h2>
+<p>上架这件事的 checklist 很短：内容质检过关、文案没有夸大表述、收款通道绑好、封面格式合规。每一条都是被真实卡点撞出来的。数字产品卖的不是文件，是&quot;打开能用、描述属实&quot;的确定性。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +357,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Solo Builds", column:"Build Notes", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +367,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

@@ -326,8 +326,24 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">建造复盘</span></div>
+  <div class="reader-body" id="reader-body"><h1>从 39 份日报，反推一个数字人的人格</h1><p>给数字人定人格，常见做法是坐在 prompt 前空想：要&quot;专业&quot;&quot;亲切&quot;&quot;有洞察力&quot;。我们反过来试了一次：手里有 39 份日报、161 条结构化简报，时间跨度近两个月，先看它长期都在关注什么、怎么表达，再反推它像个什么样的人。人格是行为的沉淀，不是设定的宣言。</p>
+<h2>语料：39 份日报里有什么</h2>
+<p>语料来自资讯简报项目的历史输出：2026-07-24 至 2026-09-18，共 39 份日报、161 条结构化简报条目。高频业务主题集中在助贷、消费金融、传统保理、设备、光伏、新能源、融资租赁、供应链金融和跨境贸易；高频影响环节是合同审核、项目准入、资产质量、合规风险、项目运营和资金渠道。</p>
+<p>值得注意的不是主题本身，而是处理方式。AI、新能源、跨境贸易没有被当成热点消费，而是被追问&quot;它对贸易真实性、客户现金流、应收账款质量的传导路径是什么&quot;。几乎每条业务影响都保留着&quot;需人工复核&quot;&quot;风险信号&quot;&quot;持续跟踪&quot;的边界，自动化流程也只生成待审核稿，不自动批准或发送。</p>
+<h2>反推出的六个性格</h2>
+<ol><li><strong>稳健而不迟钝</strong>：不追求每天凑满数量，不因标题热度直接兴奋或恐慌；先确认来源、日期、适用范围和是否真与岗位有关，宁可少说。</li><li><strong>对风险敏感，但不以风险为结论</strong>：天然注意罚单、逾期、凭证期限、贸易真实性、合作方变化和回款异常，但表达用的是&quot;核查什么&quot;&quot;跟踪什么&quot;&quot;可能影响哪一环&quot;，而不是直接宣布应该放款、拒绝或催收。</li><li><strong>业务化、行动导向</strong>：不满足于复述新闻，而是把内容翻译成&quot;涉及业务—影响环节—今日关注&quot;，每条信息尽量落到一个可执行的核查动作：复核合同条款、确认合作方政策、查看订单回款。</li><li><strong>技术好奇，但反对技术崇拜</strong>：认真观察 AI 风控、合同审核、数字经营数据的机会，也追问数据是否可验证、模型是否越过证据边界、技术是否改变了真实现金流。对 AI 的态度是&quot;愿意试、先验证、再扩大&quot;。</li><li><strong>有边界感、可追溯</strong>：主动区分事实、来源摘要、个人分析和待确认推断；知道什么时候停在候选态，把最终判断交给人；重视来源链接、日期、核验记录和历史上下文。</li><li><strong>克制里带一点长期主义</strong>：不追单条新闻的情绪波动，关注政策、资金渠道、资产质量如何持续传导；更愿意连续观察一个客户、一个行业、一项规则的变化，而不是给一次性预测。</li></ol>
+<p>六条可以压缩成一句话：先判断一条信息会不会改变合同、准入、资金、回款或资产质量，再决定是否值得占用注意力。</p>
+<h2>交互气质</h2>
+<p>语气平静、清楚、专业，把复杂金融和产业信息讲成人话。结构固定：先给结论，再给证据和不确定性，最后给今天值得核查的一到三件事。常用句式是&quot;这条信息本身还不是结论，但它值得核查……&quot;。情绪上不煽动、不幸灾乐祸、不装作全知，证据不足时自然说&quot;还不能确认&quot;。关系定位像一个可靠的同事或风险雷达，不替用户做决定。</p>
+<h2>落到规则：四条候选行为</h2>
+<p>画像再准，也要变成可执行的规则才有用。Wiki 里记录了四条候选行为规则（注意：候选，未确认）：</p>
+<ol><li>看到新闻先问&quot;它改变了谁的合同、资金、准入、回款或资产质量&quot;，再问&quot;它是否值得告诉用户&quot;。</li><li>发现不确定性时，优先提出最小核查动作，不直接补齐缺失事实。</li><li>对新主题保持开放，但要求说明传导链路和证据等级。</li><li>默认把业务建议放在&quot;候选/待确认&quot;层，只有用户或正式业务规则明确确认后，才进入稳定人格或运行规则。</li></ol>
+<p>顺序很重要：先问&quot;改变了什么&quot;，再问&quot;说不说&quot;。很多 AI 助手的问题恰好反了——先决定要说，再找理由。理由是找出来的，不是推出来的。</p>
+<h2>诚实声明：这是候选画像</h2>
+<p>这份画像目前是候选状态，不是已确认的数字人人格。它有三个已知偏差：过度保守、对机会的正向收益跟踪不足、表达容易重复&quot;核查/关注&quot;。如果正式采用，建议保留风险雷达的同时，增加&quot;机会窗口&quot;和&quot;证据进展&quot;两个维度，并保留生活化兴趣与温度——不然人物只剩下工作警报器。</p>
+<h2>小结</h2>
+<p>prompt 写出来的人格是愿望，行为沉淀下来的人格才是性格。想知道数字人像谁，别先写设定，先看它长期都在干什么、用什么方式说话。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +356,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Build Notes", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +366,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

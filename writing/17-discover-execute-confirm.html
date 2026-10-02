@@ -326,8 +326,21 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>AI 做事：发现、执行、确认是三件事</h1><p>AI 做事最容易踩的坑，是把&quot;前一阶段完成了&quot;当成&quot;后一阶段被授权了&quot;。发现证据不等于可以创建任务，创建任务不等于可以提交工时，模型提出计划不等于可以执行外部动作。发现、执行、确认是三件事，每件都要单独的授权，前一件的完成只是后一件的输入。</p>
+<h2>可信工时：六段证据链</h2>
+<p>工时回填的流程把这件事拆得很开。证据先从会话元数据、代码提交和结构化工作记录里发现，经过脱敏、估算、路由，最后由人确认任务归属和时长，再以独立授权写入外部系统。完整链条是六段：</p>
+<ol><li><strong>发现</strong>：枚举授权范围内的会话、仓库和记录，不绕过保护去读不该读的东西。</li><li><strong>脱敏</strong>：按私有规则清洗，验证输出没有敏感残留。</li><li><strong>估算</strong>：按可解释的工作活动形成候选，允许少于或超过 8 小时，不凑整。</li><li><strong>路由</strong>：优先匹配语义合适的任务；低置信结果和缺失字段进待确认，不由工具猜归属。</li><li><strong>确认</strong>：人确认日期、时长、任务和描述后，才拿到本批外部写入权限。</li><li><strong>写入与复核</strong>：提交前查重复，提交后反查实际记录，形成幂等闭环。</li></ol>
+<p>关键规则有两条。第一，创建任务和提交工时是两次独立的外部状态变更，均需单独确认。第二，创建结果不明确时，先查询是否落库，不能直接重试创建——重试一次可能就多出一条脏数据。提交工时也一样：提交前去重，提交后反查实际日志 ID、任务累计消耗和剩余工时。</p>
+<h2>Agent 编排：七个可区分的阶段</h2>
+<p>数字人 Agent 的执行编排用的是同一套思想，阶段分得更细：</p>
+<ol><li><strong>模型计划</strong>：解析用户意图，提出能力节点和目标，不直接执行外部动作。</li><li><strong>DTO 归一化</strong>：把中文时间、平台名、来源窗口映射为结构化字段，拒绝无法解释的形态。</li><li><strong>能力路径编译</strong>：只允许声明为无副作用的能力作为隐式中间节点，不能凭空增加通知、创作动作。</li><li><strong>能力/授权/依赖校验</strong>：验证能力注册表、用户授权、节点输入输出和依赖关系。</li><li><strong>审查与有限修复</strong>：对结构错误做有限次修复；未知能力不能降级为近似任务。</li><li><strong>DAG 持久化执行</strong>：按依赖就绪、资源锁、暂停/恢复/取消执行，节点结果可追溯。</li><li><strong>副作用 handler</strong>：通知、发布等外部调用由独立 handler 承担，在真实结果确认后才推进后续节点。</li></ol>
+<p>正式边界很硬：外部生成、通知、发布、写入或删除，必须由模型计划明确声明，并经过授权与状态门禁。异步外部任务在真实完成或明确失败前，不能把工作流提前标记为成功，更不能伪造最终 URL 或投递结果。</p>
+<h2>为什么必须拆开</h2>
+<p>两个场景，一个道理。工时场景里，&quot;整理出候选&quot;和&quot;写入外部系统&quot;之间隔着人工确认，因为写错工时是外部状态污染，清理成本比多一次确认高得多。Agent 场景里，&quot;模型想发通知&quot;和&quot;真的发出通知&quot;之间隔着授权校验，因为模型的一个幻觉可能变成一次真实的外部动作。</p>
+<p>拆开的本质是承认：每一阶段的输出都可能错，而错误的影响范围不同。只读的发现阶段错了，最多是候选不准；外部写入阶段错了，就是真实世界的脏数据或打扰。所以阶段越多、影响越大，门禁就要越严。把&quot;做完&quot;自动等同于&quot;被允许做下一步&quot;，等于用最弱的检查为最强的动作背书。</p>
+<h2>小结</h2>
+<p>发现、执行、确认，三个动词对应三种责任：看清楚、做正确、能证明。前一阶段的完成永远只是后一阶段的输入，授权必须每次单独给。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +353,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +363,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

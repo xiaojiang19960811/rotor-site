@@ -326,8 +326,30 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">建造复盘</span></div>
+  <div class="reader-body" id="reader-body"><h1>接第三方媒体 API：代理、缓存和排障纪律</h1><p>接第三方媒体 API（图片、视频生成），真正的坑不在&quot;调通&quot;，在媒体链路：上游返回的是临时 URL，跨国网络下浏览器直连可能超时；缓存语义不透明，什么时候过期没人告诉你。我们的做法可以总结成三句：同源代理流式转发、不落盘，排障只认证据不认猜测。</p>
+<h2>媒体链路：同源代理，不落盘</h2>
+<p>上游视频完成态返回的临时 URL，浏览器在国内网络下直连经常下载或播放超时。生产方案是同源媒体代理：前端把上游域名改写为站内的 <code>/media-proxy/...</code> 路径，容器里的 Nginx 流式反代到上游。视频代理不落盘缓存，只做转发。</p>
+<p>实现时踩过两个具体的坑：IPv6 解析问题，以及 Nginx 变量 <code>proxy_pass</code> 丢路径问题。都属于&quot;配上去能跑，生产环境换个网络就挂&quot;的类型，只能在真实链路上验证。</p>
+<h2>一个不对称风险：本机能访问，服务器不行</h2>
+<p>图片编辑链路暴露过一个不对称风险：上游图片编辑返回的临时 URL，在用户本机浏览器可以访问，但服务器出站请求会被上游返回 403。这意味着视频那套 Nginx 代理不能直接照搬给图片。</p>
+<p>当时的兜底方案是：跨域 fetch 失败时，读取图片尺寸并保留远程 URL，不让整次编辑失败。但这个兜底的代价要写清楚：它的存储键为空，依赖上游临时 URL，过期后不保证长期可用。兜底不是修复，是带有效期的妥协。</p>
+<h2>处理窗口：4 小时是上限，不是承诺</h2>
+<p>上游官方只说图片和视频 URL 是临时资源，要求及时下载或处理，没有公布固定删除期限。实测 Range 请求返回的 <code>Cache-Control</code> 约 4 小时——工程上把它视为最大安全处理窗口，尽快转存，而不是&quot;4 小时内一定可用&quot;的承诺。把观测到的缓存期当成保留承诺，是常见的自我安慰。</p>
+<h2>排障纪律：没做 A/B，前不定根因</h2>
+<p>一次&quot;重复图片&quot;故障的诊断过程，值得写下来。现象是上游偶尔返回重复图片，怀疑过画布引用错乱、浏览器缓存。诊断方法是哈希比对：提示词和上游请求体哈希正确，解码图片哈希与客户端下载文件一致，同一张异常图的哈希与原画布导出文件逐字节一致——排除画布引用错乱。同时异常请求总耗时只有 140-354 毫秒，明显不符合新图片生成路径的时间特征，更符合上游快速返回了既有素材。</p>
+<p>结论很克制：已证实的故障边界是&quot;上游返回的内容本身重复&quot;，上游内部为什么对非标准客户端快速返回旧图，不可观察。正确修复是原子对齐官方的媒体 host、身份头和请求字段，再做一次唯一提示词的计费 A/B。在 A/B 完成之前，不能把任何一个字段写成&quot;已证实的唯一根因&quot;。</p>
+<h2>协议细节：按官方文档来，不按想象来</h2>
+<p>上游的媒体协议有不少&quot;想当然会错&quot;的地方。参考视频模式要区分编辑和末帧延展，走不同的接口；一次只支持一个参考视频，不能和参考图混用。图片编辑转上游 JSON 时，图片对象用 <code>url</code> 字段——我们之前实现里用的是 <code>image_url</code>，上游不认。</p>
+<p>返回的图片格式也不能写死。不能把所有返回都标成 <code>data:image/png</code>，上游当前返回的是 JPEG，要按响应 MIME 或文件魔数构造。OAuth 的媒体请求和文本请求走不同的 host 和身份头，不能按&quot;OAuth 一律同 host&quot;一刀切。这些都是对着官方行为逐项核对出来的，没有一条是猜的。</p>
+<h2>视图模型：四个字段说清一张图</h2>
+<p>候选的视图模型只有四个字段：展示 URL、存储键、来源 URL、状态。一张图从生成到展示，状态机是显式的：有没有存下来、存在哪、能不能展示，各归各的字段，不混用。</p>
+<p>很多媒体链路的混乱，根子是一个 URL 字段打天下：展示用的、存储用的、来源追溯用的全塞在一起。一旦上游 URL 过期，整个链路都不知道&quot;这张图到底还在不在&quot;。字段分开之后，兜底策略才有地方写：存储键为空，就知道这张图依赖临时 URL，不能做长期引用。</p>
+<h2>重试与计费纪律</h2>
+<p>生成请求不走通用自动重试。参考官方客户端的行为：只在首次 401 后刷新凭据重试一次，403 直接失败。无脑重试烧的是真钱。</p>
+<p>计费同样：按实际返回的图片数计费，零图片时不能回退到&quot;请求了 n 张&quot;来收费。分母必须是真实发生，不是请求参数。</p>
+<h2>小结</h2>
+<p>第三方媒体 API 的工程纪律只有一条：把&quot;看起来通了&quot;和&quot;证据证明通了&quot;分开。代理解决可达性，缓存窗口解决时效性，A/B 解决根因归属——三件事不要互相代替。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +362,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Build Notes", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +372,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

@@ -326,8 +326,25 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>AI 记得太多：一次记忆误记复盘</h1><p>数字人 Agent 的记忆系统出过一次反直觉的事故：大模型对 14 条记忆候选全部给出 0.99 的置信度，自动确认了其中 11 条；人工复核发现，这 11 条全是误记，原始 precision 是 0%。置信度很高，正确率是零——置信度不能单独作为自动确认的依据。</p>
+<h2>发生了什么</h2>
+<p>用大模型对 5 封已回复的真实用户来信做受控回放：5 个记忆抽取任务全部成功，生成 14 条候选；自动整理环节确认了其中 11 条（78.6%）。</p>
+<p>人工抽样复核后，结论很干脆：11 条全部属于一次性任务请求、模板、模型回复或&quot;尚未确认&quot;的过程信息，不应成为长期记忆。没有一条是稳定偏好、事实经历或可复用的关系事实。</p>
+<h2>典型的误记长这样</h2>
+<ul><li>&quot;用户曾请求整理上海近期的新鲜事……&quot;</li><li>&quot;双方此次对话中，数字人提供了一份小红书文案模板。&quot;</li><li>&quot;数字人明确表示尚未确认最新的上海实时新鲜事。&quot;</li><li>&quot;双方在本次对话中共同形成了一版草稿和两版配图提示词。&quot;</li></ul>
+<p>看出来了吗？这些内容描述的都是任务过程或模型输出：整理了什么、提供了什么模板、尚未确认什么、形成了什么草稿。它们回答的是&quot;这次对话发生了什么&quot;，不是&quot;这个用户是谁、喜欢什么、和我们有什么关系&quot;。</p>
+<h2>根因：过程噪声，不是抽取错误</h2>
+<p>这次事故的根因值得单独说：抽取本身没错，错的是&quot;什么值得记住&quot;的判断。模型忠实地记录了对话内容，问题是对话内容里大部分是过程噪声——一次性任务请求、用完即弃的模板、模型自己的回复、还没确认的状态。这些东西在对话当下有用，变成长期记忆就是污染。</p>
+<p>而 0.99 的置信度，表达的是模型对&quot;抽取正确性&quot;的信心，不是&quot;值得长期记住&quot;的判断。这是两个完全不同的问题，用一个数字回答，必然翻车。自动确认的门禁如果只看置信度，等于把&quot;记得准&quot;和&quot;记得对&quot;混为一谈。</p>
+<h2>修复：门禁从置信度转向类别</h2>
+<p>11 条误记做了软撤销并保留审计记录。自动整理的门槛改成了两道：记忆类别必须是&quot;已完成共同经历&quot;或&quot;严格验证知识&quot;，且置信度 <code>&gt;=0.95</code>。任务产物、模型声明、未确认状态、稳定事实和关系判断，保留为例外或直接排除。</p>
+<p>同时新增了配套机制：跨 7 天的同主题合并、历史自动记忆重审、观测接口和人工标注。历史 2 条按旧规则自动记住的研究内容，也按新规则做了软撤销。</p>
+<h2>还没解决的问题</h2>
+<p>这次回放的 5 封样本以任务型来信为主，不能代表普通闲聊、明确的个人事实或连续的关系互动。Wiki 里列了后续要做的标注评测：构造至少 30 封多类型样本，计算抽取召回率、正式记忆 precision、例外队列占比和置信度校准；precision 没到 95% 就只收紧类别，不降低门槛。</p>
+<p>门槛收紧后 precision 能不能达到 95%，还需要用多类型样本验证。另外，任务请求到底该作为短期会话记忆保留、还是彻底不记，也还没定论。记忆系统的调优没有终点，只有&quot;当前证据下够不够用&quot;。</p>
+<h2>小结</h2>
+<p>记忆系统的质量门禁，拦的不是&quot;抽错了&quot;，而是&quot;不值得记&quot;。置信度回答&quot;有多确定&quot;，类别回答&quot;配不配记住&quot;——自动确认必须同时看这两道门。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +357,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Lab Log", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +367,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';

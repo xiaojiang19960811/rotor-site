@@ -326,8 +326,23 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   </div>
 </nav>
 <article class="art-wrap">
-  <div class="reader-top" id="reader-meta"></div>
-  <div class="reader-body" id="reader-body"></div>
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>Agent 的记忆怎么做分层</h1><p>Agent 的长期状态不能是一锅粥。&quot;发生过什么&quot;&quot;外部事实是什么&quot;&quot;正在做什么&quot;&quot;如何变化&quot;是四种不同的东西，混在一起管理，迟早会把一次闲聊当成人格，把一条旧知识当成今天的事实。我们的数字人 Agent 把记忆拆成六层，每层有自己的记录内容和进入运行上下文的方式。</p>
+<h2>六层分别记什么</h2>
+<table><thead><tr><th>层</th><th>记录内容</th><th>进入运行上下文的方式</th></tr></thead><tbody><tr><td>核心</td><td>稳定自我故事、身份与已确认核心信息</td><td>高优先级正式上下文；不能自动改写核心人格</td></tr><tr><td>事件</td><td>已发生的互动、经历和完成事件</td><td>按主题检索或汇总，不等同于人格</td></tr><tr><td>关系</td><td>对人或关系的低风险、可追溯观察</td><td>先经过风险和来源门禁</td></tr><tr><td>知识</td><td>曾经了解、整理并留下的内容</td><td>形成熟悉感；不伪装成亲历，也不覆盖更新的事实</td></tr><tr><td>工作</td><td>当前工作集、任务上下文和完成后的长期归档</td><td>当前工作集优先；完成后再进入长期记录</td></tr><tr><td>创作</td><td>已完成或正在形成的创作素材、版本和结果</td><td>作为创作上下文，不自动升级为人格事实</td></tr></tbody></table>
+<p>分层的核心思想：记忆回答的是&quot;她是否还记得、这句话怎么留下来、现在有多熟&quot;，知识库回答的是&quot;现在以什么资料为准&quot;。知识记忆的正文是知识本身，不能写成亲历；理解以性格和已有记忆为底，只有和正文不同时才另记。</p>
+<h2>正式边界：候选不能自动转正</h2>
+<p>抽取结果先成为候选，必须经过类别、完成性、来源、风险和置信度门禁，才可自动进入正式记忆。以下内容不能直接进入回信上下文：任务产物、模型声明、未确认状态、敏感身份或关系判断、低置信内容。</p>
+<p>自动晋升、人工晋升、撤销、恢复和人格运用，都要留下来源、操作者、版本和变更日志。候选、观察、正式、撤销、被阻止这五种状态必须可区分，不能用一个&quot;已记住&quot;字段覆盖整个生命周期。</p>
+<p>最重要的一条：核心人格不由自动抽取或模型自行改写。人格扩展走人工审核，这是红线。</p>
+<h2>遗忘是淡出，不是删除</h2>
+<p>一条记忆还有自己的进化史、熟悉度和遗忘，三者各管各的：</p>
+<ul><li><strong>进化史</strong>：保留旧说法，只追加不静默覆盖。新事实与旧记忆冲突时以新事实为准，并在进化史里记一笔认识更新。</li><li><strong>熟悉度</strong>：只看这条记忆被再次遇见、想起或说起的次数，不借用其他权重。</li><li><strong>遗忘</strong>：淡出日常回忆，但历史仍然留着；不等于撤销。核心记忆不自然遗忘。</li></ul>
+<p>&quot;记得&quot;和&quot;总挂在嘴边&quot;是两回事。淡出机制让 Agent 既不会失忆，也不会被三年前的事主导今天的判断。</p>
+<h2>自生长链路</h2>
+<p>记忆的生长是条流水线，不是魔法：互动产生候选内容；Worker 按幂等键、来源和主题窗口抽取合并；门禁决定自动确认还是进例外队列；正式记忆进入运行上下文，候选默认不进回信；长期重复的证据形成观察，观察再投影为受限的语气或选题提示——但观察的影响必须经过独立回放和真实样本验证，不能因为&quot;已记录&quot;就宣称 Agent 的行为已经改变。</p>
+<h2>小结</h2>
+<p>记忆分层解决的不是&quot;存得多&quot;，而是&quot;不串味&quot;：人格的归人格，事件的归事件，知识的归知识。每层有自己的晋升门禁和遗忘节奏，Agent 才能既长期生长，又不把过去当成现在。</p></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
 <div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
@@ -340,6 +355,7 @@ const STR = {
   en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
 };
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
 function render(){
   const t = STR[LANG], a = DATA;
   document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
@@ -349,10 +365,13 @@ function render(){
     const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
   });
   document.title = esc(a.t[LANG]) + ' — rotor';
-  document.getElementById('reader-meta').innerHTML =
-    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
-  document.getElementById('reader-body').innerHTML =
-    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
   const pn = document.getElementById('prev-next');
   let h = '';
   if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
