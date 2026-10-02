@@ -246,13 +246,34 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   .stats{grid-template-columns:repeat(2,1fr)}
   .stat:nth-child(2){border-right:0}
   .stat{border-bottom:1px solid var(--line)}
+  .stat:nth-child(n+3){border-bottom:0}
   .work{grid-template-columns:44px 1fr}
-  .work-year{position:static;margin-top:10px}
+  .work-year{position:static;margin-top:10px;grid-column:2}
   .art-row{flex-wrap:wrap;gap:10px}
   .art-meta{width:100%;padding-left:52px}
   .col-chips{grid-template-columns:repeat(2,1fr)}
   .scroll-hint{display:none}
   .nav-links a{display:none}
+  /* atlas: 6 统计 -> 2 列,领域卡 -> 1 列 */
+  .atlas-stats{grid-template-columns:repeat(2,1fr)}
+  .a-stat:nth-child(2n){border-right:0}
+  .a-stat{border-bottom:1px solid var(--line)}
+  .a-stat:nth-child(n+5){border-bottom:0}
+  .domain-grid{grid-template-columns:1fr}
+  /* now 列表允许换行,不挤出 */
+  .now-item{flex-wrap:wrap;row-gap:8px}
+  .now-item .nm{white-space:normal}
+  .now-item .ds{flex-basis:100%}
+  /* 文章表格横向滚动,长字符串不断行溢出 */
+  .reader-body table{display:block;overflow-x:auto;max-width:100%}
+  .reader-body p,.reader-body li,.reader-body td{overflow-wrap:break-word}
+  /* 触摸目标放大 */
+  .lang button{padding:10px 16px}
+  .f-chip{padding:12px 20px}
+  .art-nav a.lnk{padding:10px 4px}
+  a,button{-webkit-tap-highlight-color:transparent}
+  /* hero 留白 */
+  .badge-spin{width:76px;height:76px}
 }
 
 .art-nav{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}

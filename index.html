@@ -257,13 +257,34 @@ body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
   .stats{grid-template-columns:repeat(2,1fr)}
   .stat:nth-child(2){border-right:0}
   .stat{border-bottom:1px solid var(--line)}
+  .stat:nth-child(n+3){border-bottom:0}
   .work{grid-template-columns:44px 1fr}
-  .work-year{position:static;margin-top:10px}
+  .work-year{position:static;margin-top:10px;grid-column:2}
   .art-row{flex-wrap:wrap;gap:10px}
   .art-meta{width:100%;padding-left:52px}
   .col-chips{grid-template-columns:repeat(2,1fr)}
   .scroll-hint{display:none}
   .nav-links a{display:none}
+  /* atlas: 6 统计 -> 2 列,领域卡 -> 1 列 */
+  .atlas-stats{grid-template-columns:repeat(2,1fr)}
+  .a-stat:nth-child(2n){border-right:0}
+  .a-stat{border-bottom:1px solid var(--line)}
+  .a-stat:nth-child(n+5){border-bottom:0}
+  .domain-grid{grid-template-columns:1fr}
+  /* now 列表允许换行,不挤出 */
+  .now-item{flex-wrap:wrap;row-gap:8px}
+  .now-item .nm{white-space:normal}
+  .now-item .ds{flex-basis:100%}
+  /* 文章表格横向滚动,长字符串不断行溢出 */
+  .reader-body table{display:block;overflow-x:auto;max-width:100%}
+  .reader-body p,.reader-body li,.reader-body td{overflow-wrap:break-word}
+  /* 触摸目标放大 */
+  .lang button{padding:10px 16px}
+  .f-chip{padding:12px 20px}
+  .art-nav a.lnk{padding:10px 4px}
+  a,button{-webkit-tap-highlight-color:transparent}
+  /* hero 留白 */
+  .badge-spin{width:76px;height:76px}
 }
 </style>
 </head>
@@ -1057,10 +1078,36 @@ document.querySelectorAll('.magnet').forEach(el=>{
       gotoCollection(keys[nd.di]);
     }
   });
-  // touch drag
-  cv.addEventListener('touchstart', e=>{ dragging=true; lastX=e.touches[0].clientX; }, {passive:true});
+  // touch drag + tap to inspect node (no hover on touch)
+  let downTX=0, downTY=0;
+  cv.addEventListener('touchstart', e=>{ dragging=true; lastX=e.touches[0].clientX;
+    downTX=e.touches[0].clientX; downTY=e.touches[0].clientY; tip.style.display='none'; }, {passive:true});
   cv.addEventListener('touchmove', e=>{ if(dragging){ rotTarget += (e.touches[0].clientX-lastX)*0.005; lastX=e.touches[0].clientX; } }, {passive:true});
-  cv.addEventListener('touchend', ()=>{ dragging=false; });
+  cv.addEventListener('touchend', e=>{
+    dragging=false;
+    const t=e.changedTouches[0];
+    if(Math.hypot(t.clientX-downTX, t.clientY-downTY) > 10) return; // was a drag
+    const r=cv.getBoundingClientRect();
+    const nd=pick(t.clientX-r.left, t.clientY-r.top);
+    if(nd){
+      tip.style.display='block';
+      tip.style.left=Math.min(Math.max(t.clientX-r.left+14, 8), Math.max(r.width-248, 8))+'px';
+      tip.style.top=(t.clientY-r.top+14)+'px';
+      tip.innerHTML='<b>'+nd.id+'</b><div class="m">'+nd.d+'</div>';
+    } else tip.style.display='none';
+  });
+  // touch devices: swap the "hover" hint text (kept out of i18n overwrites)
+  if(matchMedia('(hover:none)').matches){
+    const gh=document.querySelector('.g-hint');
+    if(gh){
+      gh.removeAttribute('data-i18n');
+      const setTouchHint=()=>{ gh.textContent = (typeof LANG!=='undefined' && LANG==='en')
+        ? 'Tap a node \u00b7 drag to rotate' : '\u70b9\u51fb\u67e5\u770b\u8282\u70b9 \u00b7 \u62d6\u62cb\u65cb\u8f6c'; };
+      setTouchHint();
+      document.getElementById('btn-zh').addEventListener('click', setTouchHint);
+      document.getElementById('btn-en').addEventListener('click', setTouchHint);
+    }
+  }
 
   window.__drawAtlas = function(){ build(); };
   addEventListener('resize', resize);
