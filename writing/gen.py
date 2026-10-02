@@ -140,6 +140,8 @@ PAGE_TMPL = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title_zh} — rotor</title>
 <meta name="description" content="{desc_zh}">
+<link rel="canonical" href="{canon}">
+<script type="application/ld+json">{jsonld}</script>
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
@@ -211,6 +213,7 @@ LIST_TMPL = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Writing — rotor</title>
 <meta name="description" content="{desc_zh}">
+<link rel="canonical" href="https://www.rotor1996.top/writing/">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body>
@@ -231,7 +234,7 @@ LIST_TMPL = """<!DOCTYPE html>
   <p data-i18n="sub">{sub_zh}</p>
   <div class="filters" id="filters"></div>
 </header>
-<main class="list-wrap"><div id="col-list"></div></main>
+<main class="list-wrap"><div id="col-list">{list_ssr}</div></main>
 <div class="list-foot"><span>&copy; 2026 rotor&reg;</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND &middot; 转载请注明出处</span></div>
 <script>
 let LANG = localStorage.getItem('rotor-lang') || 'zh';
@@ -298,6 +301,44 @@ render();
 """
 
 
+COL_ZH = {"build": "建造复盘", "garden": "知识花园", "log": "实验日志"}
+
+def ssr_list_html(arts):
+    """列表页首屏直出(中文默认):爬虫无需执行 JS 即可看到全部文章链接。"""
+    cols = [
+        ("infra", "AI 基础设施", "网关 · 观测 · 计费 · 发布"),
+        ("agent", "Agent 与数字人", "记忆 · 人格 · 执行边界"),
+        ("biz", "多端业务", "资讯 · H5 · 组织代码"),
+        ("eng", "工程工具", "验证 · 规范 · 决策记录"),
+        ("solo", "个人建造", "独立项目的复盘"),
+    ]
+    out = []
+    for key, name, desc in cols:
+        lst = [a for a in arts if a["col"] == key]
+        if not lst:
+            continue
+        out.append(
+            f'<div class="col-block" id="col-{key}">'
+            f'<div class="col-head"><h3>{html.escape(name)}'
+            f'<span class="cnt">{len(lst)}P</span></h3>'
+            f'<p>{html.escape(desc)}</p></div>'
+        )
+        for a in lst:
+            inner = (
+                f'<span class="art-num">{a["id"]}</span>'
+                f'<div class="art-main"><div class="art-title">{html.escape(a["t"]["zh"])}</div>'
+                f'<div class="art-desc">{html.escape(a["d"]["zh"])}</div></div>'
+                f'<div class="art-meta"><span class="col-tag">{COL_ZH[a["column"]]}</span>'
+                + ('<span class="art-arrow">&rarr;</span>' if a["live"] else '<span class="soon">即将发布</span>')
+                + '</div>'
+            )
+            if a["live"] and a.get("url"):
+                out.append(f'<a class="art-row" href="{a["url"]}">{inner}</a>')
+            else:
+                out.append(f'<div class="art-row locked">{inner}</div>')
+        out.append('</div>')
+    return "".join(out)
+
 def main():
     arts = []
     for aid, slug, col, column, tcn, ten, dcn, den in ARTS:
@@ -353,7 +394,16 @@ def main():
             title_zh=a["t"]["zh"], desc_zh=a["d"]["zh"],
             data_json=json.dumps(payload, ensure_ascii=False),
             col_zh=col_zh, col_en=col_en, column_zh=column_zh, column_en=column_en,
-            title_zh_esc=html.escape(a["t"]["zh"]), body_zh=a["body"]["zh"])
+            title_zh_esc=html.escape(a["t"]["zh"]), body_zh=a["body"]["zh"],
+            canon=f"https://www.rotor1996.top/writing/{a['id']}-{a['slug']}",
+            jsonld=json.dumps({
+                "@context": "https://schema.org", "@type": "Article",
+                "headline": a["t"]["zh"], "description": a["d"]["zh"],
+                "inLanguage": "zh-CN",
+                "author": {"@type": "Person", "name": "rotor"},
+                "datePublished": DATES.get(a["id"], ""),
+                "mainEntityOfPage": f"https://www.rotor1996.top/writing/{a['id']}-{a['slug']}",
+            }, ensure_ascii=False))
         assert "</script" not in a["body"]["zh"] and "</script" not in a["body"]["en"]
         fn = f"{OUTDIR}/{a['id']}-{a['slug']}.html"
         open(fn, "w", encoding="utf-8").write(page)
@@ -370,12 +420,13 @@ def main():
             ("eng", COLLECTIONS["eng"], ("验证 · 规范 · 决策记录", "Verification · conventions · ADRs")),
             ("solo", COLLECTIONS["solo"], ("独立项目的复盘", "Indie project retrospectives")),
         ]], ensure_ascii=False)
+    list_ssr = ssr_list_html(arts)
     list_page = LIST_TMPL.format(
         desc_zh="rotor 的写作存档：建造复盘、知识花园、实验日志。",
         sub_zh="从知识库里长出来的文章：只写有来源的东西，不编故事。",
         sub_en="Articles grown from the knowledge base: sourced claims only, no fiction.",
         articles_json=json.dumps(slim, ensure_ascii=False),
-        cols_json=cols_json)
+        cols_json=cols_json, list_ssr=list_ssr)
     open(f"{OUTDIR}/index.html", "w", encoding="utf-8").write(list_page)
     print("list page:", f"{OUTDIR}/index.html", len(list_page), "bytes")
 
