@@ -197,7 +197,7 @@ PAGE_TMPL = """<!DOCTYPE html>
   <div class="reader-body" id="reader-body"></div>
   <div class="prev-next" id="prev-next"></div>
 </article>
-<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
 <script>
 const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
 let LANG = LANG0;
@@ -232,6 +232,7 @@ document.getElementById('btn-en').onclick = ()=>{{ LANG='en'; localStorage.setIt
 render();
 </script>
 {cursor_js}
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </body>
 </html>
 """
@@ -280,7 +281,7 @@ LIST_TMPL = """<!DOCTYPE html>
   <div class="filters" id="filters"></div>
 </header>
 <main class="list-wrap"><div id="col-list"></div></main>
-<div class="list-foot"><span>&copy; 2026 rotor&reg;</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span data-i18n="license">CC BY-NC-ND &middot; 转载请注明出处</span></div>
+<div class="list-foot"><span>&copy; 2026 rotor&reg;</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND &middot; 转载请注明出处</span></div>
 <script>
 let LANG = localStorage.getItem('rotor-lang') || 'zh';
 const ARTICLES = {articles_json};
@@ -340,6 +341,7 @@ document.getElementById('btn-en').onclick = ()=>{{ LANG='en'; localStorage.setIt
 render();
 </script>
 {cursor_js}
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 </body>
 </html>
 """
