@@ -6,6 +6,26 @@
 
 A single-page portfolio + a Writing section (28 essays and counting, Chinese/English bilingual). Static HTML, no framework, no build step. Articles are written in Markdown and compiled to pages by a small Python generator.
 
+## 快速上手（拿去直接用）
+
+```bash
+git clone https://github.com/xiaojiang19960811/rotor-site.git
+cd rotor-site
+```
+
+1. 写文章：`writing/drafts/29-my-topic.md`（中文）+ `writing/drafts/29-my-topic.en.md`（英文；不想做双语就删掉英文切换，生成器要求 `LIVE` 的文章中英成对）。
+2. 在 `writing/gen.py` 注册：在 `ARTS` 加一行
+   `(id, slug, 合集, 栏目, 中文标题, 英文标题, 中文一句话, 英文一句话)`，
+   把 id 加入 `LIVE`，日期加入 `DATES`。
+   合集：`infra` / `agent` / `biz` / `eng` / `solo`；
+   栏目：`build`（建造复盘）/ `garden`（知识花园）/ `log`（实验日志）。
+3. 构建：`./build.sh` → 得到 `dist/`。
+4. 把 `dist/` 部署到任何静态托管：
+   `npx wrangler pages deploy dist --project-name=<你的站点名>`
+   （或直接拖进 Cloudflare Pages / Netlify）。
+
+整个管线就是这样——不用 npm，不用框架，只要 Python 3。
+
 ## Structure
 
 ```
