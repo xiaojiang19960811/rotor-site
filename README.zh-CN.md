@@ -2,7 +2,7 @@
 
 [中文](README.zh-CN.md) | English
 
-Personal site of rotor — https://www.rotor1996.top
+个人站 rotor — https://www.rotor1996.top
 
 A single-page portfolio + a Writing section (28 essays and counting, Chinese/English bilingual). Static HTML, no framework, no build step. Articles are written in Markdown and compiled to pages by a small Python generator.
 
