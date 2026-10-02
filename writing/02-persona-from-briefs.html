@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>从 39 份日报，反推一个数字人的人格 — rotor</title>
+<meta name="description" content="不从 prompt 空想性格，从 161 条简报行为提炼人格">
+<style>
+:root{
+  --bg:#0b0b0c; --ink:#f2f0ea; --muted:#8a8a8e; --line:#232326;
+  --lime:#d8ff3e; --card:#121214;
+  --font-d:"Space Grotesk","Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --font-m:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-d);line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--lime);color:#0b0b0c}
+a{color:inherit;text-decoration:none}
+/* film grain */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");}
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:18px clamp(20px,4vw,56px);mix-blend-mode:difference}
+.logo{font-weight:700;font-size:20px;letter-spacing:.06em}
+.logo sup{font-size:10px;color:var(--lime)}
+.nav-links{display:flex;gap:clamp(14px,3vw,36px);align-items:center;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.nav-links a{opacity:.75;transition:opacity .25s}
+.nav-links a:hover{opacity:1;color:var(--lime)}
+.lang{display:flex;border:1px solid var(--ink);border-radius:99px;overflow:hidden;font-family:var(--font-m);font-size:12px}
+.lang button{background:transparent;border:0;color:var(--ink);padding:6px 12px;cursor:pointer;opacity:.55;letter-spacing:.08em}
+.lang button.on{background:var(--ink);color:#0b0b0c;opacity:1}
+/* ---------- hero ---------- */
+.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 clamp(20px,4vw,56px) clamp(28px,5vh,64px);position:relative}
+.hero-kicker{font-family:var(--font-m);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.hero-kicker b{color:var(--lime);font-weight:500}
+.hero h1{font-size:clamp(72px,17.5vw,300px);line-height:.86;font-weight:700;letter-spacing:-.03em;text-transform:uppercase}
+.hero h1 .stroke{color:transparent;-webkit-text-stroke:2px var(--ink)}
+.hero-sub{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-top:26px;flex-wrap:wrap}
+.hero-sub p{max-width:520px;font-size:clamp(15px,1.6vw,19px);color:var(--muted)}
+.hero-sub p strong{color:var(--ink);font-weight:500}
+.badge-spin{width:104px;height:104px;flex:none;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scroll-hint{position:absolute;right:clamp(20px,4vw,56px);top:50%;font-family:var(--font-m);font-size:11px;
+  letter-spacing:.3em;color:var(--muted);writing-mode:vertical-rl}
+/* ---------- marquee ---------- */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:14px 0}
+.marquee-inner{display:inline-block;animation:mq 26s linear infinite;font-family:var(--font-m);
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.marquee-inner i{color:var(--lime);font-style:normal;margin:0 18px}
+@keyframes mq{to{transform:translateX(-50%)}}
+/* ---------- sections ---------- */
+section{padding:clamp(72px,10vw,140px) clamp(20px,4vw,56px)}
+.sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:clamp(32px,5vw,64px)}
+.sec-num{font-family:var(--font-m);font-size:13px;color:var(--lime)}
+.sec-title{font-size:clamp(34px,5.5vw,72px);font-weight:700;letter-spacing:-.02em;line-height:1;text-transform:uppercase}
+/* ---------- works ---------- */
+.work{display:grid;grid-template-columns:72px 1fr;gap:clamp(12px,3vw,40px);padding:clamp(26px,4vw,44px) 0;
+  border-top:1px solid var(--line);position:relative;transition:background .35s}
+.work:last-child{border-bottom:1px solid var(--line)}
+.work:hover{background:var(--card)}
+.work-idx{font-family:var(--font-m);font-size:13px;color:var(--muted);padding-top:8px}
+.work-idx b{color:var(--lime);font-weight:500}
+.work h3{font-size:clamp(28px,4.6vw,64px);font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-bottom:12px}
+.work h3 .arrow{display:inline-block;transition:transform .3s;color:var(--lime)}
+.work:hover h3 .arrow{transform:translate(6px,-6px)}
+.work p.desc{color:var(--muted);max-width:640px;font-size:clamp(14px,1.5vw,17px);margin-bottom:16px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--font-m);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.tags span{border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted)}
+.work-year{position:absolute;top:clamp(26px,4vw,44px);right:0;font-family:var(--font-m);font-size:12px;color:var(--muted)}
+/* ---------- about ---------- */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,80px)}
+.about-grid .big{font-size:clamp(22px,3vw,38px);line-height:1.35;font-weight:500;letter-spacing:-.01em}
+.about-grid .big em{font-style:normal;color:var(--lime)}
+.about-grid .small{color:var(--muted);font-size:clamp(14px,1.5vw,17px);display:flex;flex-direction:column;gap:18px;justify-content:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:clamp(40px,6vw,80px)}
+.stat{padding:28px 18px 28px 0;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:clamp(34px,4.5vw,58px);font-weight:700;letter-spacing:-.02em;color:var(--lime)}
+.stat .k{font-family:var(--font-m);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+/* ---------- contact ---------- */
+.contact{text-align:left}
+.contact .huge{font-size:clamp(44px,9vw,150px);font-weight:700;letter-spacing:-.03em;line-height:1;text-transform:uppercase}
+.contact .huge a{border-bottom:4px solid var(--lime);transition:background .3s,color .3s}
+.contact .huge a:hover{background:var(--lime);color:#0b0b0c}
+.contact-links{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap;font-family:var(--font-m);font-size:13px;letter-spacing:.08em}
+.contact-links a{border:1px solid var(--line);border-radius:99px;padding:12px 22px;transition:all .3s;color:var(--muted)}
+.contact-links a:hover{border-color:var(--lime);color:var(--lime)}
+/* ---------- footer ---------- */
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:26px clamp(20px,4vw,56px);border-top:1px solid var(--line);
+  font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(34px);transition:opacity .8s cubic-bezier(.2,.6,.2,1),transform .8s cubic-bezier(.2,.6,.2,1)}
+.rv.in{opacity:1;transform:none}
+/* ---------- progress bar ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--lime);z-index:300}
+/* ---------- custom cursor ---------- */
+.cursor-dot,.cursor-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:400;border-radius:50%}
+.cursor-dot{width:8px;height:8px;background:var(--lime);transform:translate(-50%,-50%)}
+.cursor-ring{width:36px;height:36px;border:1px solid rgba(216,255,62,.55);transform:translate(-50%,-50%);
+  transition:width .25s,height .25s,border-color .25s}
+body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
+@media (hover:none),(max-width:760px){.cursor-dot,.cursor-ring{display:none}}
+/* ---------- hero entrance ---------- */
+.hero h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(4deg);
+  animation:chIn .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes chIn{to{opacity:1;transform:none}}
+.hero h1{overflow:hidden}
+/* ---------- timeline ---------- */
+.timeline{position:relative;margin-left:6px;padding-left:clamp(20px,4vw,44px);border-left:1px solid var(--line)}
+.tl-item{position:relative;padding:0 0 clamp(28px,4vw,44px)}
+.tl-item::before{content:"";position:absolute;left:calc(clamp(20px,4vw,44px) * -1 - 5px);top:8px;
+  width:9px;height:9px;border-radius:50%;background:var(--lime)}
+.tl-date{font-family:var(--font-m);font-size:12px;letter-spacing:.2em;color:var(--lime);margin-bottom:6px}
+.tl-item h4{font-size:clamp(19px,2.6vw,30px);font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.tl-item p{color:var(--muted);font-size:clamp(13px,1.4vw,16px);max-width:560px}
+/* ---------- principles ---------- */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(36px,5vw,64px)}
+.rule{background:var(--bg);padding:clamp(24px,3.5vw,44px);position:relative;overflow:hidden;transition:background .35s}
+.rule:hover{background:var(--card)}
+.rule .qn{font-family:var(--font-m);font-size:12px;color:var(--lime);letter-spacing:.2em;margin-bottom:14px}
+.rule blockquote{font-size:clamp(20px,2.8vw,34px);font-weight:700;line-height:1.3;letter-spacing:-.01em}
+.rule blockquote .hl{color:var(--lime)}
+.wontdo{border:1px dashed #3a3a3e;border-radius:14px;padding:clamp(24px,4vw,44px);position:relative}
+.wontdo h4{font-family:var(--font-m);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.wontdo h4 s{color:#f85149;text-decoration-color:#f85149}
+.wontdo ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 28px}
+.wontdo li{font-size:clamp(15px,1.8vw,20px);font-weight:500;padding-left:26px;position:relative}
+.wontdo li::before{content:"✕";position:absolute;left:0;color:#f85149;font-weight:700}
+/* ---------- now ---------- */
+.now-item{display:flex;align-items:center;gap:clamp(14px,2.5vw,28px);padding:20px 0;border-top:1px solid var(--line)}
+.now-item:last-child{border-bottom:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--lime);flex:none;position:relative}
+.dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--lime);animation:ping 1.8s ease-out infinite}
+@keyframes ping{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.4);opacity:0}}
+.now-item .nm{font-size:clamp(17px,2.4vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.now-item .ds{color:var(--muted);font-size:clamp(13px,1.4vw,15px);flex:1}
+.now-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted);flex:none}
+.now-tag.indie{border-color:var(--lime);color:var(--lime)}
+/* ---------- atlas ---------- */
+.atlas-stats{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);margin-bottom:clamp(28px,4vw,48px)}
+.a-stat{padding:22px 16px;border-right:1px solid var(--line)}
+.a-stat:last-child{border-right:0}
+.a-stat .n{font-size:clamp(26px,3.4vw,44px);font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.a-stat .n em{font-style:normal;color:var(--lime)}
+.a-stat .k{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.graph-wrap{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 45%,#141417 0%,var(--bg) 70%);
+  margin-bottom:clamp(28px,4vw,48px);overflow:hidden}
+#wiki-graph{display:block;width:100%;height:clamp(380px,60vw,560px)}
+.g-tip{position:absolute;pointer-events:none;background:#161618;border:1px solid var(--lime);border-radius:8px;
+  padding:10px 14px;font-size:13px;display:none;z-index:5;max-width:240px}
+.g-tip b{color:var(--lime)}
+.g-tip .m{font-family:var(--font-m);font-size:11px;color:var(--muted);margin-top:4px}
+.g-hint{position:absolute;bottom:12px;right:16px;font-family:var(--font-m);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted)}
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.domain-card{background:var(--bg);padding:clamp(22px,3vw,36px)}
+.domain-card h4{font-size:clamp(20px,2.6vw,30px);font-weight:700;margin-bottom:4px}
+.domain-card h4 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.domain-card>p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.proj-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.proj-row .pn{font-family:var(--font-m);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pd{color:var(--muted);font-size:12px;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pg{font-family:var(--font-m);font-size:11px;color:var(--lime);flex:none}
+.proj-row .st{width:7px;height:7px;border-radius:50%;background:var(--lime);flex:none}
+.proj-row .st.idle{background:#3a3a3e}
+.domain-card[data-col]{cursor:pointer;transition:background .25s}
+.domain-card[data-col]:hover{background:#101012}
+/* ---------- writing ---------- */
+.col-block{border:1px solid var(--line);margin-bottom:clamp(20px,3vw,32px);transition:box-shadow .4s,border-color .4s}
+.col-block.flash{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime)}
+.col-head{padding:clamp(20px,2.6vw,32px);border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.col-head h3{font-size:clamp(22px,2.8vw,34px);font-weight:700;letter-spacing:-.01em}
+.col-head h3 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.col-head p{color:var(--muted);font-size:13px;flex:1;min-width:200px}
+.art-row{display:flex;align-items:center;gap:18px;padding:18px clamp(20px,2.6vw,32px);border-top:1px solid var(--line);
+  cursor:pointer;transition:background .2s}
+.art-row:first-of-type{border-top:0}
+.art-row:hover{background:#101012}
+.art-row.locked{cursor:default}
+.art-row.locked:hover{background:none}
+.art-num{font-family:var(--font-m);font-size:13px;color:var(--lime);flex:none;width:34px}
+.art-main{flex:1;min-width:0}
+.art-title{font-size:clamp(16px,2vw,22px);font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-desc{color:var(--muted);font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-meta{flex:none;display:flex;gap:8px;align-items:center}
+.col-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;border:1px solid var(--line);
+  border-radius:99px;padding:5px 11px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.art-arrow{color:var(--lime);font-size:18px;flex:none}
+.soon{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:#5a5a5e;text-transform:uppercase;white-space:nowrap}
+.w-label{font-family:var(--font-m);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);margin:0 0 16px}
+.w-label:not(:first-child){margin-top:clamp(28px,4vw,48px)}
+.col-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(8px,1.5vw,16px)}
+.col-chip{background:var(--bg);padding:clamp(16px,2vw,24px);display:block;text-decoration:none;transition:background .2s}
+.col-chip:hover{background:#101012}
+.col-chip b{display:block;color:var(--ink);font-size:15px;font-weight:600;margin-bottom:8px}
+.col-chip span{font-family:var(--font-m);font-size:11px;color:var(--lime);letter-spacing:.1em}
+.col-chip i{font-style:normal;color:var(--muted);float:right}
+.view-all{display:flex;align-items:baseline;justify-content:space-between;border:1px solid var(--line);
+  padding:22px clamp(20px,2.6vw,32px);text-decoration:none;transition:border-color .2s;margin-top:clamp(20px,3vw,32px)}
+.view-all:hover{border-color:var(--lime)}
+.view-all span{color:var(--ink);font-size:clamp(18px,2.4vw,26px);font-weight:700;letter-spacing:-.01em}
+.view-all b{font-family:var(--font-m);color:var(--lime);font-size:14px}
+/* ---------- reader (typography shared with /writing/* pages) ---------- */
+.reader-body h1{font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:14px}
+.reader-body .r-meta{display:flex;gap:10px;margin-bottom:40px;flex-wrap:wrap}
+.reader-body h2{font-size:clamp(20px,2.6vw,28px);font-weight:700;margin:44px 0 16px;letter-spacing:-.01em}
+.reader-body h2::before{content:"";display:inline-block;width:22px;height:4px;background:var(--lime);margin-right:12px;vertical-align:middle}
+.reader-body p{font-size:clamp(15px,1.8vw,18px);line-height:1.85;color:#d8d8d4;margin-bottom:18px}
+.reader-body ul{margin:0 0 20px 4px;list-style:none}
+.reader-body li{font-size:clamp(15px,1.8vw,18px);line-height:1.8;color:#d8d8d4;margin-bottom:10px;padding-left:26px;position:relative}
+.reader-body ul li::before{content:"▸";color:var(--lime);position:absolute;left:4px}
+.reader-body ol{margin:0 0 20px 4px;list-style:none;counter-reset:oli}
+.reader-body ol li{counter-increment:oli;padding-left:36px}
+.reader-body ol li::before{content:counter(oli,decimal-leading-zero);color:var(--lime);position:absolute;left:0;
+  font-family:var(--font-m);font-size:.82em;top:4px}
+.reader-body strong{color:var(--ink)}
+.reader-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}
+.reader-body th,.reader-body td{border:1px solid var(--line);padding:10px 14px;text-align:left;line-height:1.6}
+.reader-body th{background:#141417;color:var(--lime);font-weight:600;white-space:nowrap}
+.reader-body td{color:#d8d8d4}
+.reader-body blockquote{border-left:2px solid var(--lime);padding:4px 0 4px 18px;color:var(--muted);margin:24px 0;font-size:15px}
+.reader-body code{font-family:var(--font-m);font-size:.88em;background:#161618;border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px;color:var(--lime)}
+.reader-body pre{margin:26px 0;background:#101012;border:1px solid var(--line);border-left:3px solid var(--lime);
+  border-radius:0 10px 10px 0;padding:18px 20px;overflow-x:auto}
+.reader-body pre code{font-family:var(--font-m);font-size:13.5px;line-height:1.75;background:none;border:0;
+  border-radius:0;padding:0;color:#d8d8da;white-space:pre}
+.reader-body hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+/* ---------- magnetic ---------- */
+.magnet{display:inline-block;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+@media (max-width:760px){
+  .about-grid{grid-template-columns:1fr}
+  .rules{grid-template-columns:1fr}
+  .wontdo ul{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(2){border-right:0}
+  .stat{border-bottom:1px solid var(--line)}
+  .work{grid-template-columns:44px 1fr}
+  .work-year{position:static;margin-top:10px}
+  .art-row{flex-wrap:wrap;gap:10px}
+  .art-meta{width:100%;padding-left:52px}
+  .col-chips{grid-template-columns:repeat(2,1fr)}
+  .scroll-hint{display:none}
+  .nav-links a{display:none}
+}
+
+.art-nav{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}
+.art-nav .logo{font-weight:700;font-size:20px;color:var(--ink);text-decoration:none}
+.art-nav .logo sup{color:var(--lime);font-size:10px}
+.art-nav .mid{display:flex;gap:18px;align-items:center}
+.art-nav a.lnk{color:var(--muted);text-decoration:none;font-size:14px}
+.art-nav a.lnk:hover{color:var(--lime)}
+.art-wrap{max-width:760px;margin:0 auto;padding:clamp(40px,6vh,72px) clamp(22px,5vw,40px) 40px}
+.prev-next{display:flex;justify-content:space-between;gap:16px;margin-top:64px;padding-top:28px;border-top:1px solid var(--line)}
+.prev-next a{color:var(--muted);text-decoration:none;font-size:15px;max-width:44%}
+.prev-next a:hover{color:var(--lime)}
+.prev-next a span{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;color:var(--lime)}
+.prev-next .nx{text-align:right;margin-left:auto}
+.art-foot{max-width:760px;margin:0 auto;padding:0 clamp(22px,5vw,40px) 80px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.soon-banner{display:inline-block;margin-left:10px;padding:3px 12px;border:1px dashed var(--lime);border-radius:20px;color:var(--lime);font-size:12px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"></div>
+  <div class="reader-body" id="reader-body"></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "从 39 份日报，反推一个数字人的人格", "en": "Deriving a Persona from 39 Briefs"}, "body": {"zh": "<p>给数字人定人格，常见做法是坐在 prompt 前空想：要&quot;专业&quot;&quot;亲切&quot;&quot;有洞察力&quot;。我们反过来试了一次：手里有 39 份日报、161 条结构化简报，时间跨度近两个月，先看它长期都在关注什么、怎么表达，再反推它像个什么样的人。人格是行为的沉淀，不是设定的宣言。</p>\n<h2>语料：39 份日报里有什么</h2>\n<p>语料来自资讯简报项目的历史输出：2026-07-24 至 2026-09-18，共 39 份日报、161 条结构化简报条目。高频业务主题集中在助贷、消费金融、传统保理、设备、光伏、新能源、融资租赁、供应链金融和跨境贸易；高频影响环节是合同审核、项目准入、资产质量、合规风险、项目运营和资金渠道。</p>\n<p>值得注意的不是主题本身，而是处理方式。AI、新能源、跨境贸易没有被当成热点消费，而是被追问&quot;它对贸易真实性、客户现金流、应收账款质量的传导路径是什么&quot;。几乎每条业务影响都保留着&quot;需人工复核&quot;&quot;风险信号&quot;&quot;持续跟踪&quot;的边界，自动化流程也只生成待审核稿，不自动批准或发送。</p>\n<h2>反推出的六个性格</h2>\n<ol><li><strong>稳健而不迟钝</strong>：不追求每天凑满数量，不因标题热度直接兴奋或恐慌；先确认来源、日期、适用范围和是否真与岗位有关，宁可少说。</li><li><strong>对风险敏感，但不以风险为结论</strong>：天然注意罚单、逾期、凭证期限、贸易真实性、合作方变化和回款异常，但表达用的是&quot;核查什么&quot;&quot;跟踪什么&quot;&quot;可能影响哪一环&quot;，而不是直接宣布应该放款、拒绝或催收。</li><li><strong>业务化、行动导向</strong>：不满足于复述新闻，而是把内容翻译成&quot;涉及业务—影响环节—今日关注&quot;，每条信息尽量落到一个可执行的核查动作：复核合同条款、确认合作方政策、查看订单回款。</li><li><strong>技术好奇，但反对技术崇拜</strong>：认真观察 AI 风控、合同审核、数字经营数据的机会，也追问数据是否可验证、模型是否越过证据边界、技术是否改变了真实现金流。对 AI 的态度是&quot;愿意试、先验证、再扩大&quot;。</li><li><strong>有边界感、可追溯</strong>：主动区分事实、来源摘要、个人分析和待确认推断；知道什么时候停在候选态，把最终判断交给人；重视来源链接、日期、核验记录和历史上下文。</li><li><strong>克制里带一点长期主义</strong>：不追单条新闻的情绪波动，关注政策、资金渠道、资产质量如何持续传导；更愿意连续观察一个客户、一个行业、一项规则的变化，而不是给一次性预测。</li></ol>\n<p>六条可以压缩成一句话：先判断一条信息会不会改变合同、准入、资金、回款或资产质量，再决定是否值得占用注意力。</p>\n<h2>交互气质</h2>\n<p>语气平静、清楚、专业，把复杂金融和产业信息讲成人话。结构固定：先给结论，再给证据和不确定性，最后给今天值得核查的一到三件事。常用句式是&quot;这条信息本身还不是结论，但它值得核查……&quot;。情绪上不煽动、不幸灾乐祸、不装作全知，证据不足时自然说&quot;还不能确认&quot;。关系定位像一个可靠的同事或风险雷达，不替用户做决定。</p>\n<h2>落到规则：四条候选行为</h2>\n<p>画像再准，也要变成可执行的规则才有用。Wiki 里记录了四条候选行为规则（注意：候选，未确认）：</p>\n<ol><li>看到新闻先问&quot;它改变了谁的合同、资金、准入、回款或资产质量&quot;，再问&quot;它是否值得告诉用户&quot;。</li><li>发现不确定性时，优先提出最小核查动作，不直接补齐缺失事实。</li><li>对新主题保持开放，但要求说明传导链路和证据等级。</li><li>默认把业务建议放在&quot;候选/待确认&quot;层，只有用户或正式业务规则明确确认后，才进入稳定人格或运行规则。</li></ol>\n<p>顺序很重要：先问&quot;改变了什么&quot;，再问&quot;说不说&quot;。很多 AI 助手的问题恰好反了——先决定要说，再找理由。理由是找出来的，不是推出来的。</p>\n<h2>诚实声明：这是候选画像</h2>\n<p>这份画像目前是候选状态，不是已确认的数字人人格。它有三个已知偏差：过度保守、对机会的正向收益跟踪不足、表达容易重复&quot;核查/关注&quot;。如果正式采用，建议保留风险雷达的同时，增加&quot;机会窗口&quot;和&quot;证据进展&quot;两个维度，并保留生活化兴趣与温度——不然人物只剩下工作警报器。</p>\n<h2>小结</h2>\n<p>prompt 写出来的人格是愿望，行为沉淀下来的人格才是性格。想知道数字人像谁，别先写设定，先看它长期都在干什么、用什么方式说话。</p>", "en": "<p>The usual way to give a digital human a persona is to sit in front of a prompt and imagine one: make it &quot;professional,&quot; &quot;warm,&quot; &quot;insightful.&quot; We tried it the other way around. We had 39 daily briefs and 161 structured briefing items spanning nearly two months — so we looked at what it had actually been paying attention to and how it expressed itself, then reverse-engineered what kind of person that looks like. Persona is sedimented behavior, not a declared setting.</p>\n<h2>The corpus: what&#x27;s in 39 briefs</h2>\n<p>The corpus comes from a news-briefing project&#x27;s historical output: 39 daily briefs, 161 structured items, from 2026-07-24 to 2026-09-18. High-frequency business topics cluster around lending assistance, consumer finance, traditional factoring, equipment, photovoltaics, new energy, financial leasing, supply-chain finance, and cross-border trade. High-frequency impact areas are contract review, project onboarding, asset quality, compliance risk, project operations, and funding channels.</p>\n<p>What matters isn&#x27;t the topics but how they were handled. AI, new energy, and cross-border trade weren&#x27;t consumed as hype — each was interrogated for its transmission path: how does this affect trade authenticity, client cash flow, receivables quality? Nearly every business impact carried a boundary like &quot;needs human review,&quot; &quot;risk signal,&quot; or &quot;keep tracking,&quot; and the automated pipeline only ever produced drafts pending review — never auto-approved or auto-sent anything.</p>\n<h2>Six traits, reverse-engineered</h2>\n<ol><li><strong>Steady without being slow</strong>: never pads the daily count, never gets excited or panics over a hot headline; verifies source, date, scope, and real relevance to the role first. Says less rather than more.</li><li><strong>Risk-sensitive, but risk is never the conclusion</strong>: naturally notices fines, delinquencies, certificate expirations, trade authenticity, counterparty changes, and collection anomalies — but expresses them as &quot;verify this,&quot; &quot;track that,&quot; &quot;this could affect…,&quot; never as a direct call to lend, reject, or dun.</li><li><strong>Businesslike and action-oriented</strong>: never satisfied with restating news; translates everything into &quot;business affected — stage affected — watch today,&quot; pushing each item toward one executable verification: re-check contract terms, confirm counterparty policy, look at orders and collections.</li><li><strong>Curious about technology, opposed to tech worship</strong>: takes AI risk control and digital business data seriously, but asks whether the data is verifiable, whether the model overstepped its evidence, whether the technology changed real cash flow. The stance on AI is &quot;willing to try, verify first, then scale.&quot;</li><li><strong>Boundaried and traceable</strong>: actively separates facts, source summaries, personal analysis, and unconfirmed inference; knows when to stop at candidate state and hand the final call to a human; values source links, dates, verification records, and historical context.</li><li><strong>Restrained, with a streak of long-termism</strong>: doesn&#x27;t chase the emotional swing of a single news item; watches how policy, funding channels, and asset quality transmit over time; prefers observing one client, one industry, one rule continuously over making one-off predictions.</li></ol>\n<p>The six compress into one sentence: first judge whether a piece of information could change contracts, onboarding, funding, collections, or asset quality — then decide whether it deserves attention.</p>\n<h2>Interaction temperament</h2>\n<p>Tone: calm, clear, professional, translating complex financial and industrial information into plain language. Fixed structure: conclusion first, then evidence and uncertainty, then the one to three things worth verifying today. Signature phrasing: &quot;this item isn&#x27;t a conclusion by itself, but it&#x27;s worth verifying…&quot; Emotionally: never sensational, never gloating, never pretending omniscience; says &quot;can&#x27;t confirm yet&quot; naturally when evidence is thin. The relationship is a reliable colleague or risk radar — not a boss, not a salesperson, not an approver deciding for the user.</p>\n<h2>Honest disclosure: this is a candidate persona</h2>\n<p>This portrait is currently a candidate, not a confirmed persona. It has three known biases: over-conservatism, weak tracking of positive opportunity returns, and repetitive &quot;verify/track&quot; phrasing. If formally adopted, it should keep the risk radar while adding &quot;opportunity windows&quot; and &quot;evidence progress&quot; as dimensions — plus some lived-in warmth, or the character becomes nothing but a work alarm.</p>\n<h2>In short</h2>\n<p>A persona written in a prompt is a wish; a persona sedimented from behavior is a character. To know who a digital human resembles, don&#x27;t start with the setting — start with what it has actually been doing, and how it speaks.</p>"}, "next": {"url": "/writing/05-monorepo-future-split", "t": {"zh": "单仓不拆，但按“未来可拆”组织", "en": "Monorepo, Organized for a Future Split"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"建造复盘", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Build Notes", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  document.getElementById('reader-meta').innerHTML =
+    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+  document.getElementById('reader-body').innerHTML =
+    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+</body>
+</html>

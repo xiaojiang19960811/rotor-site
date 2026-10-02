@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>界面只讲能证明的话 — rotor</title>
+<meta name="description" content="“任务完成≠资产确认”；不虚构统一接口">
+<style>
+:root{
+  --bg:#0b0b0c; --ink:#f2f0ea; --muted:#8a8a8e; --line:#232326;
+  --lime:#d8ff3e; --card:#121214;
+  --font-d:"Space Grotesk","Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --font-m:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-d);line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--lime);color:#0b0b0c}
+a{color:inherit;text-decoration:none}
+/* film grain */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");}
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:18px clamp(20px,4vw,56px);mix-blend-mode:difference}
+.logo{font-weight:700;font-size:20px;letter-spacing:.06em}
+.logo sup{font-size:10px;color:var(--lime)}
+.nav-links{display:flex;gap:clamp(14px,3vw,36px);align-items:center;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.nav-links a{opacity:.75;transition:opacity .25s}
+.nav-links a:hover{opacity:1;color:var(--lime)}
+.lang{display:flex;border:1px solid var(--ink);border-radius:99px;overflow:hidden;font-family:var(--font-m);font-size:12px}
+.lang button{background:transparent;border:0;color:var(--ink);padding:6px 12px;cursor:pointer;opacity:.55;letter-spacing:.08em}
+.lang button.on{background:var(--ink);color:#0b0b0c;opacity:1}
+/* ---------- hero ---------- */
+.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 clamp(20px,4vw,56px) clamp(28px,5vh,64px);position:relative}
+.hero-kicker{font-family:var(--font-m);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.hero-kicker b{color:var(--lime);font-weight:500}
+.hero h1{font-size:clamp(72px,17.5vw,300px);line-height:.86;font-weight:700;letter-spacing:-.03em;text-transform:uppercase}
+.hero h1 .stroke{color:transparent;-webkit-text-stroke:2px var(--ink)}
+.hero-sub{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-top:26px;flex-wrap:wrap}
+.hero-sub p{max-width:520px;font-size:clamp(15px,1.6vw,19px);color:var(--muted)}
+.hero-sub p strong{color:var(--ink);font-weight:500}
+.badge-spin{width:104px;height:104px;flex:none;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scroll-hint{position:absolute;right:clamp(20px,4vw,56px);top:50%;font-family:var(--font-m);font-size:11px;
+  letter-spacing:.3em;color:var(--muted);writing-mode:vertical-rl}
+/* ---------- marquee ---------- */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:14px 0}
+.marquee-inner{display:inline-block;animation:mq 26s linear infinite;font-family:var(--font-m);
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.marquee-inner i{color:var(--lime);font-style:normal;margin:0 18px}
+@keyframes mq{to{transform:translateX(-50%)}}
+/* ---------- sections ---------- */
+section{padding:clamp(72px,10vw,140px) clamp(20px,4vw,56px)}
+.sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:clamp(32px,5vw,64px)}
+.sec-num{font-family:var(--font-m);font-size:13px;color:var(--lime)}
+.sec-title{font-size:clamp(34px,5.5vw,72px);font-weight:700;letter-spacing:-.02em;line-height:1;text-transform:uppercase}
+/* ---------- works ---------- */
+.work{display:grid;grid-template-columns:72px 1fr;gap:clamp(12px,3vw,40px);padding:clamp(26px,4vw,44px) 0;
+  border-top:1px solid var(--line);position:relative;transition:background .35s}
+.work:last-child{border-bottom:1px solid var(--line)}
+.work:hover{background:var(--card)}
+.work-idx{font-family:var(--font-m);font-size:13px;color:var(--muted);padding-top:8px}
+.work-idx b{color:var(--lime);font-weight:500}
+.work h3{font-size:clamp(28px,4.6vw,64px);font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-bottom:12px}
+.work h3 .arrow{display:inline-block;transition:transform .3s;color:var(--lime)}
+.work:hover h3 .arrow{transform:translate(6px,-6px)}
+.work p.desc{color:var(--muted);max-width:640px;font-size:clamp(14px,1.5vw,17px);margin-bottom:16px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--font-m);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.tags span{border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted)}
+.work-year{position:absolute;top:clamp(26px,4vw,44px);right:0;font-family:var(--font-m);font-size:12px;color:var(--muted)}
+/* ---------- about ---------- */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,80px)}
+.about-grid .big{font-size:clamp(22px,3vw,38px);line-height:1.35;font-weight:500;letter-spacing:-.01em}
+.about-grid .big em{font-style:normal;color:var(--lime)}
+.about-grid .small{color:var(--muted);font-size:clamp(14px,1.5vw,17px);display:flex;flex-direction:column;gap:18px;justify-content:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:clamp(40px,6vw,80px)}
+.stat{padding:28px 18px 28px 0;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:clamp(34px,4.5vw,58px);font-weight:700;letter-spacing:-.02em;color:var(--lime)}
+.stat .k{font-family:var(--font-m);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+/* ---------- contact ---------- */
+.contact{text-align:left}
+.contact .huge{font-size:clamp(44px,9vw,150px);font-weight:700;letter-spacing:-.03em;line-height:1;text-transform:uppercase}
+.contact .huge a{border-bottom:4px solid var(--lime);transition:background .3s,color .3s}
+.contact .huge a:hover{background:var(--lime);color:#0b0b0c}
+.contact-links{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap;font-family:var(--font-m);font-size:13px;letter-spacing:.08em}
+.contact-links a{border:1px solid var(--line);border-radius:99px;padding:12px 22px;transition:all .3s;color:var(--muted)}
+.contact-links a:hover{border-color:var(--lime);color:var(--lime)}
+/* ---------- footer ---------- */
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:26px clamp(20px,4vw,56px);border-top:1px solid var(--line);
+  font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(34px);transition:opacity .8s cubic-bezier(.2,.6,.2,1),transform .8s cubic-bezier(.2,.6,.2,1)}
+.rv.in{opacity:1;transform:none}
+/* ---------- progress bar ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--lime);z-index:300}
+/* ---------- custom cursor ---------- */
+.cursor-dot,.cursor-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:400;border-radius:50%}
+.cursor-dot{width:8px;height:8px;background:var(--lime);transform:translate(-50%,-50%)}
+.cursor-ring{width:36px;height:36px;border:1px solid rgba(216,255,62,.55);transform:translate(-50%,-50%);
+  transition:width .25s,height .25s,border-color .25s}
+body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
+@media (hover:none),(max-width:760px){.cursor-dot,.cursor-ring{display:none}}
+/* ---------- hero entrance ---------- */
+.hero h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(4deg);
+  animation:chIn .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes chIn{to{opacity:1;transform:none}}
+.hero h1{overflow:hidden}
+/* ---------- timeline ---------- */
+.timeline{position:relative;margin-left:6px;padding-left:clamp(20px,4vw,44px);border-left:1px solid var(--line)}
+.tl-item{position:relative;padding:0 0 clamp(28px,4vw,44px)}
+.tl-item::before{content:"";position:absolute;left:calc(clamp(20px,4vw,44px) * -1 - 5px);top:8px;
+  width:9px;height:9px;border-radius:50%;background:var(--lime)}
+.tl-date{font-family:var(--font-m);font-size:12px;letter-spacing:.2em;color:var(--lime);margin-bottom:6px}
+.tl-item h4{font-size:clamp(19px,2.6vw,30px);font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.tl-item p{color:var(--muted);font-size:clamp(13px,1.4vw,16px);max-width:560px}
+/* ---------- principles ---------- */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(36px,5vw,64px)}
+.rule{background:var(--bg);padding:clamp(24px,3.5vw,44px);position:relative;overflow:hidden;transition:background .35s}
+.rule:hover{background:var(--card)}
+.rule .qn{font-family:var(--font-m);font-size:12px;color:var(--lime);letter-spacing:.2em;margin-bottom:14px}
+.rule blockquote{font-size:clamp(20px,2.8vw,34px);font-weight:700;line-height:1.3;letter-spacing:-.01em}
+.rule blockquote .hl{color:var(--lime)}
+.wontdo{border:1px dashed #3a3a3e;border-radius:14px;padding:clamp(24px,4vw,44px);position:relative}
+.wontdo h4{font-family:var(--font-m);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.wontdo h4 s{color:#f85149;text-decoration-color:#f85149}
+.wontdo ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 28px}
+.wontdo li{font-size:clamp(15px,1.8vw,20px);font-weight:500;padding-left:26px;position:relative}
+.wontdo li::before{content:"✕";position:absolute;left:0;color:#f85149;font-weight:700}
+/* ---------- now ---------- */
+.now-item{display:flex;align-items:center;gap:clamp(14px,2.5vw,28px);padding:20px 0;border-top:1px solid var(--line)}
+.now-item:last-child{border-bottom:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--lime);flex:none;position:relative}
+.dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--lime);animation:ping 1.8s ease-out infinite}
+@keyframes ping{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.4);opacity:0}}
+.now-item .nm{font-size:clamp(17px,2.4vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.now-item .ds{color:var(--muted);font-size:clamp(13px,1.4vw,15px);flex:1}
+.now-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted);flex:none}
+.now-tag.indie{border-color:var(--lime);color:var(--lime)}
+/* ---------- atlas ---------- */
+.atlas-stats{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);margin-bottom:clamp(28px,4vw,48px)}
+.a-stat{padding:22px 16px;border-right:1px solid var(--line)}
+.a-stat:last-child{border-right:0}
+.a-stat .n{font-size:clamp(26px,3.4vw,44px);font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.a-stat .n em{font-style:normal;color:var(--lime)}
+.a-stat .k{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.graph-wrap{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 45%,#141417 0%,var(--bg) 70%);
+  margin-bottom:clamp(28px,4vw,48px);overflow:hidden}
+#wiki-graph{display:block;width:100%;height:clamp(380px,60vw,560px)}
+.g-tip{position:absolute;pointer-events:none;background:#161618;border:1px solid var(--lime);border-radius:8px;
+  padding:10px 14px;font-size:13px;display:none;z-index:5;max-width:240px}
+.g-tip b{color:var(--lime)}
+.g-tip .m{font-family:var(--font-m);font-size:11px;color:var(--muted);margin-top:4px}
+.g-hint{position:absolute;bottom:12px;right:16px;font-family:var(--font-m);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted)}
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.domain-card{background:var(--bg);padding:clamp(22px,3vw,36px)}
+.domain-card h4{font-size:clamp(20px,2.6vw,30px);font-weight:700;margin-bottom:4px}
+.domain-card h4 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.domain-card>p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.proj-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.proj-row .pn{font-family:var(--font-m);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pd{color:var(--muted);font-size:12px;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pg{font-family:var(--font-m);font-size:11px;color:var(--lime);flex:none}
+.proj-row .st{width:7px;height:7px;border-radius:50%;background:var(--lime);flex:none}
+.proj-row .st.idle{background:#3a3a3e}
+.domain-card[data-col]{cursor:pointer;transition:background .25s}
+.domain-card[data-col]:hover{background:#101012}
+/* ---------- writing ---------- */
+.col-block{border:1px solid var(--line);margin-bottom:clamp(20px,3vw,32px);transition:box-shadow .4s,border-color .4s}
+.col-block.flash{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime)}
+.col-head{padding:clamp(20px,2.6vw,32px);border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.col-head h3{font-size:clamp(22px,2.8vw,34px);font-weight:700;letter-spacing:-.01em}
+.col-head h3 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.col-head p{color:var(--muted);font-size:13px;flex:1;min-width:200px}
+.art-row{display:flex;align-items:center;gap:18px;padding:18px clamp(20px,2.6vw,32px);border-top:1px solid var(--line);
+  cursor:pointer;transition:background .2s}
+.art-row:first-of-type{border-top:0}
+.art-row:hover{background:#101012}
+.art-row.locked{cursor:default}
+.art-row.locked:hover{background:none}
+.art-num{font-family:var(--font-m);font-size:13px;color:var(--lime);flex:none;width:34px}
+.art-main{flex:1;min-width:0}
+.art-title{font-size:clamp(16px,2vw,22px);font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-desc{color:var(--muted);font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-meta{flex:none;display:flex;gap:8px;align-items:center}
+.col-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;border:1px solid var(--line);
+  border-radius:99px;padding:5px 11px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.art-arrow{color:var(--lime);font-size:18px;flex:none}
+.soon{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:#5a5a5e;text-transform:uppercase;white-space:nowrap}
+.w-label{font-family:var(--font-m);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);margin:0 0 16px}
+.w-label:not(:first-child){margin-top:clamp(28px,4vw,48px)}
+.col-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(8px,1.5vw,16px)}
+.col-chip{background:var(--bg);padding:clamp(16px,2vw,24px);display:block;text-decoration:none;transition:background .2s}
+.col-chip:hover{background:#101012}
+.col-chip b{display:block;color:var(--ink);font-size:15px;font-weight:600;margin-bottom:8px}
+.col-chip span{font-family:var(--font-m);font-size:11px;color:var(--lime);letter-spacing:.1em}
+.col-chip i{font-style:normal;color:var(--muted);float:right}
+.view-all{display:flex;align-items:baseline;justify-content:space-between;border:1px solid var(--line);
+  padding:22px clamp(20px,2.6vw,32px);text-decoration:none;transition:border-color .2s;margin-top:clamp(20px,3vw,32px)}
+.view-all:hover{border-color:var(--lime)}
+.view-all span{color:var(--ink);font-size:clamp(18px,2.4vw,26px);font-weight:700;letter-spacing:-.01em}
+.view-all b{font-family:var(--font-m);color:var(--lime);font-size:14px}
+/* ---------- reader (typography shared with /writing/* pages) ---------- */
+.reader-body h1{font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:14px}
+.reader-body .r-meta{display:flex;gap:10px;margin-bottom:40px;flex-wrap:wrap}
+.reader-body h2{font-size:clamp(20px,2.6vw,28px);font-weight:700;margin:44px 0 16px;letter-spacing:-.01em}
+.reader-body h2::before{content:"";display:inline-block;width:22px;height:4px;background:var(--lime);margin-right:12px;vertical-align:middle}
+.reader-body p{font-size:clamp(15px,1.8vw,18px);line-height:1.85;color:#d8d8d4;margin-bottom:18px}
+.reader-body ul{margin:0 0 20px 4px;list-style:none}
+.reader-body li{font-size:clamp(15px,1.8vw,18px);line-height:1.8;color:#d8d8d4;margin-bottom:10px;padding-left:26px;position:relative}
+.reader-body ul li::before{content:"▸";color:var(--lime);position:absolute;left:4px}
+.reader-body ol{margin:0 0 20px 4px;list-style:none;counter-reset:oli}
+.reader-body ol li{counter-increment:oli;padding-left:36px}
+.reader-body ol li::before{content:counter(oli,decimal-leading-zero);color:var(--lime);position:absolute;left:0;
+  font-family:var(--font-m);font-size:.82em;top:4px}
+.reader-body strong{color:var(--ink)}
+.reader-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}
+.reader-body th,.reader-body td{border:1px solid var(--line);padding:10px 14px;text-align:left;line-height:1.6}
+.reader-body th{background:#141417;color:var(--lime);font-weight:600;white-space:nowrap}
+.reader-body td{color:#d8d8d4}
+.reader-body blockquote{border-left:2px solid var(--lime);padding:4px 0 4px 18px;color:var(--muted);margin:24px 0;font-size:15px}
+.reader-body code{font-family:var(--font-m);font-size:.88em;background:#161618;border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px;color:var(--lime)}
+.reader-body pre{margin:26px 0;background:#101012;border:1px solid var(--line);border-left:3px solid var(--lime);
+  border-radius:0 10px 10px 0;padding:18px 20px;overflow-x:auto}
+.reader-body pre code{font-family:var(--font-m);font-size:13.5px;line-height:1.75;background:none;border:0;
+  border-radius:0;padding:0;color:#d8d8da;white-space:pre}
+.reader-body hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+/* ---------- magnetic ---------- */
+.magnet{display:inline-block;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+@media (max-width:760px){
+  .about-grid{grid-template-columns:1fr}
+  .rules{grid-template-columns:1fr}
+  .wontdo ul{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(2){border-right:0}
+  .stat{border-bottom:1px solid var(--line)}
+  .work{grid-template-columns:44px 1fr}
+  .work-year{position:static;margin-top:10px}
+  .art-row{flex-wrap:wrap;gap:10px}
+  .art-meta{width:100%;padding-left:52px}
+  .col-chips{grid-template-columns:repeat(2,1fr)}
+  .scroll-hint{display:none}
+  .nav-links a{display:none}
+}
+
+.art-nav{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}
+.art-nav .logo{font-weight:700;font-size:20px;color:var(--ink);text-decoration:none}
+.art-nav .logo sup{color:var(--lime);font-size:10px}
+.art-nav .mid{display:flex;gap:18px;align-items:center}
+.art-nav a.lnk{color:var(--muted);text-decoration:none;font-size:14px}
+.art-nav a.lnk:hover{color:var(--lime)}
+.art-wrap{max-width:760px;margin:0 auto;padding:clamp(40px,6vh,72px) clamp(22px,5vw,40px) 40px}
+.prev-next{display:flex;justify-content:space-between;gap:16px;margin-top:64px;padding-top:28px;border-top:1px solid var(--line)}
+.prev-next a{color:var(--muted);text-decoration:none;font-size:15px;max-width:44%}
+.prev-next a:hover{color:var(--lime)}
+.prev-next a span{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;color:var(--lime)}
+.prev-next .nx{text-align:right;margin-left:auto}
+.art-foot{max-width:760px;margin:0 auto;padding:0 clamp(22px,5vw,40px) 80px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.soon-banner{display:inline-block;margin-left:10px;padding:3px 12px;border:1px dashed var(--lime);border-radius:20px;color:var(--lime);font-size:12px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"></div>
+  <div class="reader-body" id="reader-body"></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "界面只讲能证明的话", "en": "UI Should Only Claim What's Proven"}, "body": {"zh": "<p>我们的视频工作台资产库做 V8 改版时，定了一条看起来很笨的规矩：不引入统一的资产状态字段。页面只能展示当前数据对象能够证明的事实。生成过程、分镜复核、项目阶段、导出产物，分开表达，绝不混成一个漂亮的&quot;已完成&quot;。</p>\n<h2>为什么不要统一状态</h2>\n<p>资产库同时管两类东西：影视作品下的复合资产，和可以独立保存的单项资产（图片、视频、声音、小说、剧本、提示词、角色、数字人、场景、道具、分镜、成片）。每一类资产的&quot;状态&quot;含义都不同，硬套一个全库统一的&quot;待确认/已交付&quot;，等于用界面语言虚构业务事实。</p>\n<p>收口后的规则是：每个对象只展示它这个类型能证明的事实。</p>\n<h2>状态边界表</h2>\n<table><thead><tr><th>对象</th><th>可以展示</th><th>不展示</th></tr></thead><tbody><tr><td>普通资产</td><td>已入库、来源、作品归属、版本、只读派生</td><td>处理中、待确认、已交付</td></tr><tr><td>小说</td><td>草稿、可用、建议修改、合规阻断、投稿体检结果</td><td>已确认、已交付</td></tr><tr><td>剧本</td><td>草稿、生成中、可用、失败、版本号</td><td>已确认、已交付</td></tr><tr><td>分镜渲染</td><td>待生成、生成中、已生成、生成失败；需复核</td><td>需复核只属于对应分镜，不扩散到整部作品</td></tr><tr><td>任务记录</td><td>排队中、进行中、已完成、失败</td><td>任务完成不等于资产确认</td></tr><tr><td>导出产物</td><td>合成中、成片已生成、导出失败、可下载</td><td>可下载不等于用户验收</td></tr><tr><td>音频资产</td><td>已准备、版权待确认、仅项目内使用、可商用</td><td>&quot;待确认&quot;只用于版权语境</td></tr></tbody></table>\n<p>三句最容易写错的话，被明确钉死：任务完成不等于资产确认；可下载不等于用户验收；项目的&quot;已完成&quot;只表示制作阶段，不解释为已交付。</p>\n<h2>不虚构统一接口</h2>\n<p>同一条规矩也管住了交互设计：页面之间的跳转只引用前端已有的真实入口，不虚构统一的资产详情接口。评审时按三条泳道标注点击去向——入口与页面跳转、资产详情与关系、任务与导出事实——每条路径都能在现有路由里找到对应，没有&quot;将来会有的&quot;占位链接。</p>\n<p>关系说明图里写清楚五类记录的边界：资产记录是已保存内容，任务记录是生成过程，分镜记录是生成结果与复核，项目记录是制作阶段，导出产物是成片是否已生成——用户验收当前系统未记录，就老老实实写&quot;未记录&quot;，而不是编一个状态填上。</p>\n<h2>全量扫描验证</h2>\n<p>改版完成后做了一次全量文案扫描：全库找不到&quot;待确认&quot;&quot;已交付&quot;&quot;可发布&quot;&quot;已确认&quot;这类状态词。唯一的例外是声音资产的&quot;版权待确认&quot;，而且它只出现在版权字段的语境里。</p>\n<p>设计稿里的数量和示例内容是演示数据，接入实现时必须替换为接口返回值——连演示数据都不许假装成真实状态。</p>\n<h2>小结</h2>\n<p>界面文案的诚实只有一句话：数据能证明什么，就说什么；证明不了的，宁可不说，也不编一个好听的状态。这条规矩笨，但它让每一句界面上的话都能在数据库里找到出处。</p>", "en": "<p>When our video workbench&#x27;s asset library went through its V8 redesign, we set a rule that looks dumb: no unified asset status field. Every page may only display facts the underlying data object can prove. Generation progress, shot review, project phase, and export artifacts are expressed separately — never blended into one pretty &quot;Done.&quot;</p>\n<h2>Why no unified status</h2>\n<p>The library manages two kinds of things: composite assets under film projects, and standalone assets (images, video, audio, novels, scripts, prompts, characters, digital humans, scenes, props, storyboards, finished films). Each type&#x27;s &quot;status&quot; means something different — forcing one library-wide &quot;pending/delivered&quot; invents business facts in UI language.</p>\n<p>The settled rule: each object displays only what its type can prove.</p>\n<h2>The status boundary table</h2>\n<table><thead><tr><th>Object</th><th>May display</th><th>Never displays</th></tr></thead><tbody><tr><td>Ordinary assets</td><td>Stored, source, project ownership, version, read-only derivatives</td><td>Processing, pending confirmation, delivered</td></tr><tr><td>Novels</td><td>Draft, usable, needs revision, compliance block, submission check results</td><td>Confirmed, delivered</td></tr><tr><td>Scripts</td><td>Draft, generating, usable, failed, version</td><td>Confirmed, delivered</td></tr><tr><td>Shot renders</td><td>Queued, rendering, rendered, failed; needs review</td><td>&quot;Needs review&quot; belongs to its shot only, never the whole film</td></tr><tr><td>Task records</td><td>Queued, running, done, failed</td><td>Task done ≠ asset confirmed</td></tr><tr><td>Export artifacts</td><td>Compositing, film generated, export failed, downloadable</td><td>Downloadable ≠ user accepted</td></tr><tr><td>Audio assets</td><td>Ready, copyright pending, project-internal only, commercial-use OK</td><td>&quot;Pending&quot; only in copyright context</td></tr></tbody></table>\n<p>Three sentences most likely to be written wrong were nailed down: task done doesn&#x27;t mean asset confirmed; downloadable doesn&#x27;t mean user accepted; a project&#x27;s &quot;completed&quot; means production phase only, never delivered.</p>\n<h2>Never invent a unified API</h2>\n<p>The same rule governed interaction design: page navigation references only real existing frontend routes — no invented unified asset-detail endpoint. Click paths were reviewed across three swimlanes — entry and page jumps, asset details and relations, tasks and export facts — every path traceable to an existing route, with no &quot;coming soon&quot; placeholder links.</p>\n<p>The relationship diagram states five record boundaries plainly: asset records are saved content, task records are generation processes, shot records are generation results plus review, project records are production phases, export artifacts are whether the film exists. User acceptance isn&#x27;t recorded by the system today, so it says &quot;not recorded&quot; instead of inventing a status to fill the gap.</p>\n<h2>Full-text verification</h2>\n<p>After the redesign, a full copy scan found none of the status words — &quot;pending,&quot; &quot;delivered,&quot; &quot;releasable,&quot; &quot;confirmed&quot; — anywhere in the library. The sole exception is audio&#x27;s &quot;copyright pending,&quot; kept strictly inside the copyright field&#x27;s context.</p>\n<p>Quantities and examples in the design mockups are demo data and must be replaced by API responses on implementation — not even demo data may pretend to be real state.</p>\n<h2>In short</h2>\n<p>Honest UI copy is one sentence: say what the data can prove; what it can&#x27;t prove, leave unsaid rather than inventing a flattering status. The rule is clumsy, but it means every sentence on screen traces back to something in the database.</p>"}, "prev": {"url": "/writing/11-ai-codes-humans-judge", "t": {"zh": "AI 写代码越快，人越要负责判断", "en": "The Faster AI Codes, the More Humans Must Judge"}}, "next": {"url": "/writing/25-team-space-leak", "t": {"zh": "团队空间看到了别人的项目：一次越权复盘", "en": "When Team Spaces Leaked Projects"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  document.getElementById('reader-meta').innerHTML =
+    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+  document.getElementById('reader-body').innerHTML =
+    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+</body>
+</html>

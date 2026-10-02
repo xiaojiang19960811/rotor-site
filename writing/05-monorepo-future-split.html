@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单仓不拆，但按“未来可拆”组织 — rotor</title>
+<meta name="description" content="拒绝拆微仓政治正确，也拒绝意大利面单仓">
+<style>
+:root{
+  --bg:#0b0b0c; --ink:#f2f0ea; --muted:#8a8a8e; --line:#232326;
+  --lime:#d8ff3e; --card:#121214;
+  --font-d:"Space Grotesk","Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --font-m:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-d);line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--lime);color:#0b0b0c}
+a{color:inherit;text-decoration:none}
+/* film grain */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");}
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:18px clamp(20px,4vw,56px);mix-blend-mode:difference}
+.logo{font-weight:700;font-size:20px;letter-spacing:.06em}
+.logo sup{font-size:10px;color:var(--lime)}
+.nav-links{display:flex;gap:clamp(14px,3vw,36px);align-items:center;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.nav-links a{opacity:.75;transition:opacity .25s}
+.nav-links a:hover{opacity:1;color:var(--lime)}
+.lang{display:flex;border:1px solid var(--ink);border-radius:99px;overflow:hidden;font-family:var(--font-m);font-size:12px}
+.lang button{background:transparent;border:0;color:var(--ink);padding:6px 12px;cursor:pointer;opacity:.55;letter-spacing:.08em}
+.lang button.on{background:var(--ink);color:#0b0b0c;opacity:1}
+/* ---------- hero ---------- */
+.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 clamp(20px,4vw,56px) clamp(28px,5vh,64px);position:relative}
+.hero-kicker{font-family:var(--font-m);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.hero-kicker b{color:var(--lime);font-weight:500}
+.hero h1{font-size:clamp(72px,17.5vw,300px);line-height:.86;font-weight:700;letter-spacing:-.03em;text-transform:uppercase}
+.hero h1 .stroke{color:transparent;-webkit-text-stroke:2px var(--ink)}
+.hero-sub{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-top:26px;flex-wrap:wrap}
+.hero-sub p{max-width:520px;font-size:clamp(15px,1.6vw,19px);color:var(--muted)}
+.hero-sub p strong{color:var(--ink);font-weight:500}
+.badge-spin{width:104px;height:104px;flex:none;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scroll-hint{position:absolute;right:clamp(20px,4vw,56px);top:50%;font-family:var(--font-m);font-size:11px;
+  letter-spacing:.3em;color:var(--muted);writing-mode:vertical-rl}
+/* ---------- marquee ---------- */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:14px 0}
+.marquee-inner{display:inline-block;animation:mq 26s linear infinite;font-family:var(--font-m);
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.marquee-inner i{color:var(--lime);font-style:normal;margin:0 18px}
+@keyframes mq{to{transform:translateX(-50%)}}
+/* ---------- sections ---------- */
+section{padding:clamp(72px,10vw,140px) clamp(20px,4vw,56px)}
+.sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:clamp(32px,5vw,64px)}
+.sec-num{font-family:var(--font-m);font-size:13px;color:var(--lime)}
+.sec-title{font-size:clamp(34px,5.5vw,72px);font-weight:700;letter-spacing:-.02em;line-height:1;text-transform:uppercase}
+/* ---------- works ---------- */
+.work{display:grid;grid-template-columns:72px 1fr;gap:clamp(12px,3vw,40px);padding:clamp(26px,4vw,44px) 0;
+  border-top:1px solid var(--line);position:relative;transition:background .35s}
+.work:last-child{border-bottom:1px solid var(--line)}
+.work:hover{background:var(--card)}
+.work-idx{font-family:var(--font-m);font-size:13px;color:var(--muted);padding-top:8px}
+.work-idx b{color:var(--lime);font-weight:500}
+.work h3{font-size:clamp(28px,4.6vw,64px);font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-bottom:12px}
+.work h3 .arrow{display:inline-block;transition:transform .3s;color:var(--lime)}
+.work:hover h3 .arrow{transform:translate(6px,-6px)}
+.work p.desc{color:var(--muted);max-width:640px;font-size:clamp(14px,1.5vw,17px);margin-bottom:16px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--font-m);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.tags span{border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted)}
+.work-year{position:absolute;top:clamp(26px,4vw,44px);right:0;font-family:var(--font-m);font-size:12px;color:var(--muted)}
+/* ---------- about ---------- */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,80px)}
+.about-grid .big{font-size:clamp(22px,3vw,38px);line-height:1.35;font-weight:500;letter-spacing:-.01em}
+.about-grid .big em{font-style:normal;color:var(--lime)}
+.about-grid .small{color:var(--muted);font-size:clamp(14px,1.5vw,17px);display:flex;flex-direction:column;gap:18px;justify-content:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:clamp(40px,6vw,80px)}
+.stat{padding:28px 18px 28px 0;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:clamp(34px,4.5vw,58px);font-weight:700;letter-spacing:-.02em;color:var(--lime)}
+.stat .k{font-family:var(--font-m);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+/* ---------- contact ---------- */
+.contact{text-align:left}
+.contact .huge{font-size:clamp(44px,9vw,150px);font-weight:700;letter-spacing:-.03em;line-height:1;text-transform:uppercase}
+.contact .huge a{border-bottom:4px solid var(--lime);transition:background .3s,color .3s}
+.contact .huge a:hover{background:var(--lime);color:#0b0b0c}
+.contact-links{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap;font-family:var(--font-m);font-size:13px;letter-spacing:.08em}
+.contact-links a{border:1px solid var(--line);border-radius:99px;padding:12px 22px;transition:all .3s;color:var(--muted)}
+.contact-links a:hover{border-color:var(--lime);color:var(--lime)}
+/* ---------- footer ---------- */
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:26px clamp(20px,4vw,56px);border-top:1px solid var(--line);
+  font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(34px);transition:opacity .8s cubic-bezier(.2,.6,.2,1),transform .8s cubic-bezier(.2,.6,.2,1)}
+.rv.in{opacity:1;transform:none}
+/* ---------- progress bar ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--lime);z-index:300}
+/* ---------- custom cursor ---------- */
+.cursor-dot,.cursor-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:400;border-radius:50%}
+.cursor-dot{width:8px;height:8px;background:var(--lime);transform:translate(-50%,-50%)}
+.cursor-ring{width:36px;height:36px;border:1px solid rgba(216,255,62,.55);transform:translate(-50%,-50%);
+  transition:width .25s,height .25s,border-color .25s}
+body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
+@media (hover:none),(max-width:760px){.cursor-dot,.cursor-ring{display:none}}
+/* ---------- hero entrance ---------- */
+.hero h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(4deg);
+  animation:chIn .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes chIn{to{opacity:1;transform:none}}
+.hero h1{overflow:hidden}
+/* ---------- timeline ---------- */
+.timeline{position:relative;margin-left:6px;padding-left:clamp(20px,4vw,44px);border-left:1px solid var(--line)}
+.tl-item{position:relative;padding:0 0 clamp(28px,4vw,44px)}
+.tl-item::before{content:"";position:absolute;left:calc(clamp(20px,4vw,44px) * -1 - 5px);top:8px;
+  width:9px;height:9px;border-radius:50%;background:var(--lime)}
+.tl-date{font-family:var(--font-m);font-size:12px;letter-spacing:.2em;color:var(--lime);margin-bottom:6px}
+.tl-item h4{font-size:clamp(19px,2.6vw,30px);font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.tl-item p{color:var(--muted);font-size:clamp(13px,1.4vw,16px);max-width:560px}
+/* ---------- principles ---------- */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(36px,5vw,64px)}
+.rule{background:var(--bg);padding:clamp(24px,3.5vw,44px);position:relative;overflow:hidden;transition:background .35s}
+.rule:hover{background:var(--card)}
+.rule .qn{font-family:var(--font-m);font-size:12px;color:var(--lime);letter-spacing:.2em;margin-bottom:14px}
+.rule blockquote{font-size:clamp(20px,2.8vw,34px);font-weight:700;line-height:1.3;letter-spacing:-.01em}
+.rule blockquote .hl{color:var(--lime)}
+.wontdo{border:1px dashed #3a3a3e;border-radius:14px;padding:clamp(24px,4vw,44px);position:relative}
+.wontdo h4{font-family:var(--font-m);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.wontdo h4 s{color:#f85149;text-decoration-color:#f85149}
+.wontdo ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 28px}
+.wontdo li{font-size:clamp(15px,1.8vw,20px);font-weight:500;padding-left:26px;position:relative}
+.wontdo li::before{content:"✕";position:absolute;left:0;color:#f85149;font-weight:700}
+/* ---------- now ---------- */
+.now-item{display:flex;align-items:center;gap:clamp(14px,2.5vw,28px);padding:20px 0;border-top:1px solid var(--line)}
+.now-item:last-child{border-bottom:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--lime);flex:none;position:relative}
+.dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--lime);animation:ping 1.8s ease-out infinite}
+@keyframes ping{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.4);opacity:0}}
+.now-item .nm{font-size:clamp(17px,2.4vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.now-item .ds{color:var(--muted);font-size:clamp(13px,1.4vw,15px);flex:1}
+.now-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted);flex:none}
+.now-tag.indie{border-color:var(--lime);color:var(--lime)}
+/* ---------- atlas ---------- */
+.atlas-stats{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);margin-bottom:clamp(28px,4vw,48px)}
+.a-stat{padding:22px 16px;border-right:1px solid var(--line)}
+.a-stat:last-child{border-right:0}
+.a-stat .n{font-size:clamp(26px,3.4vw,44px);font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.a-stat .n em{font-style:normal;color:var(--lime)}
+.a-stat .k{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.graph-wrap{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 45%,#141417 0%,var(--bg) 70%);
+  margin-bottom:clamp(28px,4vw,48px);overflow:hidden}
+#wiki-graph{display:block;width:100%;height:clamp(380px,60vw,560px)}
+.g-tip{position:absolute;pointer-events:none;background:#161618;border:1px solid var(--lime);border-radius:8px;
+  padding:10px 14px;font-size:13px;display:none;z-index:5;max-width:240px}
+.g-tip b{color:var(--lime)}
+.g-tip .m{font-family:var(--font-m);font-size:11px;color:var(--muted);margin-top:4px}
+.g-hint{position:absolute;bottom:12px;right:16px;font-family:var(--font-m);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted)}
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.domain-card{background:var(--bg);padding:clamp(22px,3vw,36px)}
+.domain-card h4{font-size:clamp(20px,2.6vw,30px);font-weight:700;margin-bottom:4px}
+.domain-card h4 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.domain-card>p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.proj-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.proj-row .pn{font-family:var(--font-m);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pd{color:var(--muted);font-size:12px;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pg{font-family:var(--font-m);font-size:11px;color:var(--lime);flex:none}
+.proj-row .st{width:7px;height:7px;border-radius:50%;background:var(--lime);flex:none}
+.proj-row .st.idle{background:#3a3a3e}
+.domain-card[data-col]{cursor:pointer;transition:background .25s}
+.domain-card[data-col]:hover{background:#101012}
+/* ---------- writing ---------- */
+.col-block{border:1px solid var(--line);margin-bottom:clamp(20px,3vw,32px);transition:box-shadow .4s,border-color .4s}
+.col-block.flash{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime)}
+.col-head{padding:clamp(20px,2.6vw,32px);border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.col-head h3{font-size:clamp(22px,2.8vw,34px);font-weight:700;letter-spacing:-.01em}
+.col-head h3 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.col-head p{color:var(--muted);font-size:13px;flex:1;min-width:200px}
+.art-row{display:flex;align-items:center;gap:18px;padding:18px clamp(20px,2.6vw,32px);border-top:1px solid var(--line);
+  cursor:pointer;transition:background .2s}
+.art-row:first-of-type{border-top:0}
+.art-row:hover{background:#101012}
+.art-row.locked{cursor:default}
+.art-row.locked:hover{background:none}
+.art-num{font-family:var(--font-m);font-size:13px;color:var(--lime);flex:none;width:34px}
+.art-main{flex:1;min-width:0}
+.art-title{font-size:clamp(16px,2vw,22px);font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-desc{color:var(--muted);font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-meta{flex:none;display:flex;gap:8px;align-items:center}
+.col-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;border:1px solid var(--line);
+  border-radius:99px;padding:5px 11px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.art-arrow{color:var(--lime);font-size:18px;flex:none}
+.soon{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:#5a5a5e;text-transform:uppercase;white-space:nowrap}
+.w-label{font-family:var(--font-m);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);margin:0 0 16px}
+.w-label:not(:first-child){margin-top:clamp(28px,4vw,48px)}
+.col-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(8px,1.5vw,16px)}
+.col-chip{background:var(--bg);padding:clamp(16px,2vw,24px);display:block;text-decoration:none;transition:background .2s}
+.col-chip:hover{background:#101012}
+.col-chip b{display:block;color:var(--ink);font-size:15px;font-weight:600;margin-bottom:8px}
+.col-chip span{font-family:var(--font-m);font-size:11px;color:var(--lime);letter-spacing:.1em}
+.col-chip i{font-style:normal;color:var(--muted);float:right}
+.view-all{display:flex;align-items:baseline;justify-content:space-between;border:1px solid var(--line);
+  padding:22px clamp(20px,2.6vw,32px);text-decoration:none;transition:border-color .2s;margin-top:clamp(20px,3vw,32px)}
+.view-all:hover{border-color:var(--lime)}
+.view-all span{color:var(--ink);font-size:clamp(18px,2.4vw,26px);font-weight:700;letter-spacing:-.01em}
+.view-all b{font-family:var(--font-m);color:var(--lime);font-size:14px}
+/* ---------- reader (typography shared with /writing/* pages) ---------- */
+.reader-body h1{font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:14px}
+.reader-body .r-meta{display:flex;gap:10px;margin-bottom:40px;flex-wrap:wrap}
+.reader-body h2{font-size:clamp(20px,2.6vw,28px);font-weight:700;margin:44px 0 16px;letter-spacing:-.01em}
+.reader-body h2::before{content:"";display:inline-block;width:22px;height:4px;background:var(--lime);margin-right:12px;vertical-align:middle}
+.reader-body p{font-size:clamp(15px,1.8vw,18px);line-height:1.85;color:#d8d8d4;margin-bottom:18px}
+.reader-body ul{margin:0 0 20px 4px;list-style:none}
+.reader-body li{font-size:clamp(15px,1.8vw,18px);line-height:1.8;color:#d8d8d4;margin-bottom:10px;padding-left:26px;position:relative}
+.reader-body ul li::before{content:"▸";color:var(--lime);position:absolute;left:4px}
+.reader-body ol{margin:0 0 20px 4px;list-style:none;counter-reset:oli}
+.reader-body ol li{counter-increment:oli;padding-left:36px}
+.reader-body ol li::before{content:counter(oli,decimal-leading-zero);color:var(--lime);position:absolute;left:0;
+  font-family:var(--font-m);font-size:.82em;top:4px}
+.reader-body strong{color:var(--ink)}
+.reader-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}
+.reader-body th,.reader-body td{border:1px solid var(--line);padding:10px 14px;text-align:left;line-height:1.6}
+.reader-body th{background:#141417;color:var(--lime);font-weight:600;white-space:nowrap}
+.reader-body td{color:#d8d8d4}
+.reader-body blockquote{border-left:2px solid var(--lime);padding:4px 0 4px 18px;color:var(--muted);margin:24px 0;font-size:15px}
+.reader-body code{font-family:var(--font-m);font-size:.88em;background:#161618;border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px;color:var(--lime)}
+.reader-body pre{margin:26px 0;background:#101012;border:1px solid var(--line);border-left:3px solid var(--lime);
+  border-radius:0 10px 10px 0;padding:18px 20px;overflow-x:auto}
+.reader-body pre code{font-family:var(--font-m);font-size:13.5px;line-height:1.75;background:none;border:0;
+  border-radius:0;padding:0;color:#d8d8da;white-space:pre}
+.reader-body hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+/* ---------- magnetic ---------- */
+.magnet{display:inline-block;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+@media (max-width:760px){
+  .about-grid{grid-template-columns:1fr}
+  .rules{grid-template-columns:1fr}
+  .wontdo ul{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(2){border-right:0}
+  .stat{border-bottom:1px solid var(--line)}
+  .work{grid-template-columns:44px 1fr}
+  .work-year{position:static;margin-top:10px}
+  .art-row{flex-wrap:wrap;gap:10px}
+  .art-meta{width:100%;padding-left:52px}
+  .col-chips{grid-template-columns:repeat(2,1fr)}
+  .scroll-hint{display:none}
+  .nav-links a{display:none}
+}
+
+.art-nav{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}
+.art-nav .logo{font-weight:700;font-size:20px;color:var(--ink);text-decoration:none}
+.art-nav .logo sup{color:var(--lime);font-size:10px}
+.art-nav .mid{display:flex;gap:18px;align-items:center}
+.art-nav a.lnk{color:var(--muted);text-decoration:none;font-size:14px}
+.art-nav a.lnk:hover{color:var(--lime)}
+.art-wrap{max-width:760px;margin:0 auto;padding:clamp(40px,6vh,72px) clamp(22px,5vw,40px) 40px}
+.prev-next{display:flex;justify-content:space-between;gap:16px;margin-top:64px;padding-top:28px;border-top:1px solid var(--line)}
+.prev-next a{color:var(--muted);text-decoration:none;font-size:15px;max-width:44%}
+.prev-next a:hover{color:var(--lime)}
+.prev-next a span{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;color:var(--lime)}
+.prev-next .nx{text-align:right;margin-left:auto}
+.art-foot{max-width:760px;margin:0 auto;padding:0 clamp(22px,5vw,40px) 80px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.soon-banner{display:inline-block;margin-left:10px;padding:3px 12px;border:1px dashed var(--lime);border-radius:20px;color:var(--lime);font-size:12px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"></div>
+  <div class="reader-body" id="reader-body"></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "单仓不拆，但按“未来可拆”组织", "en": "Monorepo, Organized for a Future Split"}, "body": {"zh": "<p>单仓还是多仓，两边都有政治正确：拆微仓显得架构先进，单仓显得务实。我们的数字人 Agent 项目选了第三条路：继续单仓，但按&quot;未来可拆&quot;组织——部署单元和共享包先分清楚，仓库数量以后再说。拆不拆是后来的决定，拆得动是现在的能力。</p>\n<h2>怎么分：先画部署单元，再画共享包</h2>\n<p>目录按两类角色组织。<code>apps/</code> 放未来可能独立部署的单元：用户端、后台端、接口服务、后台任务。<code>packages/</code> 放共享能力：契约、应用编排、领域、持久化、外部集成、运行时。</p>\n<p>这次重组是物理搬迁，不是建新目录摆样子。前端两端的源码完成隔离，共享样式收进独立 UI 包，两端不再通过内部路径互相调用；后端的路由按资源拆成十几个模块文件——世界、来信、任务、创作、账号、记忆、后台管理各归其位，注册器只保留装配和鉴权 helper；领域相关的检索逻辑从遗留大文件里抽出来，测试按单元、契约、E2E 分目录归档，脚本按迁移、备份、评测、发布、维护分层。旧的兼容层和混放目录直接删除，不留&quot;以后再清&quot;的尾巴。</p>\n<h2>两条硬边界</h2>\n<p>第一，契约包是源头。以手写 schema 为准，生成 OpenAPI 与客户端；跨模块事件用版本化名称；资产 manifest 在契约里定义版本、URI、哈希和内容类型，主仓用 lock 文件锁定资产仓的提交。契约先行，代码随后。</p>\n<p>第二，依赖方向锁死。领域代码不得依赖 Web 框架、前端框架、队列、缓存或具体 SDK；领域之间通过应用层编排或类型化事件通信。光靠约定不够，加了一个架构检查脚本，阻止应用/领域包反向依赖服务端、数据库和队列实现——边界由机器守，不靠自觉。</p>\n<p>数据库也一样：PostgreSQL 是正式接口服务和后台任务的唯一业务数据库，SQLite 只保留在迁移、备份和隔离测试工具里。正式启动路径不再加载 SQLite 驱动，一种用途一种数据库，不搞双轨。</p>\n<h2>搬迁清单：动了哪些东西</h2>\n<p>这次重组的具体动作值得列一下，因为&quot;模块化&quot;三个字太容易停留在 PPT 里。</p>\n<p>路由层：世界、来信、任务、创作主题/项目/版本/审批、后台资源、账号登录登出、记忆/成长，各自独立成模块文件；HTTP 资源覆盖十几个模块后，注册器只做装配和鉴权 helper，不再塞业务逻辑。</p>\n<p>数据层：数字人兼容 SQL 按记忆、创作、研究世界、种子拆成四个迁移模块，统一入口按固定顺序调用；研究路径的检索、来源增强和时间窗口评估，从遗留大文件里抽离出来。</p>\n<p>应用层：新增 application 包，承载跨域入口——发用户来信、排队手动研究、启动创作项目，都走应用层编排时钟、分诊和持久化。任务立即运行也通过应用层端口接入，不再直连实现。</p>\n<p>资产：运行时生成的资产不进入 Git。独立资产仓候选已在本地初始化，主仓用 manifest lock 文件锁定其提交；新增校验命令，对版本、路径、文件存在性、内容类型和哈希做校验，且不依赖运行时。</p>\n<p>脚本和测试：脚本按迁移、备份、评测、发布、维护分层；单元测试、契约测试、E2E 分目录归档，测试的依赖方向和源码边界保持一致。</p>\n<h2>仓库数量：不预先锁定</h2>\n<p>决策里还有一句容易被忽略的话：最终仓库数量暂不预先锁定。现在按&quot;未来可拆&quot;组织，不等于将来一定要拆成 N 个仓。拆不拆、拆成几个，是到时候看团队规模、发布节奏、权限边界再定的事。</p>\n<p>现在要保证的只有一条：想拆的时候，依赖关系已经理清楚了。最糟糕的状态不是单仓也不是多仓，是&quot;单仓拆不动，多仓不敢拆&quot;——前者是意大利面，后者是分布式意大利面。</p>\n<h2>诚实收尾：没做完的写下来</h2>\n<p>验证数据：类型检查、lint、293 项测试、构建、OpenAPI 生成、架构检查全部通过；容器开发环境四服务重建后健康检查正常。但 E2E 是 32 通过、4 跳过、4 失败——失败集中在既有 mock 和测试数据的等待问题，没有把它宣称为&quot;本次结构改动已解决&quot;。</p>\n<p>没做完的也明确列出来：API 路由还没按全部资源拆完，迁移 SQL 还没按领域物理拆完，独立资产仓还没真正发布。这些保留为后续阶段，不凑进本次结论。重构报告里最可疑的就是&quot;全部完成&quot;，我们选择把未完成项写在正文里。</p>\n<h2>小结</h2>\n<p>&quot;未来可拆&quot;的本质是：用部署单元的视角组织单仓，用契约和检查脚本锁住依赖方向，用诚实的验证报告代替&quot;重构完成&quot;的宣言。拆不拆以后再说，拆得动现在就要证明。</p>", "en": "<p>Monorepo or multi-repo — both sides have their dogma: splitting into micro-repos looks architecturally advanced; staying monorepo looks pragmatic. Our digital-human Agent project took a third path: stay monorepo, but organize for a future split — draw the deployment units and shared packages clearly now, decide on repo count later. Whether to split is a future decision; being splittable is a present capability.</p>\n<h2>How to divide: deployment units first, shared packages second</h2>\n<p>Directories are organized by two roles. <code>apps/</code> holds units that might deploy independently one day: the user client, the admin console, the API service, the background worker. <code>packages/</code> holds shared capabilities: contracts, application orchestration, domain, persistence, integrations, runtime.</p>\n<p>This reorganization was a physical move, not new directories for show. Both frontend clients&#x27; sources were isolated, shared styles collected into an independent UI package, and the two clients no longer call each other through internal paths. Backend routes were split by resource into a dozen-plus module files — world, letters, tasks, creation, accounts, memory, admin each in its place, the registrar keeping only assembly and auth helpers. Domain retrieval logic was extracted from a legacy monolith file; tests were archived by unit/contract/E2E; scripts layered by migration, backup, evaluation, release, and maintenance. Old compatibility shims and mixed directories were deleted outright — no &quot;clean up later&quot; tails.</p>\n<h2>Two hard boundaries</h2>\n<p>First, the contracts package is the source of truth. Hand-written schemas generate the OpenAPI spec and clients; cross-module events use versioned names; the asset manifest defines version, URI, hash, and content-type in contracts, and the main repo pins the asset repo&#x27;s commit with a lock file. Contracts first, code second.</p>\n<p>Second, dependency direction is locked. Domain code may not depend on the web framework, the frontend framework, queues, caches, or concrete SDKs; domains communicate through application-layer orchestration or typed events. Convention alone isn&#x27;t enough — an architecture check script blocks application/domain packages from reverse-depending on server, database, and queue implementations. Boundaries are guarded by machines, not by self-discipline.</p>\n<p>The database follows the same rule: PostgreSQL is the sole business database for the production API and worker; SQLite remains only in migration, backup, and isolated test tooling. The production boot path no longer loads the SQLite driver. One purpose, one database — no dual-track.</p>\n<h2>Honest close: what isn&#x27;t done is written down</h2>\n<p>The verification numbers: type checking, lint, 293 tests, build, OpenAPI generation, and the architecture check all pass; the containerized dev environment&#x27;s four services came back healthy after rebuild. But E2E stands at 32 passed, 4 skipped, 4 failed — the failures cluster around existing mock and test-data wait issues, and we did not claim &quot;this restructure fixed them.&quot;</p>\n<p>What&#x27;s unfinished is listed explicitly too: API routes aren&#x27;t fully split by resource yet, migration SQL isn&#x27;t physically split by domain yet, the independent asset repo isn&#x27;t truly published yet. These stay as later phases, not smuggled into this round&#x27;s conclusions. The most suspicious line in any restructure report is &quot;all complete&quot; — we chose to put the unfinished items in the body text.</p>\n<h2>In short</h2>\n<p>&quot;Organized for a future split&quot; means: structure the monorepo through the lens of deployment units, lock dependency direction with contracts and check scripts, and replace the &quot;restructure complete&quot; declaration with an honest verification report. Whether to split can wait; being splittable must be proven now.</p>"}, "prev": {"url": "/writing/02-persona-from-briefs", "t": {"zh": "从 39 份日报，反推一个数字人的人格", "en": "Deriving a Persona from 39 Briefs"}}, "next": {"url": "/writing/12-agent-memory-layers", "t": {"zh": "Agent 的记忆怎么做分层", "en": "Layered Memory for Agents"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"建造复盘", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Build Notes", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  document.getElementById('reader-meta').innerHTML =
+    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+  document.getElementById('reader-body').innerHTML =
+    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+</body>
+</html>

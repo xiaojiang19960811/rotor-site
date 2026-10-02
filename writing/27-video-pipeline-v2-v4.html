@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 视频管线：v2 到 v4 的迭代 — rotor</title>
+<meta name="description" content="三次评审返工；字幕/边距/缓存的生产坑">
+<style>
+:root{
+  --bg:#0b0b0c; --ink:#f2f0ea; --muted:#8a8a8e; --line:#232326;
+  --lime:#d8ff3e; --card:#121214;
+  --font-d:"Space Grotesk","Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --font-m:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-d);line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--lime);color:#0b0b0c}
+a{color:inherit;text-decoration:none}
+/* film grain */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");}
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:18px clamp(20px,4vw,56px);mix-blend-mode:difference}
+.logo{font-weight:700;font-size:20px;letter-spacing:.06em}
+.logo sup{font-size:10px;color:var(--lime)}
+.nav-links{display:flex;gap:clamp(14px,3vw,36px);align-items:center;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.nav-links a{opacity:.75;transition:opacity .25s}
+.nav-links a:hover{opacity:1;color:var(--lime)}
+.lang{display:flex;border:1px solid var(--ink);border-radius:99px;overflow:hidden;font-family:var(--font-m);font-size:12px}
+.lang button{background:transparent;border:0;color:var(--ink);padding:6px 12px;cursor:pointer;opacity:.55;letter-spacing:.08em}
+.lang button.on{background:var(--ink);color:#0b0b0c;opacity:1}
+/* ---------- hero ---------- */
+.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 clamp(20px,4vw,56px) clamp(28px,5vh,64px);position:relative}
+.hero-kicker{font-family:var(--font-m);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.hero-kicker b{color:var(--lime);font-weight:500}
+.hero h1{font-size:clamp(72px,17.5vw,300px);line-height:.86;font-weight:700;letter-spacing:-.03em;text-transform:uppercase}
+.hero h1 .stroke{color:transparent;-webkit-text-stroke:2px var(--ink)}
+.hero-sub{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-top:26px;flex-wrap:wrap}
+.hero-sub p{max-width:520px;font-size:clamp(15px,1.6vw,19px);color:var(--muted)}
+.hero-sub p strong{color:var(--ink);font-weight:500}
+.badge-spin{width:104px;height:104px;flex:none;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scroll-hint{position:absolute;right:clamp(20px,4vw,56px);top:50%;font-family:var(--font-m);font-size:11px;
+  letter-spacing:.3em;color:var(--muted);writing-mode:vertical-rl}
+/* ---------- marquee ---------- */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:14px 0}
+.marquee-inner{display:inline-block;animation:mq 26s linear infinite;font-family:var(--font-m);
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.marquee-inner i{color:var(--lime);font-style:normal;margin:0 18px}
+@keyframes mq{to{transform:translateX(-50%)}}
+/* ---------- sections ---------- */
+section{padding:clamp(72px,10vw,140px) clamp(20px,4vw,56px)}
+.sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:clamp(32px,5vw,64px)}
+.sec-num{font-family:var(--font-m);font-size:13px;color:var(--lime)}
+.sec-title{font-size:clamp(34px,5.5vw,72px);font-weight:700;letter-spacing:-.02em;line-height:1;text-transform:uppercase}
+/* ---------- works ---------- */
+.work{display:grid;grid-template-columns:72px 1fr;gap:clamp(12px,3vw,40px);padding:clamp(26px,4vw,44px) 0;
+  border-top:1px solid var(--line);position:relative;transition:background .35s}
+.work:last-child{border-bottom:1px solid var(--line)}
+.work:hover{background:var(--card)}
+.work-idx{font-family:var(--font-m);font-size:13px;color:var(--muted);padding-top:8px}
+.work-idx b{color:var(--lime);font-weight:500}
+.work h3{font-size:clamp(28px,4.6vw,64px);font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-bottom:12px}
+.work h3 .arrow{display:inline-block;transition:transform .3s;color:var(--lime)}
+.work:hover h3 .arrow{transform:translate(6px,-6px)}
+.work p.desc{color:var(--muted);max-width:640px;font-size:clamp(14px,1.5vw,17px);margin-bottom:16px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--font-m);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.tags span{border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted)}
+.work-year{position:absolute;top:clamp(26px,4vw,44px);right:0;font-family:var(--font-m);font-size:12px;color:var(--muted)}
+/* ---------- about ---------- */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,80px)}
+.about-grid .big{font-size:clamp(22px,3vw,38px);line-height:1.35;font-weight:500;letter-spacing:-.01em}
+.about-grid .big em{font-style:normal;color:var(--lime)}
+.about-grid .small{color:var(--muted);font-size:clamp(14px,1.5vw,17px);display:flex;flex-direction:column;gap:18px;justify-content:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:clamp(40px,6vw,80px)}
+.stat{padding:28px 18px 28px 0;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:clamp(34px,4.5vw,58px);font-weight:700;letter-spacing:-.02em;color:var(--lime)}
+.stat .k{font-family:var(--font-m);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+/* ---------- contact ---------- */
+.contact{text-align:left}
+.contact .huge{font-size:clamp(44px,9vw,150px);font-weight:700;letter-spacing:-.03em;line-height:1;text-transform:uppercase}
+.contact .huge a{border-bottom:4px solid var(--lime);transition:background .3s,color .3s}
+.contact .huge a:hover{background:var(--lime);color:#0b0b0c}
+.contact-links{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap;font-family:var(--font-m);font-size:13px;letter-spacing:.08em}
+.contact-links a{border:1px solid var(--line);border-radius:99px;padding:12px 22px;transition:all .3s;color:var(--muted)}
+.contact-links a:hover{border-color:var(--lime);color:var(--lime)}
+/* ---------- footer ---------- */
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:26px clamp(20px,4vw,56px);border-top:1px solid var(--line);
+  font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(34px);transition:opacity .8s cubic-bezier(.2,.6,.2,1),transform .8s cubic-bezier(.2,.6,.2,1)}
+.rv.in{opacity:1;transform:none}
+/* ---------- progress bar ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--lime);z-index:300}
+/* ---------- custom cursor ---------- */
+.cursor-dot,.cursor-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:400;border-radius:50%}
+.cursor-dot{width:8px;height:8px;background:var(--lime);transform:translate(-50%,-50%)}
+.cursor-ring{width:36px;height:36px;border:1px solid rgba(216,255,62,.55);transform:translate(-50%,-50%);
+  transition:width .25s,height .25s,border-color .25s}
+body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
+@media (hover:none),(max-width:760px){.cursor-dot,.cursor-ring{display:none}}
+/* ---------- hero entrance ---------- */
+.hero h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(4deg);
+  animation:chIn .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes chIn{to{opacity:1;transform:none}}
+.hero h1{overflow:hidden}
+/* ---------- timeline ---------- */
+.timeline{position:relative;margin-left:6px;padding-left:clamp(20px,4vw,44px);border-left:1px solid var(--line)}
+.tl-item{position:relative;padding:0 0 clamp(28px,4vw,44px)}
+.tl-item::before{content:"";position:absolute;left:calc(clamp(20px,4vw,44px) * -1 - 5px);top:8px;
+  width:9px;height:9px;border-radius:50%;background:var(--lime)}
+.tl-date{font-family:var(--font-m);font-size:12px;letter-spacing:.2em;color:var(--lime);margin-bottom:6px}
+.tl-item h4{font-size:clamp(19px,2.6vw,30px);font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.tl-item p{color:var(--muted);font-size:clamp(13px,1.4vw,16px);max-width:560px}
+/* ---------- principles ---------- */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(36px,5vw,64px)}
+.rule{background:var(--bg);padding:clamp(24px,3.5vw,44px);position:relative;overflow:hidden;transition:background .35s}
+.rule:hover{background:var(--card)}
+.rule .qn{font-family:var(--font-m);font-size:12px;color:var(--lime);letter-spacing:.2em;margin-bottom:14px}
+.rule blockquote{font-size:clamp(20px,2.8vw,34px);font-weight:700;line-height:1.3;letter-spacing:-.01em}
+.rule blockquote .hl{color:var(--lime)}
+.wontdo{border:1px dashed #3a3a3e;border-radius:14px;padding:clamp(24px,4vw,44px);position:relative}
+.wontdo h4{font-family:var(--font-m);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.wontdo h4 s{color:#f85149;text-decoration-color:#f85149}
+.wontdo ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 28px}
+.wontdo li{font-size:clamp(15px,1.8vw,20px);font-weight:500;padding-left:26px;position:relative}
+.wontdo li::before{content:"✕";position:absolute;left:0;color:#f85149;font-weight:700}
+/* ---------- now ---------- */
+.now-item{display:flex;align-items:center;gap:clamp(14px,2.5vw,28px);padding:20px 0;border-top:1px solid var(--line)}
+.now-item:last-child{border-bottom:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--lime);flex:none;position:relative}
+.dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--lime);animation:ping 1.8s ease-out infinite}
+@keyframes ping{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.4);opacity:0}}
+.now-item .nm{font-size:clamp(17px,2.4vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.now-item .ds{color:var(--muted);font-size:clamp(13px,1.4vw,15px);flex:1}
+.now-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted);flex:none}
+.now-tag.indie{border-color:var(--lime);color:var(--lime)}
+/* ---------- atlas ---------- */
+.atlas-stats{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);margin-bottom:clamp(28px,4vw,48px)}
+.a-stat{padding:22px 16px;border-right:1px solid var(--line)}
+.a-stat:last-child{border-right:0}
+.a-stat .n{font-size:clamp(26px,3.4vw,44px);font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.a-stat .n em{font-style:normal;color:var(--lime)}
+.a-stat .k{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.graph-wrap{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 45%,#141417 0%,var(--bg) 70%);
+  margin-bottom:clamp(28px,4vw,48px);overflow:hidden}
+#wiki-graph{display:block;width:100%;height:clamp(380px,60vw,560px)}
+.g-tip{position:absolute;pointer-events:none;background:#161618;border:1px solid var(--lime);border-radius:8px;
+  padding:10px 14px;font-size:13px;display:none;z-index:5;max-width:240px}
+.g-tip b{color:var(--lime)}
+.g-tip .m{font-family:var(--font-m);font-size:11px;color:var(--muted);margin-top:4px}
+.g-hint{position:absolute;bottom:12px;right:16px;font-family:var(--font-m);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted)}
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.domain-card{background:var(--bg);padding:clamp(22px,3vw,36px)}
+.domain-card h4{font-size:clamp(20px,2.6vw,30px);font-weight:700;margin-bottom:4px}
+.domain-card h4 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.domain-card>p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.proj-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.proj-row .pn{font-family:var(--font-m);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pd{color:var(--muted);font-size:12px;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pg{font-family:var(--font-m);font-size:11px;color:var(--lime);flex:none}
+.proj-row .st{width:7px;height:7px;border-radius:50%;background:var(--lime);flex:none}
+.proj-row .st.idle{background:#3a3a3e}
+.domain-card[data-col]{cursor:pointer;transition:background .25s}
+.domain-card[data-col]:hover{background:#101012}
+/* ---------- writing ---------- */
+.col-block{border:1px solid var(--line);margin-bottom:clamp(20px,3vw,32px);transition:box-shadow .4s,border-color .4s}
+.col-block.flash{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime)}
+.col-head{padding:clamp(20px,2.6vw,32px);border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.col-head h3{font-size:clamp(22px,2.8vw,34px);font-weight:700;letter-spacing:-.01em}
+.col-head h3 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.col-head p{color:var(--muted);font-size:13px;flex:1;min-width:200px}
+.art-row{display:flex;align-items:center;gap:18px;padding:18px clamp(20px,2.6vw,32px);border-top:1px solid var(--line);
+  cursor:pointer;transition:background .2s}
+.art-row:first-of-type{border-top:0}
+.art-row:hover{background:#101012}
+.art-row.locked{cursor:default}
+.art-row.locked:hover{background:none}
+.art-num{font-family:var(--font-m);font-size:13px;color:var(--lime);flex:none;width:34px}
+.art-main{flex:1;min-width:0}
+.art-title{font-size:clamp(16px,2vw,22px);font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-desc{color:var(--muted);font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-meta{flex:none;display:flex;gap:8px;align-items:center}
+.col-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;border:1px solid var(--line);
+  border-radius:99px;padding:5px 11px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.art-arrow{color:var(--lime);font-size:18px;flex:none}
+.soon{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:#5a5a5e;text-transform:uppercase;white-space:nowrap}
+.w-label{font-family:var(--font-m);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);margin:0 0 16px}
+.w-label:not(:first-child){margin-top:clamp(28px,4vw,48px)}
+.col-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(8px,1.5vw,16px)}
+.col-chip{background:var(--bg);padding:clamp(16px,2vw,24px);display:block;text-decoration:none;transition:background .2s}
+.col-chip:hover{background:#101012}
+.col-chip b{display:block;color:var(--ink);font-size:15px;font-weight:600;margin-bottom:8px}
+.col-chip span{font-family:var(--font-m);font-size:11px;color:var(--lime);letter-spacing:.1em}
+.col-chip i{font-style:normal;color:var(--muted);float:right}
+.view-all{display:flex;align-items:baseline;justify-content:space-between;border:1px solid var(--line);
+  padding:22px clamp(20px,2.6vw,32px);text-decoration:none;transition:border-color .2s;margin-top:clamp(20px,3vw,32px)}
+.view-all:hover{border-color:var(--lime)}
+.view-all span{color:var(--ink);font-size:clamp(18px,2.4vw,26px);font-weight:700;letter-spacing:-.01em}
+.view-all b{font-family:var(--font-m);color:var(--lime);font-size:14px}
+/* ---------- reader (typography shared with /writing/* pages) ---------- */
+.reader-body h1{font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:14px}
+.reader-body .r-meta{display:flex;gap:10px;margin-bottom:40px;flex-wrap:wrap}
+.reader-body h2{font-size:clamp(20px,2.6vw,28px);font-weight:700;margin:44px 0 16px;letter-spacing:-.01em}
+.reader-body h2::before{content:"";display:inline-block;width:22px;height:4px;background:var(--lime);margin-right:12px;vertical-align:middle}
+.reader-body p{font-size:clamp(15px,1.8vw,18px);line-height:1.85;color:#d8d8d4;margin-bottom:18px}
+.reader-body ul{margin:0 0 20px 4px;list-style:none}
+.reader-body li{font-size:clamp(15px,1.8vw,18px);line-height:1.8;color:#d8d8d4;margin-bottom:10px;padding-left:26px;position:relative}
+.reader-body ul li::before{content:"▸";color:var(--lime);position:absolute;left:4px}
+.reader-body ol{margin:0 0 20px 4px;list-style:none;counter-reset:oli}
+.reader-body ol li{counter-increment:oli;padding-left:36px}
+.reader-body ol li::before{content:counter(oli,decimal-leading-zero);color:var(--lime);position:absolute;left:0;
+  font-family:var(--font-m);font-size:.82em;top:4px}
+.reader-body strong{color:var(--ink)}
+.reader-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}
+.reader-body th,.reader-body td{border:1px solid var(--line);padding:10px 14px;text-align:left;line-height:1.6}
+.reader-body th{background:#141417;color:var(--lime);font-weight:600;white-space:nowrap}
+.reader-body td{color:#d8d8d4}
+.reader-body blockquote{border-left:2px solid var(--lime);padding:4px 0 4px 18px;color:var(--muted);margin:24px 0;font-size:15px}
+.reader-body code{font-family:var(--font-m);font-size:.88em;background:#161618;border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px;color:var(--lime)}
+.reader-body pre{margin:26px 0;background:#101012;border:1px solid var(--line);border-left:3px solid var(--lime);
+  border-radius:0 10px 10px 0;padding:18px 20px;overflow-x:auto}
+.reader-body pre code{font-family:var(--font-m);font-size:13.5px;line-height:1.75;background:none;border:0;
+  border-radius:0;padding:0;color:#d8d8da;white-space:pre}
+.reader-body hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+/* ---------- magnetic ---------- */
+.magnet{display:inline-block;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+@media (max-width:760px){
+  .about-grid{grid-template-columns:1fr}
+  .rules{grid-template-columns:1fr}
+  .wontdo ul{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(2){border-right:0}
+  .stat{border-bottom:1px solid var(--line)}
+  .work{grid-template-columns:44px 1fr}
+  .work-year{position:static;margin-top:10px}
+  .art-row{flex-wrap:wrap;gap:10px}
+  .art-meta{width:100%;padding-left:52px}
+  .col-chips{grid-template-columns:repeat(2,1fr)}
+  .scroll-hint{display:none}
+  .nav-links a{display:none}
+}
+
+.art-nav{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(20px,4vw,48px);border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.9);backdrop-filter:blur(8px);z-index:50}
+.art-nav .logo{font-weight:700;font-size:20px;color:var(--ink);text-decoration:none}
+.art-nav .logo sup{color:var(--lime);font-size:10px}
+.art-nav .mid{display:flex;gap:18px;align-items:center}
+.art-nav a.lnk{color:var(--muted);text-decoration:none;font-size:14px}
+.art-nav a.lnk:hover{color:var(--lime)}
+.art-wrap{max-width:760px;margin:0 auto;padding:clamp(40px,6vh,72px) clamp(22px,5vw,40px) 40px}
+.prev-next{display:flex;justify-content:space-between;gap:16px;margin-top:64px;padding-top:28px;border-top:1px solid var(--line)}
+.prev-next a{color:var(--muted);text-decoration:none;font-size:15px;max-width:44%}
+.prev-next a:hover{color:var(--lime)}
+.prev-next a span{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:8px;color:var(--lime)}
+.prev-next .nx{text-align:right;margin-left:auto}
+.art-foot{max-width:760px;margin:0 auto;padding:0 clamp(22px,5vw,40px) 80px;color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.soon-banner{display:inline-block;margin-left:10px;padding:3px 12px;border:1px dashed var(--lime);border-radius:20px;color:var(--lime);font-size:12px;letter-spacing:.08em}
+</style>
+</head>
+<body>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"></div>
+  <div class="reader-body" id="reader-body"></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "AI 视频管线：v2 到 v4 的迭代", "en": "Video Pipeline: v2 to v4"}, "body": {"zh": "<p>小红书日更的 AI 资讯视频，管线从 v2 走到 v4。每一次版本号变化，都是一次用户评审返工。复盘下来，视频生产的坑不在画面多好看，而在交付清单里那些&quot;以为当然有&quot;的东西。</p>\n<h2>v2：能跑的生产管线</h2>\n<p>v2 是第一条跑通的生产管线：1080×1920 竖屏，50 多秒，脚本一键渲染出成片。日更就靠它：单日发视频、双日发图文，视频渲染失败自动降级图文。内容侧有两条铁律：新闻必须双来源核实后才能进视频；选题要去重，前一天发过的第二天避开。一条 60 秒的视频背后，是&quot;验证-去重-渲染-检查&quot;四步，不是&quot;跑个脚本&quot;。</p>\n<p>v2 解决的是&quot;有没有&quot;。画面动起来了，流程跑通了，但它是工程师审美：信息都摆上去了，节奏和包装都没讲究。</p>\n<h2>v3：按用户评审修包装</h2>\n<p>v3 样片交付后按评审意见改了一批包装问题：黄金 3 秒钩子、自合成无版权 BGM、关键词高亮、下条预告、结尾关注引导；顺手修了标题裁切、段首空屏、tag 空框、右侧按钮遮挡。</p>\n<p>这些全是&quot;看一眼成片才发现&quot;的问题。分镜描述里它们都不存在——标题会不会被裁，只有渲染出来才知道；按钮会不会挡字，只有叠上 UI 才知道。模板评审必须看成片，不看方案描述。</p>\n<p>v3 样片验证通过，但生产日更没切过去：等用户拍板。生产管线不因为&quot;新版更好看&quot;就切换，切换是另一个决策。</p>\n<h2>生产事故：字幕和 BGM 漏了</h2>\n<p>v2 在一次正式生产中翻车：交稿后用户反馈&quot;没有中文字幕和 BGM&quot;。查下来，渲染脚本只有画面，最终组装漏了字幕烧录和 BGM 混音——管线里根本没把这两步当成必经环节。</p>\n<p>返工出了重压版，补上字幕和 BGM。这次的教训写进了硬性要求：字幕和声音是交付清单的一部分，不是&quot;后期加上就行&quot;。用户要的是中文字幕，这条此后每次评审都先确认。</p>\n<h2>v4：换设计语言，再返工一次</h2>\n<p>用户要求换成获奖设计风格，v4 按这个方向交付：深黑底、电光绿、巨型描边序号、标题逐字上浮、等宽字体 kicker、手绘风可视化、胶片颗粒、底部进度条，视觉和个人站同源。</p>\n<p>评审时用户指出两点：中文字幕又没了，&quot;少了一点感觉&quot;。第一条是交付清单问题，第二条是审美问题——都没法在动工前一次说清，只能看片返工。修订后用户批准 v4 为正式生产模板，替换 v2 接入日更管线。</p>\n<h2>三条生产纪律</h2>\n<ol><li><strong>交付清单先行</strong>：字幕、声音、封面是必检项，不在&quot;画面&quot;之后。漏一项就是一次返工。</li><li><strong>评审看成片</strong>：标题裁切、按钮遮挡、空屏，所有排版问题只存在于渲染结果里。方案评审代替不了成片评审。</li><li><strong>生产切换单独决策</strong>：新版验证通过 ≠ 立刻替换生产管线。v3 样片 OK，但日更继续走 v2，直到用户明确拍板 v4。</li></ol>\n<h2>小结</h2>\n<p>视频管线迭代的本质是把&quot;以为当然有&quot;变成&quot;清单上必须有&quot;。v2 证明能跑，v3 修包装，v4 换语言，每一次返工都来自一次真实评审。自动化生产最怕的不是慢，是没人看成片。</p>", "en": "<blockquote>Column: Build Notes ｜ Collection: Solo Building ｜ Source: Xiaohongshu video pipeline log (~/workspace/xiaohongshu/, memory/2026-10-01.md, memory/2026-10-02.md) ｜ Status: first draft</blockquote>\n<p>The daily AI-news videos for Xiaohongshu went through pipeline versions v2 to v4. Every version bump was a user-review rework. Looking back, the traps in video production weren&#x27;t about how good the visuals were — they were the things in the delivery checklist everyone assumed were there.</p>\n<h2>v2: a pipeline that runs</h2>\n<p>v2 was the first production pipeline that actually ran: 1080×1920 vertical, fifty-odd seconds, one script rendering the finished piece. Daily publishing depended on it: video on odd days, image-text posts on even days, automatic fallback to image-text if video rendering failed. The content side has two iron rules: news only enters a video after dual-source verification; topics are deduplicated — what shipped yesterday is skipped today. Behind a 60-second video are four steps, &quot;verify, dedupe, render, review,&quot; not &quot;run a script.&quot;</p>\n<p>v2 solved &quot;does it exist.&quot; It moved, the flow ran, but it had engineer aesthetics: all the information was on screen, pacing and packaging unconsidered.</p>\n<h2>v3: packaging fixes from user review</h2>\n<p>After the v3 sample shipped, a round of packaging fixes followed review notes: a golden 3-second hook, self-synthesized copyright-free BGM, keyword highlights, next-item teasers, follow/comment prompts at the end; plus title cropping, empty first frames, empty tag boxes, and side-button occlusion.</p>\n<p>Every one of these is a &quot;you only see it in the finished piece&quot; problem. They don&#x27;t exist in storyboard descriptions — whether a title gets cropped is only known after rendering; whether buttons cover text is only known after the UI overlays. Template reviews must watch the finished piece, not the proposal.</p>\n<p>The v3 sample passed verification, but production didn&#x27;t switch: it waited for the user&#x27;s call. A production pipeline doesn&#x27;t switch because &quot;the new version looks better&quot; — switching is a separate decision.</p>\n<h2>Production incident: subtitles and BGM missing</h2>\n<p>v2 failed in a real production run: after delivery, the user reported &quot;no Chinese subtitles and no BGM.&quot; Investigation showed the render script produced visuals only — the final assembly had skipped subtitle burning and BGM mixing entirely. The pipeline never treated those two steps as mandatory.</p>\n<p>Rework produced a re-pressed version with subtitles and BGM added. The lesson became a hard requirement: subtitles and audio are part of the delivery checklist, not &quot;add it in post.&quot; The user wants Chinese subtitles — confirmed first at every review since.</p>\n<h2>v4: new design language, one more rework</h2>\n<p>The user asked for an award-winning design style, and v4 shipped in that direction: deep black background, electric green, giant outlined numerals, word-by-word rising titles, monospace kickers, hand-drawn-style visualizations, film grain, a bottom progress bar — visuals sharing DNA with the personal site.</p>\n<p>Review surfaced two notes: Chinese subtitles were missing again, and it &quot;lacked a certain feeling.&quot; The first is a checklist problem, the second an aesthetics problem — neither can be fully specified before the work, only reworked after watching. After revision, the user approved v4 as the official production template, replacing v2 in the daily pipeline.</p>\n<h2>Three production disciplines</h2>\n<ol><li><strong>Checklist first</strong>: subtitles, audio, cover art are mandatory checks, not afterthoughts to &quot;the visuals.&quot; One miss is one rework.</li><li><strong>Review the finished piece</strong>: title cropping, button occlusion, empty frames — every layout problem exists only in the rendered result. Proposal reviews can&#x27;t substitute.</li><li><strong>Switching production is a separate decision</strong>: a verified new version doesn&#x27;t mean an immediate production swap. The v3 sample was fine, but daily publishing stayed on v2 until the user explicitly approved v4.</li></ol>\n<h2>In short</h2>\n<p>Iterating a video pipeline means turning &quot;assumed present&quot; into &quot;must be on the checklist.&quot; v2 proved it runs, v3 fixed packaging, v4 changed the language — every rework came from a real review. The scariest thing in automated production isn&#x27;t slowness; it&#x27;s nobody watching the finished piece.</p>"}, "prev": {"url": "/writing/26-tinykit-decisions", "t": {"zh": "TinyKit：一个工具站的决策链", "en": "TinyKit: Anatomy of a Decision Chain"}}, "next": {"url": "/writing/28-gumroad-launch", "t": {"zh": "Gumroad 上架记：三个数字产品", "en": "Gumroad Launch Notes"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"个人建造", column:"建造复盘", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Solo Builds", column:"Build Notes", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  document.getElementById('reader-meta').innerHTML =
+    '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+  document.getElementById('reader-body').innerHTML =
+    '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+</body>
+</html>

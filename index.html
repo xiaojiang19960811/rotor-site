@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rotor — 独立开发者</title>
+<meta name="description" content="rotor 的个人作品站：TinyKit、大富翁转盘、数字产品、知识图谱。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.rotor1996.top/">
+<meta property="og:title" content="rotor — 独立开发者">
+<meta property="og:description" content="不讲故事，只看作品。TinyKit、数字产品、AI 视频管线、工程知识图谱。">
+<meta property="og:image" content="https://www.rotor1996.top/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b0c; --ink:#f2f0ea; --muted:#8a8a8e; --line:#232326;
+  --lime:#d8ff3e; --card:#121214;
+  --font-d:"Space Grotesk","Noto Sans SC",-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+  --font-m:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-d);line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+::selection{background:var(--lime);color:#0b0b0c}
+a{color:inherit;text-decoration:none}
+/* film grain */
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:200;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");}
+/* ---------- nav ---------- */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;
+  padding:18px clamp(20px,4vw,56px);mix-blend-mode:difference}
+.logo{font-weight:700;font-size:20px;letter-spacing:.06em}
+.logo sup{font-size:10px;color:var(--lime)}
+.nav-links{display:flex;gap:clamp(14px,3vw,36px);align-items:center;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+.nav-links a{opacity:.75;transition:opacity .25s}
+.nav-links a:hover{opacity:1;color:var(--lime)}
+.lang{display:flex;border:1px solid var(--ink);border-radius:99px;overflow:hidden;font-family:var(--font-m);font-size:12px}
+.lang button{background:transparent;border:0;color:var(--ink);padding:6px 12px;cursor:pointer;opacity:.55;letter-spacing:.08em}
+.lang button.on{background:var(--ink);color:#0b0b0c;opacity:1}
+/* ---------- hero ---------- */
+.hero{min-height:100svh;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:0 clamp(20px,4vw,56px) clamp(28px,5vh,64px);position:relative}
+.hero-kicker{font-family:var(--font-m);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.hero-kicker b{color:var(--lime);font-weight:500}
+.hero h1{font-size:clamp(72px,17.5vw,300px);line-height:.86;font-weight:700;letter-spacing:-.03em;text-transform:uppercase}
+.hero h1 .stroke{color:transparent;-webkit-text-stroke:2px var(--ink)}
+.hero-sub{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;margin-top:26px;flex-wrap:wrap}
+.hero-sub p{max-width:520px;font-size:clamp(15px,1.6vw,19px);color:var(--muted)}
+.hero-sub p strong{color:var(--ink);font-weight:500}
+.badge-spin{width:104px;height:104px;flex:none;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scroll-hint{position:absolute;right:clamp(20px,4vw,56px);top:50%;font-family:var(--font-m);font-size:11px;
+  letter-spacing:.3em;color:var(--muted);writing-mode:vertical-rl}
+/* ---------- marquee ---------- */
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:14px 0}
+.marquee-inner{display:inline-block;animation:mq 26s linear infinite;font-family:var(--font-m);
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.marquee-inner i{color:var(--lime);font-style:normal;margin:0 18px}
+@keyframes mq{to{transform:translateX(-50%)}}
+/* ---------- sections ---------- */
+section{padding:clamp(72px,10vw,140px) clamp(20px,4vw,56px)}
+.sec-head{display:flex;align-items:baseline;gap:18px;margin-bottom:clamp(32px,5vw,64px)}
+.sec-num{font-family:var(--font-m);font-size:13px;color:var(--lime)}
+.sec-title{font-size:clamp(34px,5.5vw,72px);font-weight:700;letter-spacing:-.02em;line-height:1;text-transform:uppercase}
+/* ---------- works ---------- */
+.work{display:grid;grid-template-columns:72px 1fr;gap:clamp(12px,3vw,40px);padding:clamp(26px,4vw,44px) 0;
+  border-top:1px solid var(--line);position:relative;transition:background .35s}
+.work:last-child{border-bottom:1px solid var(--line)}
+.work:hover{background:var(--card)}
+.work-idx{font-family:var(--font-m);font-size:13px;color:var(--muted);padding-top:8px}
+.work-idx b{color:var(--lime);font-weight:500}
+.work h3{font-size:clamp(28px,4.6vw,64px);font-weight:700;letter-spacing:-.02em;line-height:1.05;margin-bottom:12px}
+.work h3 .arrow{display:inline-block;transition:transform .3s;color:var(--lime)}
+.work:hover h3 .arrow{transform:translate(6px,-6px)}
+.work p.desc{color:var(--muted);max-width:640px;font-size:clamp(14px,1.5vw,17px);margin-bottom:16px}
+.tags{display:flex;gap:8px;flex-wrap:wrap;font-family:var(--font-m);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.tags span{border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted)}
+.work-year{position:absolute;top:clamp(26px,4vw,44px);right:0;font-family:var(--font-m);font-size:12px;color:var(--muted)}
+/* ---------- about ---------- */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,5vw,80px)}
+.about-grid .big{font-size:clamp(22px,3vw,38px);line-height:1.35;font-weight:500;letter-spacing:-.01em}
+.about-grid .big em{font-style:normal;color:var(--lime)}
+.about-grid .small{color:var(--muted);font-size:clamp(14px,1.5vw,17px);display:flex;flex-direction:column;gap:18px;justify-content:center}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);margin-top:clamp(40px,6vw,80px)}
+.stat{padding:28px 18px 28px 0;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat .n{font-size:clamp(34px,4.5vw,58px);font-weight:700;letter-spacing:-.02em;color:var(--lime)}
+.stat .k{font-family:var(--font-m);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+/* ---------- contact ---------- */
+.contact{text-align:left}
+.contact .huge{font-size:clamp(44px,9vw,150px);font-weight:700;letter-spacing:-.03em;line-height:1;text-transform:uppercase}
+.contact .huge a{border-bottom:4px solid var(--lime);transition:background .3s,color .3s}
+.contact .huge a:hover{background:var(--lime);color:#0b0b0c}
+.contact-links{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap;font-family:var(--font-m);font-size:13px;letter-spacing:.08em}
+.contact-links a{border:1px solid var(--line);border-radius:99px;padding:12px 22px;transition:all .3s;color:var(--muted)}
+.contact-links a:hover{border-color:var(--lime);color:var(--lime)}
+/* ---------- footer ---------- */
+footer{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:26px clamp(20px,4vw,56px);border-top:1px solid var(--line);
+  font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(34px);transition:opacity .8s cubic-bezier(.2,.6,.2,1),transform .8s cubic-bezier(.2,.6,.2,1)}
+.rv.in{opacity:1;transform:none}
+/* ---------- progress bar ---------- */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:var(--lime);z-index:300}
+/* ---------- custom cursor ---------- */
+.cursor-dot,.cursor-ring{position:fixed;top:0;left:0;pointer-events:none;z-index:400;border-radius:50%}
+.cursor-dot{width:8px;height:8px;background:var(--lime);transform:translate(-50%,-50%)}
+.cursor-ring{width:36px;height:36px;border:1px solid rgba(216,255,62,.55);transform:translate(-50%,-50%);
+  transition:width .25s,height .25s,border-color .25s}
+body.link-hover .cursor-ring{width:64px;height:64px;border-color:var(--lime)}
+@media (hover:none),(max-width:760px){.cursor-dot,.cursor-ring{display:none}}
+/* ---------- hero entrance ---------- */
+.hero h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(4deg);
+  animation:chIn .9s cubic-bezier(.2,.7,.2,1) forwards}
+@keyframes chIn{to{opacity:1;transform:none}}
+.hero h1{overflow:hidden}
+/* ---------- timeline ---------- */
+.timeline{position:relative;margin-left:6px;padding-left:clamp(20px,4vw,44px);border-left:1px solid var(--line)}
+.tl-item{position:relative;padding:0 0 clamp(28px,4vw,44px)}
+.tl-item::before{content:"";position:absolute;left:calc(clamp(20px,4vw,44px) * -1 - 5px);top:8px;
+  width:9px;height:9px;border-radius:50%;background:var(--lime)}
+.tl-date{font-family:var(--font-m);font-size:12px;letter-spacing:.2em;color:var(--lime);margin-bottom:6px}
+.tl-item h4{font-size:clamp(19px,2.6vw,30px);font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.tl-item p{color:var(--muted);font-size:clamp(13px,1.4vw,16px);max-width:560px}
+/* ---------- principles ---------- */
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(36px,5vw,64px)}
+.rule{background:var(--bg);padding:clamp(24px,3.5vw,44px);position:relative;overflow:hidden;transition:background .35s}
+.rule:hover{background:var(--card)}
+.rule .qn{font-family:var(--font-m);font-size:12px;color:var(--lime);letter-spacing:.2em;margin-bottom:14px}
+.rule blockquote{font-size:clamp(20px,2.8vw,34px);font-weight:700;line-height:1.3;letter-spacing:-.01em}
+.rule blockquote .hl{color:var(--lime)}
+.wontdo{border:1px dashed #3a3a3e;border-radius:14px;padding:clamp(24px,4vw,44px);position:relative}
+.wontdo h4{font-family:var(--font-m);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);margin-bottom:18px}
+.wontdo h4 s{color:#f85149;text-decoration-color:#f85149}
+.wontdo ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px 28px}
+.wontdo li{font-size:clamp(15px,1.8vw,20px);font-weight:500;padding-left:26px;position:relative}
+.wontdo li::before{content:"✕";position:absolute;left:0;color:#f85149;font-weight:700}
+/* ---------- now ---------- */
+.now-item{display:flex;align-items:center;gap:clamp(14px,2.5vw,28px);padding:20px 0;border-top:1px solid var(--line)}
+.now-item:last-child{border-bottom:1px solid var(--line)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--lime);flex:none;position:relative}
+.dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--lime);animation:ping 1.8s ease-out infinite}
+@keyframes ping{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.4);opacity:0}}
+.now-item .nm{font-size:clamp(17px,2.4vw,26px);font-weight:700;letter-spacing:-.01em;white-space:nowrap}
+.now-item .ds{color:var(--muted);font-size:clamp(13px,1.4vw,15px);flex:1}
+.now-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:99px;padding:5px 12px;color:var(--muted);flex:none}
+.now-tag.indie{border-color:var(--lime);color:var(--lime)}
+/* ---------- atlas ---------- */
+.atlas-stats{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line);margin-bottom:clamp(28px,4vw,48px)}
+.a-stat{padding:22px 16px;border-right:1px solid var(--line)}
+.a-stat:last-child{border-right:0}
+.a-stat .n{font-size:clamp(26px,3.4vw,44px);font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+.a-stat .n em{font-style:normal;color:var(--lime)}
+.a-stat .k{font-family:var(--font-m);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.graph-wrap{position:relative;border:1px solid var(--line);background:radial-gradient(ellipse at 50% 45%,#141417 0%,var(--bg) 70%);
+  margin-bottom:clamp(28px,4vw,48px);overflow:hidden}
+#wiki-graph{display:block;width:100%;height:clamp(380px,60vw,560px)}
+.g-tip{position:absolute;pointer-events:none;background:#161618;border:1px solid var(--lime);border-radius:8px;
+  padding:10px 14px;font-size:13px;display:none;z-index:5;max-width:240px}
+.g-tip b{color:var(--lime)}
+.g-tip .m{font-family:var(--font-m);font-size:11px;color:var(--muted);margin-top:4px}
+.g-hint{position:absolute;bottom:12px;right:16px;font-family:var(--font-m);font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--muted)}
+.domain-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line)}
+.domain-card{background:var(--bg);padding:clamp(22px,3vw,36px)}
+.domain-card h4{font-size:clamp(20px,2.6vw,30px);font-weight:700;margin-bottom:4px}
+.domain-card h4 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.domain-card>p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.proj-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.proj-row .pn{font-family:var(--font-m);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pd{color:var(--muted);font-size:12px;flex:2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proj-row .pg{font-family:var(--font-m);font-size:11px;color:var(--lime);flex:none}
+.proj-row .st{width:7px;height:7px;border-radius:50%;background:var(--lime);flex:none}
+.proj-row .st.idle{background:#3a3a3e}
+.domain-card[data-col]{cursor:pointer;transition:background .25s}
+.domain-card[data-col]:hover{background:#101012}
+/* ---------- writing ---------- */
+.col-block{border:1px solid var(--line);margin-bottom:clamp(20px,3vw,32px);transition:box-shadow .4s,border-color .4s}
+.col-block.flash{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime)}
+.col-head{padding:clamp(20px,2.6vw,32px);border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.col-head h3{font-size:clamp(22px,2.8vw,34px);font-weight:700;letter-spacing:-.01em}
+.col-head h3 .cnt{font-family:var(--font-m);font-size:12px;color:var(--lime);vertical-align:middle;margin-left:10px;letter-spacing:.1em}
+.col-head p{color:var(--muted);font-size:13px;flex:1;min-width:200px}
+.art-row{display:flex;align-items:center;gap:18px;padding:18px clamp(20px,2.6vw,32px);border-top:1px solid var(--line);
+  cursor:pointer;transition:background .2s}
+.art-row:first-of-type{border-top:0}
+.art-row:hover{background:#101012}
+.art-row.locked{cursor:default}
+.art-row.locked:hover{background:none}
+.art-num{font-family:var(--font-m);font-size:13px;color:var(--lime);flex:none;width:34px}
+.art-main{flex:1;min-width:0}
+.art-title{font-size:clamp(16px,2vw,22px);font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-desc{color:var(--muted);font-size:13px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.art-meta{flex:none;display:flex;gap:8px;align-items:center}
+.col-tag{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;border:1px solid var(--line);
+  border-radius:99px;padding:5px 11px;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.art-arrow{color:var(--lime);font-size:18px;flex:none}
+.soon{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:#5a5a5e;text-transform:uppercase;white-space:nowrap}
+.w-label{font-family:var(--font-m);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);margin:0 0 16px}
+.w-label:not(:first-child){margin-top:clamp(28px,4vw,48px)}
+.col-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:clamp(8px,1.5vw,16px)}
+.col-chip{background:var(--bg);padding:clamp(16px,2vw,24px);display:block;text-decoration:none;transition:background .2s}
+.col-chip:hover{background:#101012}
+.col-chip b{display:block;color:var(--ink);font-size:15px;font-weight:600;margin-bottom:8px}
+.col-chip span{font-family:var(--font-m);font-size:11px;color:var(--lime);letter-spacing:.1em}
+.col-chip i{font-style:normal;color:var(--muted);float:right}
+.view-all{display:flex;align-items:baseline;justify-content:space-between;border:1px solid var(--line);
+  padding:22px clamp(20px,2.6vw,32px);text-decoration:none;transition:border-color .2s;margin-top:clamp(20px,3vw,32px)}
+.view-all:hover{border-color:var(--lime)}
+.view-all span{color:var(--ink);font-size:clamp(18px,2.4vw,26px);font-weight:700;letter-spacing:-.01em}
+.view-all b{font-family:var(--font-m);color:var(--lime);font-size:14px}
+/* ---------- reader (typography shared with /writing/* pages) ---------- */
+.reader-body h1{font-size:clamp(30px,4.6vw,52px);font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:14px}
+.reader-body .r-meta{display:flex;gap:10px;margin-bottom:40px;flex-wrap:wrap}
+.reader-body h2{font-size:clamp(20px,2.6vw,28px);font-weight:700;margin:44px 0 16px;letter-spacing:-.01em}
+.reader-body h2::before{content:"";display:inline-block;width:22px;height:4px;background:var(--lime);margin-right:12px;vertical-align:middle}
+.reader-body p{font-size:clamp(15px,1.8vw,18px);line-height:1.85;color:#d8d8d4;margin-bottom:18px}
+.reader-body ul{margin:0 0 20px 4px;list-style:none}
+.reader-body li{font-size:clamp(15px,1.8vw,18px);line-height:1.8;color:#d8d8d4;margin-bottom:10px;padding-left:26px;position:relative}
+.reader-body ul li::before{content:"▸";color:var(--lime);position:absolute;left:4px}
+.reader-body ol{margin:0 0 20px 4px;list-style:none;counter-reset:oli}
+.reader-body ol li{counter-increment:oli;padding-left:36px}
+.reader-body ol li::before{content:counter(oli,decimal-leading-zero);color:var(--lime);position:absolute;left:0;
+  font-family:var(--font-m);font-size:.82em;top:4px}
+.reader-body strong{color:var(--ink)}
+.reader-body table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}
+.reader-body th,.reader-body td{border:1px solid var(--line);padding:10px 14px;text-align:left;line-height:1.6}
+.reader-body th{background:#141417;color:var(--lime);font-weight:600;white-space:nowrap}
+.reader-body td{color:#d8d8d4}
+.reader-body blockquote{border-left:2px solid var(--lime);padding:4px 0 4px 18px;color:var(--muted);margin:24px 0;font-size:15px}
+.reader-body code{font-family:var(--font-m);font-size:.88em;background:#161618;border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px;color:var(--lime)}
+.reader-body pre{margin:26px 0;background:#101012;border:1px solid var(--line);border-left:3px solid var(--lime);
+  border-radius:0 10px 10px 0;padding:18px 20px;overflow-x:auto}
+.reader-body pre code{font-family:var(--font-m);font-size:13.5px;line-height:1.75;background:none;border:0;
+  border-radius:0;padding:0;color:#d8d8da;white-space:pre}
+.reader-body hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+/* ---------- magnetic ---------- */
+.magnet{display:inline-block;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+@media (max-width:760px){
+  .about-grid{grid-template-columns:1fr}
+  .rules{grid-template-columns:1fr}
+  .wontdo ul{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat:nth-child(2){border-right:0}
+  .stat{border-bottom:1px solid var(--line)}
+  .work{grid-template-columns:44px 1fr}
+  .work-year{position:static;margin-top:10px}
+  .art-row{flex-wrap:wrap;gap:10px}
+  .art-meta{width:100%;padding-left:52px}
+  .col-chips{grid-template-columns:repeat(2,1fr)}
+  .scroll-hint{display:none}
+  .nav-links a{display:none}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-ring" id="cring"></div>
+
+<nav>
+  <a class="logo" href="#top">rotor<sup>®</sup></a>
+  <div class="nav-links">
+    <a href="#works" data-i18n="nav_works">作品</a>
+    <a href="#journey" data-i18n="nav_journey">历程</a>
+    <a href="#about" data-i18n="nav_principles">原则</a>
+    <a href="#now" data-i18n="nav_now">现在</a>
+    <a href="#writing" data-i18n="nav_writing">写作</a>
+    <a href="#contact" data-i18n="nav_contact">联系</a>
+    <div class="lang">
+      <button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="hero-kicker rv"><b>●</b>&nbsp;&nbsp;<span data-i18n="hero_kicker">独立开发者 — 作品集 2026</span></div>
+  <h1 class="rv" id="hero-title" aria-label="rotor ships things">rotor<br><span class="stroke">ships</span> things</h1>
+  <div class="hero-sub">
+    <p class="rv" data-i18n="hero_sub">我把想法变成<strong>真实上线的产品</strong>：小工具、游戏、交易系统。不追风口，只做能用的东西。</p>
+    <svg class="badge-spin rv" viewBox="0 0 100 100" aria-hidden="true">
+      <defs><path id="circ" d="M50,50 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0"/></defs>
+      <text font-size="10.5" letter-spacing="2.5" fill="#d8ff3e" font-family="JetBrains Mono,monospace">
+        <textPath href="#circ">OPEN SOURCE • SHIP IT • OPEN SOURCE • </textPath>
+      </text>
+      <circle cx="50" cy="50" r="6" fill="#d8ff3e"/>
+    </svg>
+  </div>
+  <div class="scroll-hint">SCROLL ↓</div>
+</header>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-inner" id="mq"></div>
+</div>
+
+<section id="works">
+  <div class="sec-head rv">
+    <span class="sec-num">01</span>
+    <h2 class="sec-title" data-i18n="works_title">Selected Works</h2>
+  </div>
+  <div id="work-list"></div>
+</section>
+
+<section id="journey">
+  <div class="sec-head rv">
+    <span class="sec-num">02</span>
+    <h2 class="sec-title" data-i18n="journey_title">Journey</h2>
+  </div>
+  <div class="timeline" id="timeline"></div>
+</section>
+
+<section id="about">
+  <div class="sec-head rv">
+    <span class="sec-num">03</span>
+    <h2 class="sec-title" data-i18n="about_title">The Rules</h2>
+  </div>
+  <p class="big rv" style="font-size:clamp(24px,3.4vw,42px);line-height:1.35;font-weight:500;letter-spacing:-.01em;max-width:900px;margin-bottom:clamp(36px,5vw,64px)" data-i18n="about_big">少即是多。<em style="font-style:normal;color:var(--lime)">话少，事多。</em>这是我的做事方式。</p>
+  <div class="rules rv" id="rules"></div>
+  <div class="wontdo rv">
+    <h4><s data-i18n="wontdo_title">不做清单</s></h4>
+    <ul id="wontdo-list"></ul>
+  </div>
+  <div class="stats rv">
+    <div class="stat"><div class="n" data-count="31">0</div><div class="k" data-i18n="st_tools">在线工具</div></div>
+    <div class="stat"><div class="n" data-count="23">0</div><div class="k" data-i18n="st_api">API 接口</div></div>
+    <div class="stat"><div class="n" data-count="6">0</div><div class="k" data-i18n="st_products">上线产品</div></div>
+    <div class="stat"><div class="n">24/7</div><div class="k" data-i18n="st_ship">持续交付</div></div>
+  </div>
+</section>
+
+<section id="now">
+  <div class="sec-head rv">
+    <span class="sec-num">04</span>
+    <h2 class="sec-title" data-i18n="now_title">Now</h2>
+  </div>
+  <p class="rv" style="color:var(--muted);max-width:640px;margin:-8px 0 clamp(28px,4vw,48px);font-size:clamp(14px,1.5vw,17px)" data-i18n="now_sub">手头在做的事，实时更新。工作项目只写方向，不涉及内部细节。</p>
+  <div id="now-list"></div>
+</section>
+
+<section id="atlas">
+  <div class="sec-head rv">
+    <span class="sec-num">05</span>
+    <h2 class="sec-title" data-i18n="atlas_title">Wiki Atlas</h2>
+  </div>
+  <p class="rv" style="color:var(--muted);max-width:680px;margin:-8px 0 clamp(28px,4vw,48px);font-size:clamp(14px,1.5vw,17px)" data-i18n="atlas_sub">和 AI 一起攒了 3 个月的知识库全景。库是私有的，这里只看结构，不看内容。</p>
+  <div class="atlas-stats rv" id="atlas-stats"></div>
+  <div class="graph-wrap rv">
+    <canvas id="wiki-graph"></canvas>
+    <div class="g-tip" id="g-tip"></div>
+    <div class="g-hint" data-i18n="atlas_hint">悬停查看节点</div>
+  </div>
+  <div class="domain-grid" id="domain-grid"></div>
+  <p class="rv" style="margin-top:clamp(24px,3vw,36px);color:var(--muted);font-size:clamp(13px,1.4vw,15px);border-left:2px solid var(--lime);padding-left:16px;max-width:640px" data-i18n="atlas_foot"></p>
+</section>
+
+<section id="writing">
+  <div class="sec-head rv">
+    <span class="sec-num">06</span>
+    <h2 class="sec-title" data-i18n="writing_title">Writing</h2>
+  </div>
+  <p class="rv" style="color:var(--muted);max-width:680px;margin:-8px 0 clamp(28px,4vw,48px);font-size:clamp(14px,1.5vw,17px)" data-i18n="writing_sub">从知识库里长出来的文章：只写有来源的东西，不编故事。</p>
+  <div id="col-list"></div>
+</section>
+
+<section id="contact" class="contact">
+  <div class="sec-head rv">
+    <span class="sec-num">07</span>
+    <h2 class="sec-title" data-i18n="contact_title">Say Hello</h2>
+  </div>
+  <p class="huge rv"><a href="mailto:rotor1996@gmail.com" class="magnet" data-i18n="contact_cta">来聊聊 →</a></p>
+  <div class="contact-links rv">
+    <a href="https://github.com/rotor1996" target="_blank" rel="noopener">GitHub ↗</a>
+    <a href="https://xiaojiang.gumroad.com" target="_blank" rel="noopener">Gumroad ↗</a>
+    <a href="mailto:rotor1996@gmail.com">Email ↗</a>
+  </div>
+</section>
+
+<footer>
+  <span>© 2026 rotor®</span>
+  <span data-i18n="footer_note">设计与代码：rotor + AI</span>
+  <span><a href="#top" style="color:var(--muted)">↑ TOP</a></span>
+</footer>
+
+
+<script>
+/* ================= i18n ================= */
+const I18N = {
+zh:{
+  nav_works:"作品", nav_journey:"历程", nav_principles:"原则", nav_now:"现在", nav_writing:"写作", nav_contact:"联系",
+  hero_kicker:"独立开发者 — 不整虚的",
+  hero_sub:"不讲故事，<strong>只看作品</strong>。下面每一个都真实在线，点进去就能用。不行就砍，行就继续。",
+  works_title:"Selected Works",
+  journey_title:"Journey",
+  journey:[
+    {d:"2026-07 ~ 10", t:"Obsidian 知识库沉淀", x:"和 AI 一起攒的知识库，230 多页，还在长。"},
+    {d:"2026-10-01", t:"TinyKit 上线", x:"31 个免费小工具 + 23 个开放 API，一天内从零到上线。"},
+    {d:"2026-10-01", t:"开源与上架", x:"TinyKit MCP 开源；3 款 AI 数字产品全球开卖。"},
+    {d:"2026-10-02", t:"AI 视频管线", x:"小红书日更视频自动化：配音 + 字幕 + BGM。"},
+    {d:"2026-10-02", t:"这个网站", x:"rotor 的个人站，你现在看的这个。"}
+  ],
+  now_title:"Now",
+  now_sub:"手头在做的事，实时更新。工作项目只写方向，不涉及内部细节。",
+  now:[
+    {t:"数字人 Agent 平台", d:"持久世界 Agent：记忆、创作、运营后台持续迭代", tag:"工作", indie:false},
+    {t:"多模型 API 网关", d:"上游版本跟进、网关治理与发布", tag:"工作", indie:false},
+    {t:"数字人视频链路", d:"创作意图到视频生成的链路打通", tag:"工作", indie:false},
+    {t:"行业资讯简报", d:"每日采集 + 人工核验的资讯自动化", tag:"工作", indie:false},
+    {t:"小红书日更", d:"AI 资讯视频，养号中", tag:"独立", indie:true},
+    {t:"实验性交易项目", d:"链上交易实验，系统自动执行", tag:"独立", indie:true},
+    {t:"TinyKit 运营", d:"等目录收录和 AdSense 审核", tag:"独立", indie:true}
+  ],
+  atlas_title:"Wiki Atlas",
+  atlas_sub:"和 AI 一起攒了 3 个月的知识库全景。库是私有的，这里只看结构，不看内容。",
+  atlas_hint:"悬停查看节点 · 拖拽旋转",
+  atlas_ghost:"？",
+  atlas_ghost_d:"探索中的方向",
+  atlas_foot:"这张图每周都在长。有些方向还在试，暂时不公开。",
+  enter:"进入 ↓",
+  atlas_stats:[
+    {n:"230+", k:"知识页面"},
+    {n:"65", k:"项目簇"},
+    {n:"51", k:"排障复盘"},
+    {n:"45", k:"通用概念"},
+    {n:"14", k:"架构决策"},
+    {n:"<em>3</em> 个月", k:"持续沉淀"}
+  ],
+  domains:[
+    {name:"AI 基础设施", desc:"模型网关 · 资讯采集 · 多模态应用", projects:[
+      {label:"多模型网关", d:"跨模型 API 网关与治理", pages:22, updated:"2026-09-19", active:true},
+      {label:"资讯引擎", d:"每日行业资讯采集", pages:1, updated:"2026-09-21", active:true},
+      {label:"无限画布", d:"多模态创作应用", pages:2, updated:"2026-08-11", active:true},
+      {label:"隐私网关", d:"数据隐私处理", pages:1, updated:"2026-07-23", active:false},
+      {label:"视频工作流", d:"AI 视频生成管线", pages:1, updated:"2026-07-14", active:false},
+      {label:"创作工作室", d:"AI 创作实验", pages:1, updated:"2026-07-15", active:false}
+    ]},
+    {name:"Agent 与数字人", desc:"持久世界 Agent · 数字人 · Skill 资产", projects:[
+      {label:"数字人 Agent", d:"持久世界智能体", pages:30, updated:"2026-10-02", active:true},
+      {label:"视频工作台", d:"AI 视频生成", pages:9, updated:"2026-09-09", active:true},
+      {label:"数字人对讲", d:"Persona 对话", pages:2, updated:"2026-08-14", active:true},
+      {label:"Skill 资产库", d:"能力资产管理", pages:6, updated:"2026-07-16", active:false},
+      {label:"知识维护", d:"知识库自动化维护", pages:1, updated:"2026-07-31", active:false},
+      {label:"Agent 平台", d:"智能体平台", pages:1, updated:"2026-08-10", active:true},
+      {label:"效能工具", d:"研发效能", pages:1, updated:"2026-07-24", active:false}
+    ]},
+    {name:"多端业务", desc:"H5 · 管理后台 · 营销", projects:[
+      {label:"多端业务", d:"H5 与管理后台", pages:5, updated:"2026-07-31", active:true},
+      {label:"营销支付", d:"营销与支付链路", pages:3, updated:"2026-08-07", active:false}
+    ]},
+    {name:"工程工具", desc:"需求评估 · 后台工程 · 知识执行", projects:[
+      {label:"需求评估", d:"需求分析工具", pages:1, updated:"2026-06-30", active:false},
+      {label:"设备后台", d:"设备管理后台", pages:1, updated:"2026-06-30", active:false},
+      {label:"打卡应用", d:"小程序", pages:1, updated:"2026-06-30", active:false},
+      {label:"执行知识库", d:"团队执行知识", pages:1, updated:"2026-07-23", active:false},
+      {label:"可视化实验", d:"数据可视化试点", pages:1, updated:"2026-08-07", active:false}
+    ]}
+  ],
+  writing_title:"Writing",
+  writing_sub:"从知识库里长出来的文章：只写有来源的东西，不编故事。",
+  collections:[
+    {key:"infra", name:"AI 基础设施", desc:"网关 · 观测 · 计费 · 发布"},
+    {key:"agent", name:"Agent 与数字人", desc:"记忆 · 人格 · 执行边界"},
+    {key:"biz", name:"多端业务", desc:"资讯 · H5 · 组织代码"},
+    {key:"eng", name:"工程工具", desc:"验证 · 规范 · 决策记录"},
+    {key:"solo", name:"个人建造", desc:"独立项目的复盘"}
+  ],
+  columns:{build:"建造复盘", garden:"知识花园", log:"实验日志"},
+  read:"阅读 →", soon:"即将发布",
+  writing_latest:"最新发布", writing_cols:"合集", writing_all:"浏览全部文章",
+  reader_foot:"CC BY-NC-ND · 转载请注明出处",
+  view_col:"查看合集 →",
+  about_title:"The Rules",
+  about_big:"话少，事多。<em style=\"font-style:normal;color:var(--lime)\">这是我的做事方式。</em>",
+  rules:[
+    {t:"要有价值，<span class=\"hl\">宁缺毋滥</span>。", x:"不堆数量，一个能打的顶十个凑数的。"},
+    {t:"<span class=\"hl\">别瞎忙活</span>。", x:"离钱远的事不做，做了就要见结果。"},
+    {t:"让<span class=\"hl\">市场</span>投票。", x:"不自嗨，不感动自己，数据说了算。"},
+    {t:"搞钱归搞钱，<span class=\"hl\">不越界</span>。", x:"不侵权，不犯罪，不瞎搞，不割韭菜。"}
+  ],
+  wontdo_title:"不做清单",
+  wontdo:["不画饼", "不堆数量凑数", "不编造数据", "不割韭菜", "不开空头支票", "不追风口"],
+  st_tools:"在线工具", st_api:"API 接口", st_products:"上线产品", st_ship:"持续交付",
+  contact_title:"Say Hello",
+  contact_cta:"来聊聊 →",
+  footer_note:"设计与代码：rotor + AI",
+  visit:"访问 →",
+  mq:"独立开发者<i>✦</i>小而美<i>✦</i>开源<i>✦</i>说人话<i>✦</i>",
+  works:[
+    {t:"TinyKit", d:"31 个免费在线小工具 + 23 个开放 API：去 AI 味、Token 计数、Prompt 构建……平时顺手做的，攒多了就成了站。", tags:["Web Tools","API","i18n"], url:"https://gettinykit.top", year:"2026"},
+    {t:"大富翁转盘", d:"线下大富翁的掷骰子搭子：1-12 数字转盘起家，后来加了银行贷款、利息、土改事件。轻量小玩意，打开即用。", tags:["Toy","Single File"], url:"https://dafuweng-wheel.pages.dev", year:"2026"},
+    {t:"Gumroad 数字产品", d:"三款 AI 效率数字商品（$9 / $29 / $39），已上架全球销售，PayPal 收款。", tags:["Digital Goods","Global"], url:"https://xiaojiang.gumroad.com", year:"2026"},
+    {t:"TinyKit MCP", d:"开源 MCP 服务：把 TinyKit 全部 23 个工具开放给 Claude 等 AI 助手直接调用。", tags:["Open Source","MCP"], url:"https://github.com/xiaojiang19960811/tinykit-mcp", year:"2026"},
+    {t:"AI 视频管线", d:"小红书日更视频，自动生产：新闻双源核实 → 文案 → AI 配音 → 字幕 → BGM，竖屏直出。", tags:["Video","Automation"], year:"2026", nourl:true},
+    {t:"Obsidian LLM 知识库", d:"和 AI 一起攒了 3 个月的知识库：230 多页，排障、概念、决策、项目，互相连成网。私有，点击看全景。", tags:["Knowledge","Obsidian"], year:"2026", url:"#atlas", internal:true}
+  ]
+},
+en:{
+  nav_works:"Works", nav_journey:"Journey", nav_principles:"Rules", nav_now:"Now", nav_writing:"Writing", nav_contact:"Contact",
+  hero_kicker:"Independent Developer — no fluff",
+  hero_sub:"No stories, <strong>just shipped work</strong>. Everything below is live — click and use it. If it doesn't work, kill it.",
+  works_title:"Selected Works",
+  journey_title:"Journey",
+  journey:[
+    {d:"2026-07 ~ 10", t:"Obsidian wiki growing", x:"Knowledge base built with AI, 230+ pages and still growing."},
+    {d:"2026-10-01", t:"TinyKit launched", x:"31 free micro-tools + 23 open APIs, zero to live in a day."},
+    {d:"2026-10-01", t:"Open source & on sale", x:"TinyKit MCP open-sourced; 3 AI digital products selling worldwide."},
+    {d:"2026-10-02", t:"AI video pipeline", x:"Automated daily videos for Xiaohongshu: voiceover + subtitles + BGM."},
+    {d:"2026-10-02", t:"This site", x:"rotor's personal site. The one you're looking at."}
+  ],
+  now_title:"Now",
+  now_sub:"What I'm working on, updated as it changes. Work projects are direction-only, no internals.",
+  now:[
+    {t:"Digital-human Agent platform", d:"Persistent-world agent: memory, creation, ops dashboard in active iteration", tag:"Work", indie:false},
+    {t:"Multi-model API gateway", d:"Upstream version tracking, gateway governance and releases", tag:"Work", indie:false},
+    {t:"Digital-human video pipeline", d:"Connecting creative intent to video generation", tag:"Work", indie:false},
+    {t:"Industry news briefing", d:"Daily collection + human-verified news automation", tag:"Work", indie:false},
+    {t:"Xiaohongshu daily", d:"AI news videos, account warming up", tag:"Indie", indie:true},
+    {t:"Experimental trading", d:"On-chain trading experiment, run automatically", tag:"Indie", indie:true},
+    {t:"TinyKit ops", d:"Waiting on directory listings and AdSense review", tag:"Indie", indie:true}
+  ],
+  atlas_title:"Wiki Atlas",
+  atlas_sub:"A knowledge base built with AI over 3 months, mapped. Private repo — structure only, no content details.",
+  atlas_hint:"Hover nodes · drag to rotate",
+  atlas_ghost:"?",
+  atlas_ghost_d:"Directions under exploration",
+  atlas_foot:"This map grows every week. Some directions are still experiments — undisclosed for now.",
+  enter:"Enter ↓",
+  atlas_stats:[
+    {n:"230+", k:"Knowledge pages"},
+    {n:"65", k:"Project clusters"},
+    {n:"51", k:"Bug postmortems"},
+    {n:"45", k:"Concepts"},
+    {n:"14", k:"Arch decisions"},
+    {n:"<em>3</em> mo", k:"Accumulating"}
+  ],
+  domains:[
+    {name:"AI Infra", desc:"Model gateway · News collection · Multimodal apps", projects:[
+      {label:"Model Gateway", d:"Cross-model API gateway & governance", pages:22, updated:"2026-09-19", active:true},
+      {label:"News Engine", d:"Daily industry news collection", pages:1, updated:"2026-09-21", active:true},
+      {label:"Infinite Canvas", d:"Multimodal creation app", pages:2, updated:"2026-08-11", active:true},
+      {label:"Privacy Gateway", d:"Data privacy processing", pages:1, updated:"2026-07-23", active:false},
+      {label:"Video Workflow", d:"AI video generation pipeline", pages:1, updated:"2026-07-14", active:false},
+      {label:"Creation Studio", d:"AI creation experiments", pages:1, updated:"2026-07-15", active:false}
+    ]},
+    {name:"Agents & Digital Humans", desc:"Persistent-world agents · Digital humans · Skill assets", projects:[
+      {label:"Digital-human Agent", d:"Persistent-world agent", pages:30, updated:"2026-10-02", active:true},
+      {label:"Video Studio", d:"AI video generation", pages:9, updated:"2026-09-09", active:true},
+      {label:"Persona Chat", d:"Persona dialogue", pages:2, updated:"2026-08-14", active:true},
+      {label:"Skill Vault", d:"Capability asset management", pages:6, updated:"2026-07-16", active:false},
+      {label:"Wiki Keeper", d:"Automated knowledge maintenance", pages:1, updated:"2026-07-31", active:false},
+      {label:"Agent Platform", d:"Agent platform", pages:1, updated:"2026-08-10", active:true},
+      {label:"Dev Efficiency", d:"Engineering efficiency", pages:1, updated:"2026-07-24", active:false}
+    ]},
+    {name:"Multi-platform Biz", desc:"H5 · Admin dashboards · Marketing", projects:[
+      {label:"Biz Platform", d:"H5 & admin dashboards", pages:5, updated:"2026-07-31", active:true},
+      {label:"Growth & Pay", d:"Marketing & payment flows", pages:3, updated:"2026-08-07", active:false}
+    ]},
+    {name:"Eng Tools", desc:"Req assessment · Admin engineering · Exec knowledge", projects:[
+      {label:"Req Assessment", d:"Requirement analysis", pages:1, updated:"2026-06-30", active:false},
+      {label:"Device Admin", d:"Device management", pages:1, updated:"2026-06-30", active:false},
+      {label:"Check-in App", d:"Mini-program", pages:1, updated:"2026-06-30", active:false},
+      {label:"Exec Wiki", d:"Team execution knowledge", pages:1, updated:"2026-07-23", active:false},
+      {label:"Visual Lab", d:"Data visualization pilot", pages:1, updated:"2026-08-07", active:false}
+    ]}
+  ],
+  writing_title:"Writing",
+  writing_sub:"Articles grown from the knowledge base: sourced claims only, no fiction.",
+  collections:[
+    {key:"infra", name:"AI Infrastructure", desc:"Gateway · observability · billing · releases"},
+    {key:"agent", name:"Agents & Digital Humans", desc:"Memory · persona · execution boundaries"},
+    {key:"biz", name:"Multi-platform", desc:"Newsletters · H5 · code organization"},
+    {key:"eng", name:"Engineering", desc:"Verification · conventions · ADRs"},
+    {key:"solo", name:"Solo Builds", desc:"Indie project retrospectives"}
+  ],
+  columns:{build:"Build Notes", garden:"Garden", log:"Lab Log"},
+  read:"Read →", soon:"Coming soon",
+  writing_latest:"Latest", writing_cols:"Collections", writing_all:"Browse all articles",
+  reader_foot:"CC BY-NC-ND · attribution required",
+  view_col:"View collection →",
+  about_title:"The Rules",
+  about_big:"Less talk, more shipping. <em style=\"font-style:normal;color:var(--lime)\">That's how I work.</em>",
+  rules:[
+    {t:"Be valuable or <span class=\"hl\">don't bother</span>.", x:"No filler. One thing that hits beats ten that don't."},
+    {t:"Don't <span class=\"hl\">busywork</span>.", x:"If it doesn't move the needle, it doesn't get built."},
+    {t:"Let the <span class=\"hl\">market</span> vote.", x:"No self-congratulation. Data decides."},
+    {t:"Chase money, <span class=\"hl\">stay clean</span>.", x:"No infringement, no crime, no scams, no rug pulls."}
+  ],
+  wontdo_title:"Won't-do list",
+  wontdo:["No hype decks", "No filler features", "No fake metrics", "No rug pulls", "No empty promises", "No trend-chasing"],
+  st_tools:"Live Tools", st_api:"API Endpoints", st_products:"Shipped Products", st_ship:"Always Shipping",
+  contact_title:"Say Hello",
+  contact_cta:"Let's talk →",
+  footer_note:"Designed & coded by rotor + AI",
+  visit:"Visit →",
+  mq:"Independent Developer<i>✦</i>Always Shipping<i>✦</i>Open Source<i>✦</i>Small & Sharp<i>✦</i>",
+  works:[
+    {t:"TinyKit", d:"31 free online micro-tools + 23 open APIs: de-AI-flavor text, token counter, prompt builder… small tools I actually use, gathered into one site.", tags:["Web Tools","API","i18n"], url:"https://gettinykit.top", year:"2026"},
+    {t:"Monopoly Wheel", d:"A dice companion for tabletop Monopoly nights: started as a 1–12 spinner, grew bank loans, interest and event cards. A lightweight toy, not a full game.", tags:["Toy","Single File"], url:"https://dafuweng-wheel.pages.dev", year:"2026"},
+    {t:"Gumroad Digital Goods", d:"Three AI productivity digital products ($9 / $29 / $39), live and selling worldwide via PayPal.", tags:["Digital Goods","Global"], url:"https://xiaojiang.gumroad.com", year:"2026"},
+    {t:"TinyKit MCP", d:"Open-source MCP server exposing all 23 TinyKit tools to Claude and other AI assistants.", tags:["Open Source","MCP"], url:"https://github.com/xiaojiang19960811/tinykit-mcp", year:"2026"},
+    {t:"AI Video Pipeline", d:"Daily videos for Xiaohongshu, made automatically: dual-source news check → script → AI voiceover → subtitles → BGM, vertical output.", tags:["Video","Automation"], year:"2026", nourl:true},
+    {t:"Obsidian LLM Wiki", d:"A knowledge base built with AI over 3 months: 230+ pages of bugs, concepts, decisions and projects, all linked up. Private — click for the atlas.", tags:["Knowledge","Obsidian"], year:"2026", url:"#atlas", internal:true}
+  ]
+}};
+const ARTICLES = [{"id": "01", "slug": "newsletter-newsroom", "col": "infra", "column": "build", "t": {"zh": "做资讯简报：机器干活，人把关", "en": "Newsletter, Built Like a Newsroom"}, "d": {"zh": "发现初筛归机器，核验发布归人；六道质量门禁", "en": "Machines discover and draft; humans verify and ship. Six quality gates."}, "live": true, "url": "/writing/01-newsletter-newsroom", "next": {"url": "/writing/03-fork-selective-upgrade", "t": {"zh": "Fork 开源项目：选择性升级", "en": "Forking Open Source: Selective Upgrades"}}, "date": "2026-10-02"}, {"id": "02", "slug": "persona-from-briefs", "col": "agent", "column": "build", "t": {"zh": "从 39 份日报，反推一个数字人的人格", "en": "Deriving a Persona from 39 Briefs"}, "d": {"zh": "不从 prompt 空想性格，从 161 条简报行为提炼人格", "en": "Don't imagine a persona from prompts — distill it from 161 briefs of behavior."}, "live": true, "url": "/writing/02-persona-from-briefs", "next": {"url": "/writing/05-monorepo-future-split", "t": {"zh": "单仓不拆，但按“未来可拆”组织", "en": "Monorepo, Organized for a Future Split"}}, "date": "2026-10-02"}, {"id": "03", "slug": "fork-selective-upgrade", "col": "infra", "column": "build", "t": {"zh": "Fork 开源项目：选择性升级", "en": "Forking Open Source: Selective Upgrades"}, "d": {"zh": "按主题手工吸收上游，高风险项不得无确认删除", "en": "Absorb upstream by topic, by hand. High-risk hunks need explicit sign-off."}, "live": true, "url": "/writing/03-fork-selective-upgrade", "prev": {"url": "/writing/01-newsletter-newsroom", "t": {"zh": "做资讯简报：机器干活，人把关", "en": "Newsletter, Built Like a Newsroom"}}, "next": {"url": "/writing/04-proxy-media-api", "t": {"zh": "接第三方媒体 API：代理、缓存和排障纪律", "en": "Proxying Media APIs: Discipline Over Magic"}}, "date": "2026-10-02"}, {"id": "04", "slug": "proxy-media-api", "col": "infra", "column": "build", "t": {"zh": "接第三方媒体 API：代理、缓存和排障纪律", "en": "Proxying Media APIs: Discipline Over Magic"}, "d": {"zh": "同源代理流式转发不落盘；没做 A/B 前不定根因", "en": "Same-origin proxy streaming, no disk. No root cause without A/B."}, "live": true, "url": "/writing/04-proxy-media-api", "prev": {"url": "/writing/03-fork-selective-upgrade", "t": {"zh": "Fork 开源项目：选择性升级", "en": "Forking Open Source: Selective Upgrades"}}, "next": {"url": "/writing/06-ai-comics-pipeline", "t": {"zh": "AI 漫画是连续生产，不是单图生成", "en": "AI Comics Are a Production Line"}}, "date": "2026-10-02"}, {"id": "05", "slug": "monorepo-future-split", "col": "agent", "column": "build", "t": {"zh": "单仓不拆，但按“未来可拆”组织", "en": "Monorepo, Organized for a Future Split"}, "d": {"zh": "拒绝拆微仓政治正确，也拒绝意大利面单仓", "en": "Neither micro-repo dogma nor spaghetti monorepo."}, "live": true, "url": "/writing/05-monorepo-future-split", "prev": {"url": "/writing/02-persona-from-briefs", "t": {"zh": "从 39 份日报，反推一个数字人的人格", "en": "Deriving a Persona from 39 Briefs"}}, "next": {"url": "/writing/12-agent-memory-layers", "t": {"zh": "Agent 的记忆怎么做分层", "en": "Layered Memory for Agents"}}, "date": "2026-10-02"}, {"id": "06", "slug": "ai-comics-pipeline", "col": "infra", "column": "build", "t": {"zh": "AI 漫画是连续生产，不是单图生成", "en": "AI Comics Are a Production Line"}, "d": {"zh": "角色场景道具镜头受控；生成成功≠成品", "en": "Controlled cast, sets and shots. A successful call is not a finished product."}, "live": true, "url": "/writing/06-ai-comics-pipeline", "prev": {"url": "/writing/04-proxy-media-api", "t": {"zh": "接第三方媒体 API：代理、缓存和排障纪律", "en": "Proxying Media APIs: Discipline Over Magic"}}, "next": {"url": "/writing/08-selfhost-video-models", "t": {"zh": "部署开源视频模型前，先看三条边界", "en": "Before Self-Hosting Open Video Models"}}, "date": "2026-10-02"}, {"id": "07", "slug": "one-biz-four-clients", "col": "biz", "column": "build", "t": {"zh": "一个业务四个端，怎么组织代码", "en": "One Business, Four Clients: Code Organization"}, "d": {"zh": "目录第一层按端语义命名；清洗下沉 adapter 层", "en": "Name top-level dirs by client semantics; push cleanup into adapters."}, "live": true, "url": "/writing/07-one-biz-four-clients", "next": {"url": "/writing/14-public-not-crawlable", "t": {"zh": "公开能看，不等于能爬", "en": "Public ≠ Crawlable"}}, "date": "2026-10-02"}, {"id": "08", "slug": "selfhost-video-models", "col": "infra", "column": "build", "t": {"zh": "部署开源视频模型前，先看三条边界", "en": "Before Self-Hosting Open Video Models"}, "d": {"zh": "开放权重≠开放完整链路；许可证有地域排除", "en": "Open weights ≠ open pipeline. Licenses have regional exclusions."}, "live": true, "url": "/writing/08-selfhost-video-models", "prev": {"url": "/writing/06-ai-comics-pipeline", "t": {"zh": "AI 漫画是连续生产，不是单图生成", "en": "AI Comics Are a Production Line"}}, "next": {"url": "/writing/13-calling-ai-apis", "t": {"zh": "调 AI 接口，不能只看“通没通”", "en": "Calling AI APIs: Beyond “It Works”"}}, "date": "2026-10-02"}, {"id": "09", "slug": "done-vs-verified", "col": "eng", "column": "garden", "t": {"zh": "“已完成”不等于“已验证”", "en": "“Done” Is Not “Verified”"}, "d": {"zh": "六个结论不能互相替代；失败证据也是证据", "en": "Six conclusions, none interchangeable. Failure is evidence too."}, "live": true, "url": "/writing/09-done-vs-verified", "next": {"url": "/writing/10-knowledge-base-rules", "t": {"zh": "给知识库立规矩：什么算数，什么不算", "en": "Rules for the Knowledge Base"}}, "date": "2026-10-02"}, {"id": "10", "slug": "knowledge-base-rules", "col": "eng", "column": "garden", "t": {"zh": "给知识库立规矩：什么算数，什么不算", "en": "Rules for the Knowledge Base"}, "d": {"zh": "正式规则三来源；AI 推断一律进候选区", "en": "Formal rules have three sources. AI inference stays in candidates."}, "live": true, "url": "/writing/10-knowledge-base-rules", "prev": {"url": "/writing/09-done-vs-verified", "t": {"zh": "“已完成”不等于“已验证”", "en": "“Done” Is Not “Verified”"}}, "next": {"url": "/writing/11-ai-codes-humans-judge", "t": {"zh": "AI 写代码越快，人越要负责判断", "en": "The Faster AI Codes, the More Humans Must Judge"}}, "date": "2026-10-02"}, {"id": "11", "slug": "ai-codes-humans-judge", "col": "eng", "column": "garden", "t": {"zh": "AI 写代码越快，人越要负责判断", "en": "The Faster AI Codes, the More Humans Must Judge"}, "d": {"zh": "开发人员真正参与的七件事；SDD 不保证 Token 更少", "en": "Seven things developers actually do. SDD doesn't promise fewer tokens."}, "live": true, "url": "/writing/11-ai-codes-humans-judge", "prev": {"url": "/writing/10-knowledge-base-rules", "t": {"zh": "给知识库立规矩：什么算数，什么不算", "en": "Rules for the Knowledge Base"}}, "next": {"url": "/writing/15-ui-claims-proof", "t": {"zh": "界面只讲能证明的话", "en": "UI Should Only Claim What's Proven"}}, "date": "2026-10-02"}, {"id": "12", "slug": "agent-memory-layers", "col": "agent", "column": "garden", "t": {"zh": "Agent 的记忆怎么做分层", "en": "Layered Memory for Agents"}, "d": {"zh": "六层分别管理；遗忘是淡出不是删除", "en": "Six layers, managed separately. Forgetting fades, not deletes."}, "live": true, "url": "/writing/12-agent-memory-layers", "prev": {"url": "/writing/05-monorepo-future-split", "t": {"zh": "单仓不拆，但按“未来可拆”组织", "en": "Monorepo, Organized for a Future Split"}}, "next": {"url": "/writing/17-discover-execute-confirm", "t": {"zh": "AI 做事：发现、执行、确认是三件事", "en": "Discover, Execute, Confirm: Three Separate Things"}}, "date": "2026-10-02"}, {"id": "13", "slug": "calling-ai-apis", "col": "infra", "column": "garden", "t": {"zh": "调 AI 接口，不能只看“通没通”", "en": "Calling AI APIs: Beyond “It Works”"}, "d": {"zh": "8 个语义阶段；传输存活≠语义进展", "en": "Eight semantic stages. Connection alive ≠ progress made."}, "live": true, "url": "/writing/13-calling-ai-apis", "prev": {"url": "/writing/08-selfhost-video-models", "t": {"zh": "部署开源视频模型前，先看三条边界", "en": "Before Self-Hosting Open Video Models"}}, "next": {"url": "/writing/16-ai-app-security", "t": {"zh": "AI 应用的安全审计：内容过滤只是最后一环", "en": "AI App Security: Filtering Is the Last Step"}}, "date": "2026-10-02"}, {"id": "14", "slug": "public-not-crawlable", "col": "biz", "column": "garden", "t": {"zh": "公开能看，不等于能爬", "en": "Public ≠ Crawlable"}, "d": {"zh": "红黄绿三级准入；反爬绕过永久禁止", "en": "Red/yellow/green access tiers. Anti-scrape bypass permanently banned."}, "live": true, "url": "/writing/14-public-not-crawlable", "prev": {"url": "/writing/07-one-biz-four-clients", "t": {"zh": "一个业务四个端，怎么组织代码", "en": "One Business, Four Clients: Code Organization"}}, "next": {"url": "/writing/19-h5-base", "t": {"zh": "H5 底座：比脚手架多一层，比业务少一层", "en": "H5 Base: Thicker Than a Scaffold"}}, "date": "2026-10-02"}, {"id": "15", "slug": "ui-claims-proof", "col": "eng", "column": "garden", "t": {"zh": "界面只讲能证明的话", "en": "UI Should Only Claim What's Proven"}, "d": {"zh": "“任务完成≠资产确认”；不虚构统一接口", "en": "“Task done ≠ asset confirmed.” Never invent a unified API."}, "live": true, "url": "/writing/15-ui-claims-proof", "prev": {"url": "/writing/11-ai-codes-humans-judge", "t": {"zh": "AI 写代码越快，人越要负责判断", "en": "The Faster AI Codes, the More Humans Must Judge"}}, "next": {"url": "/writing/25-team-space-leak", "t": {"zh": "团队空间看到了别人的项目：一次越权复盘", "en": "When Team Spaces Leaked Projects"}}, "date": "2026-10-02"}, {"id": "16", "slug": "ai-app-security", "col": "infra", "column": "garden", "t": {"zh": "AI 应用的安全审计：内容过滤只是最后一环", "en": "AI App Security: Filtering Is the Last Step"}, "d": {"zh": "提示词快照是高敏证据；fail-open/fail-closed 取舍", "en": "Prompt snapshots are sensitive evidence. Fail-open vs fail-closed tradeoffs."}, "live": true, "url": "/writing/16-ai-app-security", "prev": {"url": "/writing/13-calling-ai-apis", "t": {"zh": "调 AI 接口，不能只看“通没通”", "en": "Calling AI APIs: Beyond “It Works”"}}, "next": {"url": "/writing/22-nine-minutes-first-token", "t": {"zh": "首字等了 9 分钟：一次网关超时复盘", "en": "Nine Minutes for the First Token"}}, "date": "2026-10-02"}, {"id": "17", "slug": "discover-execute-confirm", "col": "agent", "column": "garden", "t": {"zh": "AI 做事：发现、执行、确认是三件事", "en": "Discover, Execute, Confirm: Three Separate Things"}, "d": {"zh": "前一阶段完成不默认授权后一阶段", "en": "Finishing one phase never authorizes the next."}, "live": true, "url": "/writing/17-discover-execute-confirm", "prev": {"url": "/writing/12-agent-memory-layers", "t": {"zh": "Agent 的记忆怎么做分层", "en": "Layered Memory for Agents"}}, "next": {"url": "/writing/18-model-said-success", "t": {"zh": "模型说“成功了”，不等于真成功了", "en": "The Model Said “Success” — Prove It"}}, "date": "2026-10-02"}, {"id": "18", "slug": "model-said-success", "col": "agent", "column": "garden", "t": {"zh": "模型说“成功了”，不等于真成功了", "en": "The Model Said “Success” — Prove It"}, "d": {"zh": "决策与执行拆开；成功结论绑定外部证据", "en": "Split deciding from doing. Success claims need external evidence."}, "live": true, "url": "/writing/18-model-said-success", "prev": {"url": "/writing/17-discover-execute-confirm", "t": {"zh": "AI 做事：发现、执行、确认是三件事", "en": "Discover, Execute, Confirm: Three Separate Things"}}, "next": {"url": "/writing/20-writing-skills", "t": {"zh": "Skill 怎么写才有人用", "en": "Writing Skills People Actually Use"}}, "date": "2026-10-02"}, {"id": "19", "slug": "h5-base", "col": "biz", "column": "garden", "t": {"zh": "H5 底座：比脚手架多一层，比业务少一层", "en": "H5 Base: Thicker Than a Scaffold"}, "d": {"zh": "带轻业务骨架的底座；路由 meta 承载语义", "en": "A base with a light business skeleton. Route meta carries semantics."}, "live": true, "url": "/writing/19-h5-base", "prev": {"url": "/writing/14-public-not-crawlable", "t": {"zh": "公开能看，不等于能爬", "en": "Public ≠ Crawlable"}}, "date": "2026-10-02"}, {"id": "20", "slug": "writing-skills", "col": "agent", "column": "garden", "t": {"zh": "Skill 怎么写才有人用", "en": "Writing Skills People Actually Use"}, "d": {"zh": "一 Skill 一任务；高频复用才沉淀", "en": "One skill, one task. Distill only what gets reused."}, "live": true, "url": "/writing/20-writing-skills", "prev": {"url": "/writing/18-model-said-success", "t": {"zh": "模型说“成功了”，不等于真成功了", "en": "The Model Said “Success” — Prove It"}}, "next": {"url": "/writing/21-ai-remembers-too-much", "t": {"zh": "AI 记得太多：一次记忆误记复盘", "en": "When AI Remembers Too Much"}}, "date": "2026-10-02"}, {"id": "21", "slug": "ai-remembers-too-much", "col": "agent", "column": "log", "t": {"zh": "AI 记得太多：一次记忆误记复盘", "en": "When AI Remembers Too Much"}, "d": {"zh": "14 条候选 11 条误记，模型却给 0.99 置信度", "en": "11 of 14 recalled wrong, model confidence 0.99."}, "live": true, "url": "/writing/21-ai-remembers-too-much", "prev": {"url": "/writing/20-writing-skills", "t": {"zh": "Skill 怎么写才有人用", "en": "Writing Skills People Actually Use"}}, "date": "2026-10-02"}, {"id": "22", "slug": "nine-minutes-first-token", "col": "infra", "column": "log", "t": {"zh": "首字等了 9 分钟：一次网关超时复盘", "en": "Nine Minutes for the First Token"}, "d": {"zh": "95% 耗时在首有效输出前；预算 90s/180s/换号 1 次", "en": "95% of time before first semantic output. Budgets: 90s/180s/1 swap."}, "live": true, "url": "/writing/22-nine-minutes-first-token", "prev": {"url": "/writing/16-ai-app-security", "t": {"zh": "AI 应用的安全审计：内容过滤只是最后一环", "en": "AI App Security: Filtering Is the Last Step"}}, "next": {"url": "/writing/23-cache-billing-trap", "t": {"zh": "缓存计费的坑：三笔账必须互斥", "en": "The Cache Billing Trap"}}, "date": "2026-10-02"}, {"id": "23", "slug": "cache-billing-trap", "col": "infra", "column": "log", "t": {"zh": "缓存计费的坑：三笔账必须互斥", "en": "The Cache Billing Trap"}, "d": {"zh": "修复前按 2.25x 收费；纵向闭环测试缺失", "en": "Billed at 2.25x before the fix. The vertical test loop was missing."}, "live": true, "url": "/writing/23-cache-billing-trap", "prev": {"url": "/writing/22-nine-minutes-first-token", "t": {"zh": "首字等了 9 分钟：一次网关超时复盘", "en": "Nine Minutes for the First Token"}}, "next": {"url": "/writing/24-webrtc-white-screen", "t": {"zh": "WebRTC 白屏：先别急着上 TURN", "en": "WebRTC White Screen: Don't Rush to TURN"}}, "date": "2026-10-02"}, {"id": "24", "slug": "webrtc-white-screen", "col": "infra", "column": "log", "t": {"zh": "WebRTC 白屏：先别急着上 TURN", "en": "WebRTC White Screen: Don't Rush to TURN"}, "d": {"zh": "根因是 NAT 后公网地址发布，不是必须上 TURN", "en": "Root cause: public address behind NAT, not a missing TURN."}, "live": true, "url": "/writing/24-webrtc-white-screen", "prev": {"url": "/writing/23-cache-billing-trap", "t": {"zh": "缓存计费的坑：三笔账必须互斥", "en": "The Cache Billing Trap"}}, "date": "2026-10-02"}, {"id": "25", "slug": "team-space-leak", "col": "eng", "column": "log", "t": {"zh": "团队空间看到了别人的项目：一次越权复盘", "en": "When Team Spaces Leaked Projects"}, "d": {"zh": "空 organizationId 历史数据回退；多租户隔离教训", "en": "Empty org-id fallback on legacy data. A multi-tenant lesson."}, "live": true, "url": "/writing/25-team-space-leak", "prev": {"url": "/writing/15-ui-claims-proof", "t": {"zh": "界面只讲能证明的话", "en": "UI Should Only Claim What's Proven"}}, "date": "2026-10-02"}, {"id": "26", "slug": "tinykit-decisions", "col": "solo", "column": "build", "t": {"zh": "TinyKit：一个工具站的决策链", "en": "TinyKit: Anatomy of a Decision Chain"}, "d": {"zh": "痛点调研→31 工具→API→MCP", "en": "Pain research → 31 tools → API → MCP."}, "live": true, "url": "/writing/26-tinykit-decisions", "next": {"url": "/writing/27-video-pipeline-v2-v4", "t": {"zh": "AI 视频管线：v2 到 v4 的迭代", "en": "Video Pipeline: v2 to v4"}}, "date": "2026-10-02"}, {"id": "27", "slug": "video-pipeline-v2-v4", "col": "solo", "column": "build", "t": {"zh": "AI 视频管线：v2 到 v4 的迭代", "en": "Video Pipeline: v2 to v4"}, "d": {"zh": "三次评审返工；字幕/边距/缓存的生产坑", "en": "Three review rounds. Subtitles, margins, cache — production pitfalls."}, "live": true, "url": "/writing/27-video-pipeline-v2-v4", "prev": {"url": "/writing/26-tinykit-decisions", "t": {"zh": "TinyKit：一个工具站的决策链", "en": "TinyKit: Anatomy of a Decision Chain"}}, "next": {"url": "/writing/28-gumroad-launch", "t": {"zh": "Gumroad 上架记：三个数字产品", "en": "Gumroad Launch Notes"}}, "date": "2026-10-02"}, {"id": "28", "slug": "gumroad-launch", "col": "solo", "column": "build", "t": {"zh": "Gumroad 上架记：三个数字产品", "en": "Gumroad Launch Notes"}, "d": {"zh": "$9/$29/$39 定价；PayPal 收款；中国卖家坑", "en": "$9/$29/$39 pricing, PayPal payout, traps for CN sellers."}, "live": true, "url": "/writing/28-gumroad-launch", "prev": {"url": "/writing/27-video-pipeline-v2-v4", "t": {"zh": "AI 视频管线：v2 到 v4 的迭代", "en": "Video Pipeline: v2 to v4"}}, "date": "2026-10-02"}];
+let LANG = localStorage.getItem('rotor-lang') || 'zh';
+function applyLang(l){
+  LANG = l;
+  localStorage.setItem('rotor-lang', l);
+  document.documentElement.lang = l==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', l==='zh');
+  document.getElementById('btn-en').classList.toggle('on', l==='en');
+  const d = I18N[l];
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n');
+    if(d[k]!==undefined) el.innerHTML = d[k];
+  });
+  document.getElementById('mq').innerHTML = (d.mq+' ').repeat(6);
+  /* timeline */
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+  d.journey.forEach(j=>{
+    const div = document.createElement('div');
+    div.className = 'tl-item rv';
+    div.innerHTML = '<div class="tl-date">'+j.d+'</div><h4>'+j.t+'</h4><p>'+j.x+'</p>';
+    tl.appendChild(div);
+  });
+  /* rules */
+  const rl = document.getElementById('rules');
+  rl.innerHTML = '';
+  d.rules.forEach((r,i)=>{
+    const div = document.createElement('div');
+    div.className = 'rule rv';
+    div.innerHTML = '<div class="qn">RULE 0'+(i+1)+'</div><blockquote>'+r.t+'</blockquote>'+
+      '<p style="color:var(--muted);margin-top:12px;font-size:14px">'+r.x+'</p>';
+    rl.appendChild(div);
+  });
+  /* wont-do */
+  const wl2 = document.getElementById('wontdo-list');
+  wl2.innerHTML = '';
+  d.wontdo.forEach(w=>{
+    const li = document.createElement('li');
+    li.textContent = w;
+    wl2.appendChild(li);
+  });
+  /* now */
+  const nl = document.getElementById('now-list');
+  if(nl && d.now){
+    nl.innerHTML = '';
+    d.now.forEach(n=>{
+      const div = document.createElement('div');
+      div.className = 'now-item rv';
+      div.innerHTML = '<span class="dot"></span><span class="nm">'+n.t+'</span>'+
+        '<span class="ds">'+n.d+'</span>'+
+        '<span class="now-tag'+(n.indie?' indie':'')+'">'+n.tag+'</span>';
+      nl.appendChild(div);
+    });
+  }
+  /* atlas stats */
+  const as = document.getElementById('atlas-stats');
+  if(as && d.atlas_stats){
+    as.innerHTML = '';
+    d.atlas_stats.forEach(s=>{
+      const div = document.createElement('div');
+      div.className = 'a-stat';
+      div.innerHTML = '<div class="n">'+s.n+'</div><div class="k">'+s.k+'</div>';
+      as.appendChild(div);
+    });
+  }
+  /* domain grid */
+  const dg = document.getElementById('domain-grid');
+  if(dg && d.domains){
+    dg.innerHTML = '';
+    const colKeys = ['infra','agent','biz','eng'];
+    d.domains.forEach((dom, di)=>{
+      const card = document.createElement('div');
+      card.className = 'domain-card rv';
+      card.setAttribute('data-col', colKeys[di] || '');
+      card.title = d.view_col || '';
+      card.onclick = ()=>gotoCollection(colKeys[di]);
+      const total = dom.projects.reduce((a,p)=>a+p.pages,0);
+      card.innerHTML = '<h4>'+dom.name+'<span class="cnt">'+total+'P</span></h4><p>'+dom.desc+'</p>'+
+        dom.projects.map(p=>
+          '<div class="proj-row"><span class="st'+(p.active?'':' idle')+'"></span>'+
+          '<span class="pn">'+p.label+'</span><span class="pd">'+p.d+'</span>'+
+          '<span class="pg">'+p.pages+'p · '+p.updated.slice(5)+'</span></div>'
+        ).join('');
+      dg.appendChild(card);
+    });
+  }
+  window.__atlasData = d.domains;
+  window.__atlasGhost = d.atlas_ghost;
+  window.__atlasGhostD = d.atlas_ghost_d;
+  if(window.__drawAtlas) window.__drawAtlas();
+  /* writing */
+  renderWriting(d);
+  const wl = document.getElementById('work-list');
+  wl.innerHTML = '';
+  d.works.forEach((w,i)=>{
+    const total = String(d.works.length).padStart(2,'0');
+    const num = String(i+1).padStart(2,'0');
+    const isLink = !!w.url;
+    const el = document.createElement(isLink ? 'a' : 'div');
+    el.className='work rv';
+    if(isLink){
+      el.href=w.url;
+      if(!w.internal){ el.target='_blank'; el.rel='noopener'; }
+    } else { el.style.cursor='default'; }
+    el.innerHTML =
+      '<div class="work-idx"><b>'+num+'</b><br>/'+total+'</div>'+
+      '<div><h3>'+w.t+(!isLink?'':' <span class="arrow">'+(w.internal?'↓':'↗')+'</span>')+'</h3>'+
+      '<p class="desc">'+w.d+'</p>'+
+      '<div class="tags">'+w.tags.map(t=>'<span>'+t+'</span>').join('')+
+      (!isLink?'':'<span style="border-color:var(--lime);color:var(--lime)">'+(w.internal?d.enter:d.visit)+'</span>')+'</div></div>'+
+      '<div class="work-year">'+w.year+'</div>';
+    wl.appendChild(el);
+  });
+  observeRv();
+  animateCounts();
+}
+/* ================= writing ================= */
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+function renderWriting(d){
+  const host = document.getElementById('col-list');
+  if(!host) return;
+  host.innerHTML = '';
+  const cols = d.collections || [];
+  const colNameOf = k=>{ const c = cols.find(x=>x.key===k); return c ? c.name : k; };
+  /* 最新发布 */
+  const live = ARTICLES.filter(a=>a.live).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,3);
+  if(live.length){
+    const h = document.createElement('div');
+    h.className = 'w-label rv';
+    h.textContent = d.writing_latest || '';
+    host.appendChild(h);
+    const box = document.createElement('div');
+    box.className = 'col-block rv';
+    live.forEach(a=>{
+      const row = document.createElement('div');
+      row.className = 'art-row';
+      row.innerHTML =
+        '<span class="art-num">'+a.id+'</span>'+
+        '<div class="art-main"><div class="art-title">'+esc(a.t[LANG]||a.t.zh)+'</div>'+
+        '<div class="art-desc">'+esc(a.d[LANG]||a.d.zh)+'</div></div>'+
+        '<div class="art-meta"><span class="col-tag">'+esc(colNameOf(a.col))+'</span>'+
+        '<span class="art-arrow">→</span></div>';
+      if(a.url) row.onclick = ()=>{ location.href = a.url; };
+      box.appendChild(row);
+    });
+    host.appendChild(box);
+  }
+  /* 合集入口 */
+  const h2 = document.createElement('div');
+  h2.className = 'w-label rv';
+  h2.textContent = d.writing_cols || '';
+  host.appendChild(h2);
+  const grid = document.createElement('div');
+  grid.className = 'col-chips rv';
+  cols.forEach(c=>{
+    const n = ARTICLES.filter(a=>a.col===c.key).length;
+    const card = document.createElement('a');
+    card.className = 'col-chip';
+    card.href = '/writing/#col-' + c.key;
+    card.innerHTML = '<b>'+esc(c.name)+'</b><span>'+n+'P</span><i>→</i>';
+    grid.appendChild(card);
+  });
+  host.appendChild(grid);
+  /* 查看全部 */
+  const all = document.createElement('a');
+  all.className = 'view-all rv';
+  all.href = '/writing/';
+  const total = ARTICLES.length;
+  all.innerHTML = '<span>'+esc(d.writing_all||'')+'</span><b>'+total+'</b>';
+  host.appendChild(all);
+  observeRv();
+}
+/* atlas -> writing linkage */
+function gotoCollection(key){
+  location.href = '/writing/#col-' + key;
+}
+document.getElementById('btn-zh').onclick = ()=>applyLang('zh');
+document.getElementById('btn-en').onclick = ()=>applyLang('en');
+/* ================= reveal on scroll ================= */
+let io;
+function observeRv(){
+  if(io) io.disconnect();
+  io = new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}
+  }),{threshold:.12});
+  document.querySelectorAll('.rv:not(.in)').forEach(el=>io.observe(el));
+}
+/* ================= count-up ================= */
+function animateCounts(){
+  document.querySelectorAll('.stat .n[data-count]').forEach(el=>{
+    if(el.dataset.done) return;
+    el.dataset.done = 1;
+    const target = +el.getAttribute('data-count');
+    const t0 = performance.now(), dur = 1200;
+    function tick(t){
+      const p = Math.min(1,(t-t0)/dur), e = 1-Math.pow(1-p,3);
+      el.textContent = Math.round(target*e);
+      if(p<1) requestAnimationFrame(tick);
+    }
+    const o = new IntersectionObserver(es=>es.forEach(x=>{
+      if(x.isIntersecting){requestAnimationFrame(tick);o.disconnect();}
+    }),{threshold:.4});
+    o.observe(el);
+  });
+}
+/* ================= hero char stagger ================= */
+(function(){
+  const h1 = document.getElementById('hero-title');
+  if(!h1) return;
+  const frag = document.createDocumentFragment();
+  let idx = 0;
+  function walk(node){
+    node.childNodes.forEach(n=>{
+      if(n.nodeType===3){
+        n.textContent.split('').forEach(ch=>{
+          const s = document.createElement('span');
+          s.className = 'ch';
+          s.style.animationDelay = (idx*28)+'ms';
+          s.innerHTML = ch===' ' ? '&nbsp;' : (ch==='\n'?'':ch);
+          if(ch==='\n'){ frag.appendChild(document.createElement('br')); }
+          else frag.appendChild(s);
+          idx++;
+        });
+      } else if(n.nodeName==='BR'){ frag.appendChild(document.createElement('br')); }
+      else {
+        const wrap = document.createElement(n.nodeName.toLowerCase());
+        if(n.className) wrap.className = n.className;
+        n.textContent.split('').forEach(ch=>{
+          const s = document.createElement('span');
+          s.className = 'ch';
+          s.style.animationDelay = (idx*28)+'ms';
+          s.textContent = ch===' ' ? '\u00a0' : ch;
+          wrap.appendChild(s); idx++;
+        });
+        frag.appendChild(wrap);
+      }
+    });
+  }
+  walk(h1);
+  h1.innerHTML=''; h1.appendChild(frag);
+  h1.classList.remove('rv'); h1.style.opacity=1; h1.style.transform='none';
+})();
+/* ================= scramble kicker ================= */
+(function(){
+  const el = document.querySelector('.hero-kicker span[data-i18n]');
+  if(!el) return;
+  const glyphs = '!<>-_\\/[]{}—=+*^?#01';
+  let frame = null;
+  function scramble(){
+    const target = el.textContent;
+    let i = 0;
+    cancelAnimationFrame(frame);
+    (function tick(){
+      el.textContent = target.split('').map((c,j)=>
+        j < i ? c : (c===' '||c==='—' ? c : glyphs[Math.random()*glyphs.length|0])
+      ).join('');
+      if(i < target.length){ i += 1.2; frame = requestAnimationFrame(tick); }
+      else el.textContent = target;
+    })();
+  }
+  setTimeout(scramble, 600);
+  window.__rescramble = scramble;
+})();
+const _applyLang = applyLang;
+applyLang = function(l){ _applyLang(l); if(window.__rescramble) setTimeout(window.__rescramble, 150); };
+/* ================= custom cursor ================= */
+(function(){
+  if(matchMedia('(hover:none)').matches) return;
+  const dot = document.getElementById('cdot'), ring = document.getElementById('cring');
+  let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+  addEventListener('mousemove',e=>{
+    mx=e.clientX; my=e.clientY;
+    dot.style.left=mx+'px'; dot.style.top=my+'px';
+    const t=e.target.closest('a,button,.work');
+    document.body.classList.toggle('link-hover', !!t);
+  });
+  (function loop(){
+    rx+=(mx-rx)*.16; ry+=(my-ry)*.16;
+    ring.style.left=rx+'px'; ring.style.top=ry+'px';
+    requestAnimationFrame(loop);
+  })();
+})();
+/* ================= magnetic ================= */
+document.querySelectorAll('.magnet').forEach(el=>{
+  el.addEventListener('mousemove',e=>{
+    const r=el.getBoundingClientRect();
+    const x=e.clientX-r.left-r.width/2, y=e.clientY-r.top-r.height/2;
+    el.style.transform='translate('+(x*.18)+'px,'+(y*.28)+'px)';
+  });
+  el.addEventListener('mouseleave',()=>{el.style.transform='';});
+});
+/* ================= progress + hero parallax ================= */
+(function(){
+  const bar=document.getElementById('progress');
+  const hero=document.querySelector('.hero h1');
+  function onScroll(){
+    const h=document.documentElement;
+    const p=h.scrollTop/(h.scrollHeight-h.clientHeight||1);
+    bar.style.width=(p*100)+'%';
+    if(hero) hero.style.transform='translateY('+(h.scrollTop*.18)+'px)';
+  }
+  addEventListener('scroll',onScroll,{passive:true});
+  onScroll();
+})();
+/* ================= wiki atlas graph ================= */
+(function(){
+  const cv = document.getElementById('wiki-graph');
+  const tip = document.getElementById('g-tip');
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  let W=0, H=0, rot=0, rotTarget=0, dragging=false, lastX=0, hover=null, nodes=[];
+  const LIME='#d8ff3e', INK='#f2f0ea', MUT='#5a5a5e';
+
+  function build(){
+    const doms = window.__atlasData || [];
+    nodes = [{id:'WIKI', kind:'center', r:30, d:doms.length+' domains'}];
+    const n = doms.length;
+    doms.forEach((dom, di)=>{
+      const ang = (di/n)*Math.PI*2 - Math.PI/2;
+      nodes.push({id:dom.name, kind:'domain', r:17, ang, ring:1, d:dom.projects.length+' projects', di});
+      const ps = dom.projects;
+      ps.forEach((p, pi)=>{
+        const spread = 0.62;
+        const pa = ang + (ps.length===1 ? 0 : (pi/(ps.length-1)-0.5)*spread*2);
+        nodes.push({id:p.label, kind:'proj', r:Math.min(13, 6+Math.sqrt(p.pages)*2.2),
+          ang:pa, ring:2, di, d:p.d+' · '+p.pages+'p · '+p.updated, active:p.active});
+      });
+    });
+    // ghost nodes: directions still being explored
+    const ghostLabel = (window.__atlasGhost || '？');
+    for(let gi=0; gi<3; gi++){
+      nodes.push({id:ghostLabel, kind:'ghost', r:9,
+        ang:(gi/3)*Math.PI*2 + 0.5, ring:2.6,
+        d:(window.__atlasGhostD || '探索中的方向')});
+    }
+  }
+  function resize(){
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(2, devicePixelRatio||1);
+    W = r.width; H = r.height;
+    cv.width = W*dpr; cv.height = H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function pos(nd){
+    const cx=W/2, cy=H/2;
+    if(nd.kind==='center') return {x:cx, y:cy};
+    const m = Math.min(W,H);
+    const R = nd.ring===1 ? m*0.22 : nd.ring===2.6 ? m*0.47 : m*0.40;
+    const a = nd.ang + rot;
+    return {x:cx+Math.cos(a)*R, y:cy+Math.sin(a)*R};
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    rot += (rotTarget-rot)*0.06;
+    const P = nodes.map(nd=>({...nd, ...pos(nd)}));
+    const center = P[0];
+    // edges
+    ctx.lineWidth = 1;
+    P.slice(1).forEach(nd=>{
+      const from = nd.kind==='domain' ? center : nd.kind==='ghost' ? center : P[1+nd.di];
+      const isH = hover && hover.id===nd.id && hover.kind===nd.kind;
+      ctx.strokeStyle = isH ? 'rgba(216,255,62,.8)' : nd.kind==='ghost' ? 'rgba(242,240,234,.07)' : 'rgba(242,240,234,.12)';
+      if(nd.kind==='ghost') ctx.setLineDash([3,4]); else ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(nd.x,nd.y); ctx.stroke();
+      ctx.setLineDash([]);
+    });
+    // nodes
+    P.forEach(nd=>{
+      const isH = hover && hover.id===nd.id && hover.kind===nd.kind;
+      ctx.beginPath(); ctx.arc(nd.x,nd.y, nd.r+(isH?4:0), 0, 7);
+      if(nd.kind==='center'){ ctx.fillStyle=LIME; }
+      else if(nd.kind==='domain'){ ctx.fillStyle = isH?LIME:'#1c1c1f'; ctx.strokeStyle=LIME; ctx.lineWidth=1.5; }
+      else if(nd.kind==='ghost'){
+        ctx.fillStyle='transparent'; ctx.strokeStyle = isH?LIME:'rgba(242,240,234,.25)';
+        ctx.setLineDash([3,3]); ctx.lineWidth=1;
+      }
+      else { ctx.fillStyle = nd.active ? (isH?LIME:'#3f3f45') : (isH?'#8a8a8e':'#2a2a2e'); }
+      ctx.fill();
+      if(nd.kind==='domain'){ ctx.stroke(); }
+      if(nd.kind==='ghost'){ ctx.stroke(); ctx.setLineDash([]); }
+      // labels
+      ctx.font = (nd.kind==='center'?'700 13px':nd.kind==='domain'?'600 11px':'10px')+' "JetBrains Mono",monospace';
+      ctx.textAlign='center';
+      ctx.fillStyle = nd.kind==='center' ? '#0b0b0c' : (isH?LIME:(nd.kind==='domain'?INK:(nd.kind==='ghost'?'#5a5a5e':'#9a9a9e')));
+      const ly = nd.y + nd.r + (isH?4:0) + 14;
+      if(nd.kind!=='proj' || isH){
+        const label = nd.id.length>18 ? nd.id.slice(0,17)+'…' : nd.id;
+        ctx.fillText(label, nd.x, ly);
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+  function pick(mx,my){
+    let best=null, bd=1e9;
+    nodes.forEach(nd=>{
+      const p = pos(nd);
+      const dist = Math.hypot(mx-p.x, my-p.y);
+      if(dist < nd.r+10 && dist < bd){ bd=dist; best=nd; }
+    });
+    return best;
+  }
+  cv.addEventListener('mousemove', e=>{
+    if(dragging){
+      rotTarget += (e.clientX-lastX)*0.005; lastX=e.clientX; return;
+    }
+    const r = cv.getBoundingClientRect();
+    hover = pick(e.clientX-r.left, e.clientY-r.top);
+    cv.style.cursor = hover ? 'pointer' : 'grab';
+    if(hover){
+      tip.style.display='block';
+      tip.style.left=(e.clientX-r.left+16)+'px';
+      tip.style.top=(e.clientY-r.top+16)+'px';
+      tip.innerHTML='<b>'+hover.id+'</b><div class="m">'+hover.d+'</div>';
+    } else tip.style.display='none';
+  });
+  cv.addEventListener('mouseleave', ()=>{ hover=null; tip.style.display='none'; dragging=false; });
+  cv.addEventListener('mousedown', e=>{ dragging=true; lastX=e.clientX; cv.style.cursor='grabbing'; });
+  addEventListener('mouseup', ()=>{ dragging=false; });
+  // click on domain node -> jump to writing collection
+  let downX=0, downY=0;
+  cv.addEventListener('mousedown', e=>{ downX=e.clientX; downY=e.clientY; });
+  cv.addEventListener('click', e=>{
+    if(Math.hypot(e.clientX-downX, e.clientY-downY) > 6) return; // was a drag
+    const r = cv.getBoundingClientRect();
+    const nd = pick(e.clientX-r.left, e.clientY-r.top);
+    if(nd && nd.kind==='domain'){
+      const keys = ['infra','agent','biz','eng'];
+      gotoCollection(keys[nd.di]);
+    }
+  });
+  // touch drag
+  cv.addEventListener('touchstart', e=>{ dragging=true; lastX=e.touches[0].clientX; }, {passive:true});
+  cv.addEventListener('touchmove', e=>{ if(dragging){ rotTarget += (e.touches[0].clientX-lastX)*0.005; lastX=e.touches[0].clientX; } }, {passive:true});
+  cv.addEventListener('touchend', ()=>{ dragging=false; });
+
+  window.__drawAtlas = function(){ build(); };
+  addEventListener('resize', resize);
+  resize(); build(); draw();
+  // idle slow spin
+  setInterval(()=>{ if(!dragging && !hover) rotTarget += 0.0006; }, 16);
+})();
+applyLang(LANG);
+</script>
+</body>
+</html>
