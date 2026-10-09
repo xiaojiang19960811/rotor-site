@@ -1,1 +1,4 @@
 dist/
+.wrangler/
+__pycache__/
+writing-plan.md

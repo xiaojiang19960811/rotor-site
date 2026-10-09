@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>没确认的接口契约，前端别先固化 — rotor</title>
+<meta name="description" content="契约三来源；定义缺失先确认再实现">
+<link rel="canonical" href="https://www.rotor1996.top/writing/31-api-contract-discipline">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "没确认的接口契约，前端别先固化", "description": "契约三来源；定义缺失先确认再实现", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-05", "mainEntityOfPage": "https://www.rotor1996.top/writing/31-api-contract-discipline"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>没确认的接口契约，前端别先固化</h1><p><strong>结论先行：</strong> 接口字段、状态值、返回结构和业务语义，属于契约，不是细节。契约的合法来源只有三个：已确认的接口文档、源码、用户确认。前端为联调进度按猜测写死的逻辑，债务不会在联调结束时自动消失——它会长期留在代码里，持续收租。</p>
+<h2>定义：什么是契约</h2>
+<p>契约是前后端之间关于数据的一切约定：字段名叫什么、类型是什么、状态枚举有哪些值、返回结构怎么嵌套、每个值代表什么业务语义。它不是&quot;后端的事&quot;，前端代码里的每一行映射、每一个状态判断，都是在对契约投票。</p>
+<p>确认的来源只有三个，按优先级排：已确认的接口文档；文档缺失或存疑时，看源码或运行实证；涉及业务口径的，由用户确认。除此之外的来源——口头约定、截图里抄来的、别的项目里见过的——都算未确认契约。</p>
+<p>之所以要纪律，是因为前端往往是最早把契约&quot;落地&quot;成代码的人。联调时接口还不定，进度又催，前端先按猜测写死是常态。但猜测的代码和确认的代码长得一模一样，后人看不出区别，于是临时方案变成正式逻辑，没人再回头确认。</p>
+<h2>规则一：字段映射默认以已确认接口文档为准</h2>
+<p>映射逻辑的第一依据是接口文档，不是返回示例。返回示例可能是手工编的，可能只覆盖了 happy path。一个请求里&quot;有哪些字段&quot;看文档，&quot;某次返回长什么样&quot;看抓包，两件事不要混用。</p>
+<p>文档缺失或明显过时，也不要顺手用&quot;惯例&quot;代替。&quot;我们以前项目都这么叫&quot;不是确认，三个合法来源里没这一条。过时的文档要么推动更新，要么降级成观察记录，明确标记它不算数。</p>
+<h2>规则二：不主动保留多套字段名兜底</h2>
+<p>这是最容易踩的坑。字段名不确定时，顺手写 <code>res.data.name || res.data.title || res.data.label</code>，觉得&quot;兼容一下也无妨&quot;。但这行代码一旦合并，就再也删不掉了：没人知道生产环境里到底哪一个字段在生效，删除任一套都可能是线上事故。契约不确定性的成本，被从&quot;确认一次&quot;推向了&quot;维护永远&quot;。</p>
+<p>兜底只保留给&quot;已确认需要兼容旧版本&quot;的明确场景，并且要有删除时间或版本号。没有确认依据的多套映射，写的时候省三分钟，维护时每年都在交税。</p>
+<h2>规则三：定义缺失时先确认，再实现正式逻辑</h2>
+<p>没有定义就问：问接口方要口径，看源码找真相，请用户确认业务语义。确认了再写正式逻辑。</p>
+<p>如果进度实在等不及，允许写临时逻辑，但必须显式标注为临时：TODO、注释、待办事项三件套一件不能少。临时逻辑最危险的形态不是&quot;写得烂&quot;，而是&quot;写得和正式逻辑一模一样&quot;，让人分不清。标注是给未来自己的留白，也是给同事的提醒：这块逻辑的契约还没确认，改后端定义时要先回头看。</p>
+<p>确认也要找对人。字段语义问接口方，业务口径问需求方，不要把&quot;能跑通&quot;当成&quot;已确认&quot;。联调跑通只证明这条路径上数据是对的，不证明状态值全集、异常分支和边界语义都对——这些正是文档和用户确认才覆盖得了的东西。</p>
+<h2>规则四：文档和实际返回不一致时，记下三样东西</h2>
+<p>文档怎么定义、实际返回是什么、当前代码如何处理——不一致出现时，把这三样写在同一个地方。</p>
+<p>这件事之所以是纪律，是因为面对不一致，人的本能是选一个顺手的：&quot;反正真实返回长这样，就按返回写吧&quot;。但真实返回可能只是某个版本的偶然行为，按它固化等于把偶然变成了约定。把三样东西并列记下，风险就看得见：后续是推接口方改返回、改文档，还是改前端处理，每个决定都有依据。看不见冲突的团队，冲突不会消失，只会延迟到线上爆发。</p>
+<h2>收束</h2>
+<p>这四条规则的来源是多个前端项目交接时沉淀的共性经验：管理后台、H5 端、业务后台，项目不同，踩的坑是同一个——契约没确认就固化，固化之后就忘。记住一句话：<strong>先确认再固化，否则前端写的不是业务逻辑，是在替接口的可变性买单。</strong></p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "没确认的接口契约，前端别先固化", "en": "Don't Hardcode Unconfirmed API Contracts"}, "body": {"zh": "<p><strong>结论先行：</strong> 接口字段、状态值、返回结构和业务语义，属于契约，不是细节。契约的合法来源只有三个：已确认的接口文档、源码、用户确认。前端为联调进度按猜测写死的逻辑，债务不会在联调结束时自动消失——它会长期留在代码里，持续收租。</p>\n<h2>定义：什么是契约</h2>\n<p>契约是前后端之间关于数据的一切约定：字段名叫什么、类型是什么、状态枚举有哪些值、返回结构怎么嵌套、每个值代表什么业务语义。它不是&quot;后端的事&quot;，前端代码里的每一行映射、每一个状态判断，都是在对契约投票。</p>\n<p>确认的来源只有三个，按优先级排：已确认的接口文档；文档缺失或存疑时，看源码或运行实证；涉及业务口径的，由用户确认。除此之外的来源——口头约定、截图里抄来的、别的项目里见过的——都算未确认契约。</p>\n<p>之所以要纪律，是因为前端往往是最早把契约&quot;落地&quot;成代码的人。联调时接口还不定，进度又催，前端先按猜测写死是常态。但猜测的代码和确认的代码长得一模一样，后人看不出区别，于是临时方案变成正式逻辑，没人再回头确认。</p>\n<h2>规则一：字段映射默认以已确认接口文档为准</h2>\n<p>映射逻辑的第一依据是接口文档，不是返回示例。返回示例可能是手工编的，可能只覆盖了 happy path。一个请求里&quot;有哪些字段&quot;看文档，&quot;某次返回长什么样&quot;看抓包，两件事不要混用。</p>\n<p>文档缺失或明显过时，也不要顺手用&quot;惯例&quot;代替。&quot;我们以前项目都这么叫&quot;不是确认，三个合法来源里没这一条。过时的文档要么推动更新，要么降级成观察记录，明确标记它不算数。</p>\n<h2>规则二：不主动保留多套字段名兜底</h2>\n<p>这是最容易踩的坑。字段名不确定时，顺手写 <code>res.data.name || res.data.title || res.data.label</code>，觉得&quot;兼容一下也无妨&quot;。但这行代码一旦合并，就再也删不掉了：没人知道生产环境里到底哪一个字段在生效，删除任一套都可能是线上事故。契约不确定性的成本，被从&quot;确认一次&quot;推向了&quot;维护永远&quot;。</p>\n<p>兜底只保留给&quot;已确认需要兼容旧版本&quot;的明确场景，并且要有删除时间或版本号。没有确认依据的多套映射，写的时候省三分钟，维护时每年都在交税。</p>\n<h2>规则三：定义缺失时先确认，再实现正式逻辑</h2>\n<p>没有定义就问：问接口方要口径，看源码找真相，请用户确认业务语义。确认了再写正式逻辑。</p>\n<p>如果进度实在等不及，允许写临时逻辑，但必须显式标注为临时：TODO、注释、待办事项三件套一件不能少。临时逻辑最危险的形态不是&quot;写得烂&quot;，而是&quot;写得和正式逻辑一模一样&quot;，让人分不清。标注是给未来自己的留白，也是给同事的提醒：这块逻辑的契约还没确认，改后端定义时要先回头看。</p>\n<p>确认也要找对人。字段语义问接口方，业务口径问需求方，不要把&quot;能跑通&quot;当成&quot;已确认&quot;。联调跑通只证明这条路径上数据是对的，不证明状态值全集、异常分支和边界语义都对——这些正是文档和用户确认才覆盖得了的东西。</p>\n<h2>规则四：文档和实际返回不一致时，记下三样东西</h2>\n<p>文档怎么定义、实际返回是什么、当前代码如何处理——不一致出现时，把这三样写在同一个地方。</p>\n<p>这件事之所以是纪律，是因为面对不一致，人的本能是选一个顺手的：&quot;反正真实返回长这样，就按返回写吧&quot;。但真实返回可能只是某个版本的偶然行为，按它固化等于把偶然变成了约定。把三样东西并列记下，风险就看得见：后续是推接口方改返回、改文档，还是改前端处理，每个决定都有依据。看不见冲突的团队，冲突不会消失，只会延迟到线上爆发。</p>\n<h2>收束</h2>\n<p>这四条规则的来源是多个前端项目交接时沉淀的共性经验：管理后台、H5 端、业务后台，项目不同，踩的坑是同一个——契约没确认就固化，固化之后就忘。记住一句话：<strong>先确认再固化，否则前端写的不是业务逻辑，是在替接口的可变性买单。</strong></p>", "en": "<p><strong>Bottom line first:</strong> Field names, status values, response shapes, and business semantics are contracts, not details. A contract has exactly three legitimate sources: confirmed API docs, source code, or user sign-off. Logic the frontend hardcodes from guesswork to keep integration moving doesn&#x27;t disappear when integration ends — it stays in the codebase, collecting rent.</p>\n<h2>Definition: What Is a Contract</h2>\n<p>A contract is every agreement about data between frontend and backend: what fields are called, what types they are, what values a status enum can take, how responses nest, what each value means in business terms. It&#x27;s not &quot;the backend&#x27;s business&quot; — every mapping line and every status check in frontend code is a vote on the contract.</p>\n<p>Only three sources count, in priority order: confirmed API documentation; when docs are missing or dubious, source code or runtime evidence; for business interpretations, user confirmation. Everything else — verbal agreements, names copied from a screenshot, names seen in another project — is an unconfirmed contract.</p>\n<p>The reason this is a discipline is that the frontend is usually the first place a contract gets &quot;written down&quot; as code. During integration the API is still shifting, deadlines press, and hardcoding a guess feels like the only option. But guessed code looks exactly like confirmed code, so nobody can tell them apart — the temporary fix becomes the formal logic, and nobody ever goes back to confirm.</p>\n<h2>Rule 1: Field Mapping Defaults to Confirmed API Docs</h2>\n<p>The first authority for mapping logic is the docs, not a sample response. A sample response may be hand-edited, or may only cover the happy path. &quot;What fields exist&quot; comes from the docs; &quot;what one response looked like&quot; comes from a capture. Don&#x27;t mix the two.</p>\n<p>When docs are missing or clearly stale, don&#x27;t reach for &quot;convention&quot; as a substitute. &quot;We&#x27;ve always named it this way in past projects&quot; is not confirmation — it isn&#x27;t one of the three sources. Stale docs should either be pushed to update, or downgraded to an observation explicitly marked as not counting.</p>\n<h2>Rule 2: Don&#x27;t Keep Multiple Field-Name Fallbacks Proactively</h2>\n<p>This is the easiest trap. When a field name is uncertain, it&#x27;s tempting to write <code>res.data.name || res.data.title || res.data.label</code> and call it &quot;being compatible&quot;. But once that line merges, it can never be removed: nobody knows which field actually takes effect in production, and deleting any of them risks an incident. The cost of contract uncertainty gets pushed from &quot;confirm once&quot; to &quot;maintain forever&quot;.</p>\n<p>Keep fallbacks only for explicitly confirmed scenarios — &quot;we need to support an older version&quot; — with an expiry time or version attached. A compatibility mapping with no confirmed basis saves three minutes today and collects maintenance tax every year after.</p>\n<h2>Rule 3: When the Definition Is Missing, Confirm First, Then Write Formal Logic</h2>\n<p>No definition means ask: ask the API owner for the semantics, read the source for the truth, ask the user to confirm the business meaning. Write the formal logic after confirmation.</p>\n<p>If the deadline truly can&#x27;t wait, temporary logic is allowed — but it must be explicitly marked temporary: TODO, comment, and a task entry, none optional. The most dangerous form of temporary logic isn&#x27;t &quot;written badly&quot;, it&#x27;s &quot;written identically to formal logic&quot;, so no one can tell the difference. Marking is whitespace left for your future self, and a warning for teammates: this logic&#x27;s contract isn&#x27;t confirmed yet — check back here before changing backend definitions.</p>\n<p>And confirm with the right person. Ask the API owner about field semantics, the requirements owner about business interpretations. Don&#x27;t treat &quot;it runs&quot; as &quot;it&#x27;s confirmed&quot;. Passing integration only proves the data is right on this one path — it proves nothing about the full status set, error branches, or boundary semantics, which is exactly what docs and user confirmation cover.</p>\n<h2>Rule 4: When Docs and Actual Responses Disagree, Write Down Three Things</h2>\n<p>What the docs define, what the actual response is, and how the current code handles it — when they disagree, record all three in one place.</p>\n<p>This is a discipline because the instinct is to pick the convenient one: &quot;well, this is what the real response looks like, let&#x27;s just code to the response.&quot; But the real response may be an accident of one version; hardcoding to it turns an accident into an agreement. Writing the three side by side makes the risk visible: whether to push the API owner to fix the response, fix the docs, or adjust the frontend — each decision gets its evidence. A team that can&#x27;t see the conflict doesn&#x27;t make it go away; it just delays the explosion until production.</p>\n<h2>Closing</h2>\n<p>These four rules come from common lessons distilled across several frontend projects — admin consoles, H5 clients, business backends. Different projects, same pit: contracts got hardcoded before they were confirmed, and forgotten after they were hardcoded. Remember one line: <strong>confirm before you hardcode, or the frontend isn&#x27;t writing business logic — it&#x27;s paying for the API&#x27;s variability.</strong></p>"}, "prev": {"url": "/writing/25-team-space-leak", "t": {"zh": "团队空间看到了别人的项目：一次越权复盘", "en": "When Team Spaces Leaked Projects"}}, "next": {"url": "/writing/33-permission-intersection", "t": {"zh": "多空间权限：交集，不是并集", "en": "Multi-Space Permissions: Intersection, Not Union"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git 对象库坏了：别修仓库，从远端重建 — rotor</title>
+<meta name="description" content="本地对象缺失先护住工作区，再从远端补回 pack">
+<link rel="canonical" href="https://www.rotor1996.top/writing/34-git-object-store-rebuild">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Git 对象库坏了：别修仓库，从远端重建", "description": "本地对象缺失先护住工作区，再从远端补回 pack", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-08", "mainEntityOfPage": "https://www.rotor1996.top/writing/34-git-object-store-rebuild"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>Git 对象库坏了：别修仓库，从远端重建</h1><p><strong>结论先行：</strong> 一个项目的本地 Git 仓库突然&quot;半死不活&quot;：<code>git status</code> 报致命错误读不到 tree，<code>git fsck</code> 报大量对象缺失。没有去修复那些坏掉的对象——Git 对象缺失是修不好的，只能补。恢复只用了三步：先确认工作区完好，再从远端拉一个完整克隆，最后把它的对象 pack 直接补进损坏仓库。五分钟后 <code>git status</code> 恢复，暂存的修改一个没丢。记住一句话：<strong>Git 的真实源头是远端，不是你本地的 .git；对象丢了不要修，直接从远端拿。</strong></p>
+<h2>现象：仓库&quot;半死不活&quot;</h2>
+<p>2026 年 9 月 20 日，数字人 Agent 项目的一个本地工作分支，<code>git status</code> 抛 <code>fatal: unable to read tree</code>，连当前工作树状态都读不出来。<code>git fsck --full</code> 显示索引的 cache-tree 指向了无效对象，并报出大量缺失的 blob、tree、commit。查看 <code>.git/objects/pack</code> 是空的——这个仓库基本靠残缺的 loose objects 活着，也就是它大部分时候是&quot;勉强能工作&quot;，直到某次操作触发读到了缺失的那部分。</p>
+<p>有意思的是坏得不均匀：当前工作分支的 HEAD 提交在远端同样存在，且 HTTP 远端可正常读取。工作区里还有一批已暂存的修改和未跟踪的新文件——这些是&quot;工作成果&quot;，仓库只是&quot;包装&quot;，恢复过程中绝对不许碰。</p>
+<h2>诊断：先分清&quot;工作区&quot;和&quot;对象库&quot;</h2>
+<p>Git 仓库里有两个完全不同的东西，损坏时要先分开看。</p>
+<p>一是工作区：当前目录的文件，包括已暂存但未提交的修改。这一层在这次故障里是完好的。 二是对象库：<code>.git/objects</code> 下的 blob、tree、commit，Git 的&quot;数据库&quot;。这一层是坏的。</p>
+<p>诊断的目标只有一件事：确认&quot;远端有没有这批对象&quot;。<code>git ls-remote</code> 显示远端可读，且远端分支指向与本地 HEAD 完全相同的提交。这给了恢复方案的合法性：远端有完整的、与本地 HEAD 一致的对象图，本地缺失的对象是可补的，不是不可挽回的。</p>
+<p>另一个旧本地分支也缺 4 个对象，但远端没有这个分支，备用远端通道因 SSH 公钥不可用读不到。这个分支的恢复被明确标记为&quot;待确认&quot;，不强行修、不随手删——没法补的对象，就不碰引用它的分支。</p>
+<h2>恢复：补 pack，不修对象</h2>
+<p>真正的恢复只有三步，没有魔法。</p>
+<p>第一步，从远端创建一个临时克隆，不检出工作区。只为了拿到它完整的对象 pack（约 78 MiB）。 第二步，把这个 pack 文件直接复制进损坏仓库的 <code>.git/objects/pack</code> 目录。Git 读取对象时会在 pack 里找，loose objects 缺的部分就被补上了。不需要重建索引，不需要改任何引用。 第三步，验证：<code>git status</code> 恢复正常且保留全部工作区改动；<code>git cat-file -p HEAD^{tree}</code> 可读；<code>git fsck --full HEAD</code> 不再报告缺失对象，只剩下正常的历史 dangling 对象。</p>
+<p>恢复过程中一条红线被严格执行：没有回退、覆盖或清理工作区里的任何文件。仓库损坏的恢复方案，凡是第一步就让你 <code>git reset --hard</code> 或删掉 <code>.git</code> 重来的，都是把&quot;包装&quot;修好、把&quot;成果&quot;扔掉的顺序。</p>
+<h2>没有恢复的，是那个旧分支</h2>
+<p>全仓库的 <code>git fsck</code> 仍报告 4 个缺失对象，限定在旧分支。记录写得很诚实：当前分支可继续开发，但全仓库不能宣称无损；坏的旧分支不检出也不删。</p>
+<p>这本身就是纪律：恢复范围和验证证据一一对应，能读的分支才算数。旧分支要恢复，必须先从其他备份、开发机或仍持有该分支的远端拿到对象，再谈引用修复。没证据就写&quot;待确认&quot;，不把推测写成结论。</p>
+<h2>收束</h2>
+<p>这次故障留下四条可复用的纪律：</p>
+<ol><li><strong>对象库损坏时，先保护工作区，再补对象。</strong> 工作区是成果，仓库是包装。恢复方案的第一步永远是确认暂存区和未跟踪文件没事。</li><li><strong>缺失的 Git 对象不要&quot;修&quot;，直接从远端拿。</strong> 对象缺失没有修复操作，只有补充操作：远端克隆的 pack 补进来，索引不需要动。</li><li><strong>恢复范围和验证证据一一对应。</strong> 能读的分支算恢复，没对象补的分支写&quot;待确认&quot;，不碰也不删。全仓库&quot;看起来没事&quot;不是恢复完成的证据。</li><li><strong>重要本地分支必须有远端或 bundle 备份。</strong> 只存在于某台机器上的分支，对象一坏就没有任何合法来源能补。dangling 对象不是备份，未推送的分支不是备份。</li></ol>
+<p>Git 的设计本身就是分布式的：任何一个完整的远端克隆，都是你本地对象库的合法重建来源。仓库坏了别修仓库，从远端重建。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "Git 对象库坏了：别修仓库，从远端重建", "en": "When Git's Object Store Breaks: Don't Repair, Rebuild from Remote"}, "body": {"zh": "<p><strong>结论先行：</strong> 一个项目的本地 Git 仓库突然&quot;半死不活&quot;：<code>git status</code> 报致命错误读不到 tree，<code>git fsck</code> 报大量对象缺失。没有去修复那些坏掉的对象——Git 对象缺失是修不好的，只能补。恢复只用了三步：先确认工作区完好，再从远端拉一个完整克隆，最后把它的对象 pack 直接补进损坏仓库。五分钟后 <code>git status</code> 恢复，暂存的修改一个没丢。记住一句话：<strong>Git 的真实源头是远端，不是你本地的 .git；对象丢了不要修，直接从远端拿。</strong></p>\n<h2>现象：仓库&quot;半死不活&quot;</h2>\n<p>2026 年 9 月 20 日，数字人 Agent 项目的一个本地工作分支，<code>git status</code> 抛 <code>fatal: unable to read tree</code>，连当前工作树状态都读不出来。<code>git fsck --full</code> 显示索引的 cache-tree 指向了无效对象，并报出大量缺失的 blob、tree、commit。查看 <code>.git/objects/pack</code> 是空的——这个仓库基本靠残缺的 loose objects 活着，也就是它大部分时候是&quot;勉强能工作&quot;，直到某次操作触发读到了缺失的那部分。</p>\n<p>有意思的是坏得不均匀：当前工作分支的 HEAD 提交在远端同样存在，且 HTTP 远端可正常读取。工作区里还有一批已暂存的修改和未跟踪的新文件——这些是&quot;工作成果&quot;，仓库只是&quot;包装&quot;，恢复过程中绝对不许碰。</p>\n<h2>诊断：先分清&quot;工作区&quot;和&quot;对象库&quot;</h2>\n<p>Git 仓库里有两个完全不同的东西，损坏时要先分开看。</p>\n<p>一是工作区：当前目录的文件，包括已暂存但未提交的修改。这一层在这次故障里是完好的。 二是对象库：<code>.git/objects</code> 下的 blob、tree、commit，Git 的&quot;数据库&quot;。这一层是坏的。</p>\n<p>诊断的目标只有一件事：确认&quot;远端有没有这批对象&quot;。<code>git ls-remote</code> 显示远端可读，且远端分支指向与本地 HEAD 完全相同的提交。这给了恢复方案的合法性：远端有完整的、与本地 HEAD 一致的对象图，本地缺失的对象是可补的，不是不可挽回的。</p>\n<p>另一个旧本地分支也缺 4 个对象，但远端没有这个分支，备用远端通道因 SSH 公钥不可用读不到。这个分支的恢复被明确标记为&quot;待确认&quot;，不强行修、不随手删——没法补的对象，就不碰引用它的分支。</p>\n<h2>恢复：补 pack，不修对象</h2>\n<p>真正的恢复只有三步，没有魔法。</p>\n<p>第一步，从远端创建一个临时克隆，不检出工作区。只为了拿到它完整的对象 pack（约 78 MiB）。 第二步，把这个 pack 文件直接复制进损坏仓库的 <code>.git/objects/pack</code> 目录。Git 读取对象时会在 pack 里找，loose objects 缺的部分就被补上了。不需要重建索引，不需要改任何引用。 第三步，验证：<code>git status</code> 恢复正常且保留全部工作区改动；<code>git cat-file -p HEAD^{tree}</code> 可读；<code>git fsck --full HEAD</code> 不再报告缺失对象，只剩下正常的历史 dangling 对象。</p>\n<p>恢复过程中一条红线被严格执行：没有回退、覆盖或清理工作区里的任何文件。仓库损坏的恢复方案，凡是第一步就让你 <code>git reset --hard</code> 或删掉 <code>.git</code> 重来的，都是把&quot;包装&quot;修好、把&quot;成果&quot;扔掉的顺序。</p>\n<h2>没有恢复的，是那个旧分支</h2>\n<p>全仓库的 <code>git fsck</code> 仍报告 4 个缺失对象，限定在旧分支。记录写得很诚实：当前分支可继续开发，但全仓库不能宣称无损；坏的旧分支不检出也不删。</p>\n<p>这本身就是纪律：恢复范围和验证证据一一对应，能读的分支才算数。旧分支要恢复，必须先从其他备份、开发机或仍持有该分支的远端拿到对象，再谈引用修复。没证据就写&quot;待确认&quot;，不把推测写成结论。</p>\n<h2>收束</h2>\n<p>这次故障留下四条可复用的纪律：</p>\n<ol><li><strong>对象库损坏时，先保护工作区，再补对象。</strong> 工作区是成果，仓库是包装。恢复方案的第一步永远是确认暂存区和未跟踪文件没事。</li><li><strong>缺失的 Git 对象不要&quot;修&quot;，直接从远端拿。</strong> 对象缺失没有修复操作，只有补充操作：远端克隆的 pack 补进来，索引不需要动。</li><li><strong>恢复范围和验证证据一一对应。</strong> 能读的分支算恢复，没对象补的分支写&quot;待确认&quot;，不碰也不删。全仓库&quot;看起来没事&quot;不是恢复完成的证据。</li><li><strong>重要本地分支必须有远端或 bundle 备份。</strong> 只存在于某台机器上的分支，对象一坏就没有任何合法来源能补。dangling 对象不是备份，未推送的分支不是备份。</li></ol>\n<p>Git 的设计本身就是分布式的：任何一个完整的远端克隆，都是你本地对象库的合法重建来源。仓库坏了别修仓库，从远端重建。</p>", "en": "<p><strong>Up front:</strong> One project&#x27;s local Git repository went &quot;half-dead&quot;: <code>git status</code> threw a fatal error reading the tree, and <code>git fsck</code> reported large numbers of missing objects. Nobody tried to repair the broken objects — missing Git objects cannot be repaired, only replaced. Recovery took three steps: first confirm the working tree was intact, then pull a complete clone from remote, and finally drop its object pack straight into the damaged repository&#x27;s object store. Five minutes later <code>git status</code> was back to normal, and every staged change survived. Remember one line: <strong>Git&#x27;s real source of truth is the remote, not your local .git; when objects are gone, don&#x27;t repair — fetch.</strong></p>\n<h2>The Symptom: A Half-Dead Repository</h2>\n<p>On 2026-09-20, a local working branch of the digital-person agent project threw <code>fatal: unable to read tree</code> on <code>git status</code> — it couldn&#x27;t even read the current worktree state. <code>git fsck --full</code> showed the index&#x27;s cache-tree pointing at invalid objects and reported large numbers of missing blobs, trees, and commits. <code>.git/objects/pack</code> was empty — this repository was essentially living on a damaged set of loose objects, which worked &quot;just barely&quot; until some operation finally tried to read the missing part.</p>\n<p>The corruption was uneven, interestingly: the working branch&#x27;s HEAD commit also existed on the remote, and the HTTP remote was readable. The worktree still held a batch of staged changes and new untracked files. Those changes were things the recovery was absolutely forbidden to touch — they are the &quot;work product&quot;; the repository is just the &quot;packaging&quot;.</p>\n<h2>Diagnosis: Separate the Worktree from the Object Store</h2>\n<p>A Git repository contains two completely different things, and damage must be assessed separately.</p>\n<p>One is the worktree: the files in the current directory, including staged but uncommitted changes. This layer was intact in this incident. The other is the object store: the blobs, trees, and commits under <code>.git/objects</code> — Git&#x27;s &quot;database&quot;. This layer was broken.</p>\n<p>The diagnosis had exactly one goal: confirm whether the remote had these objects. <code>git ls-remote</code> showed the remote was readable and a remote branch pointed at exactly the same commit as local HEAD. That established the recovery&#x27;s legitimacy: the remote had a complete object graph consistent with local HEAD, so the local object store&#x27;s gaps were fillable, not unrecoverable.</p>\n<p>Scope was also bounded on the side: another old local branch was missing 4 objects, but no remote had that branch, and the alternate remote was unreachable due to an unavailable SSH key. Recovery of that branch was explicitly marked &quot;to be confirmed&quot; — no forced repair, no casual deletion. A branch whose objects cannot be supplied is a branch you don&#x27;t touch.</p>\n<h2>Recovery: Add the Pack, Don&#x27;t Repair Objects</h2>\n<p>The actual recovery was three steps, no magic.</p>\n<p>Step one: create a temporary clone from the remote, without checking out a worktree. All that was needed was its complete object pack (about 78 MiB). Step two: copy that pack file directly into the damaged repository&#x27;s <code>.git/objects/pack</code> directory. Git searches packs when reading objects, so everything missing from loose objects got covered. No index rebuild, no reference changes. Step three: verify. <code>git status</code> returned to normal with all worktree changes preserved; <code>git cat-file -p HEAD^{tree}</code> readable; <code>git fsck --full HEAD</code> reported no missing objects, only normal historical dangling objects.</p>\n<p>One red line was strictly enforced throughout: nothing in the worktree was rolled back, overwritten, or cleaned. Any recovery plan whose first step is <code>git reset --hard</code> or deleting <code>.git</code> and starting over fixes the &quot;packaging&quot; and throws away the &quot;product&quot;. Wrong order.</p>\n<h2>What Stayed Unrecovered: The Old Branch</h2>\n<p>A repository-wide <code>git fsck</code> still reported 4 missing objects, scoped to that old local branch. The record is deliberately honest: the working branch can continue development, but the whole repository cannot be declared lossless; the damaged old branch is neither checked out nor deleted.</p>\n<p>That &quot;partial recovery&quot; style of recording is itself a discipline: the scope of recovery must match the evidence from verification one-to-one — a branch counts as recovered only when its objects are readable. To recover the old branch, the objects must first come from another backup, a dev machine, or a remote that still holds it, before any reference repair is considered. Without evidence, write &quot;to be confirmed&quot; — don&#x27;t write speculation as conclusion.</p>\n<h2>Takeaways</h2>\n<p>This incident left four reusable rules:</p>\n<ol><li><strong>When the object store breaks, protect the worktree first, then replace objects.</strong> The worktree is the product; the repository is the packaging. Step one of any recovery plan is always confirming staged and untracked files are fine.</li><li><strong>Don&#x27;t &quot;repair&quot; missing Git objects — fetch them from the remote.</strong> Missing objects have no repair operation, only a replacement operation: drop in a pack from a remote clone and leave the index alone.</li><li><strong>Keep recovery scope one-to-one with verification evidence.</strong> Branches that can be read count as recovered; branches with no way to supply objects are marked &quot;to be confirmed&quot;, untouched and undeleted. A whole repository that &quot;looks fine&quot; is not evidence of completed recovery.</li><li><strong>Important local branches must have a remote or bundle backup.</strong> A branch that exists only on one machine has no legitimate source of objects once they break. Dangling objects are not a backup; unpushed branches are not a backup.</li></ol>\n<p>Git is distributed by design: any complete remote clone is a legitimate source for rebuilding your local object store. When the repository breaks, don&#x27;t repair the repository — rebuild it from the remote.</p>"}, "prev": {"url": "/writing/32-online-update-502", "t": {"zh": "一键\"在线更新\"，点掉了一台线上服务", "en": "One Click on \"Online Update\" Took Down Production"}}, "next": {"url": "/writing/35-user-said-data-gone", "t": {"zh": "用户说\"数据都没了\"：一次把缓存当替罪羊的复盘", "en": "When the User Says \"Data Is Gone\": A Cache Scapegoat Postmortem"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>

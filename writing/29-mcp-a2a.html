@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent 的两条连线：MCP 接工具，A2A 连 Agent — rotor</title>
+<meta name="description" content="Skill、MCP、A2A 各管一层；按连接形态选协议">
+<link rel="canonical" href="https://www.rotor1996.top/writing/29-mcp-a2a">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "Agent 的两条连线：MCP 接工具，A2A 连 Agent", "description": "Skill、MCP、A2A 各管一层；按连接形态选协议", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-03", "mainEntityOfPage": "https://www.rotor1996.top/writing/29-mcp-a2a"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>Agent 的两条连线：MCP 接工具，A2A 连 Agent</h1><p>Agent 世界有两个开放协议，解决的是两种不同的连接问题：MCP 负责 Agent 和工具/资源之间的连线，A2A 负责 Agent 和 Agent 之间的连线。混淆两者的职责，是引入它们之前最常见的误判。</p>
+<h2>三层：Skill、MCP、A2A 各管什么</h2>
+<ul><li><strong>Skill</strong>：单个 Agent 内部的能力包和执行流程。</li><li><strong>MCP</strong>：Agent 连接工具、API、数据库、文件、外部资源的协议。</li><li><strong>A2A</strong>：独立 Agent 系统之间互相发现、沟通、委托和协作的开放协议。</li></ul>
+<p>典型链路：</p>
+<pre><code>用户
+  -&gt; 主 Agent
+    -&gt; 通过 A2A 委托专业 Agent
+      -&gt; 专业 Agent 内部使用 Skill
+      -&gt; 专业 Agent 通过 MCP 调工具/数据</code></pre>
+<p>三层互不替代：MCP 是外部能力连接协议，Skill 是 Agent 内部可复用的工作流；协议升级不会把两者合并成同一种资产。</p>
+<h2>A2A：Agent 和 Agent 的握手方式</h2>
+<p>A2A 最初由 Google 提出，后作为 Linux Foundation 下的开放项目演进。它处理的是对等或委托关系：一个主 Agent 发现并调用专业 Agent，但不需要知道对方的内部工具、记忆或实现细节。</p>
+<p>核心机制：</p>
+<ul><li><strong>Agent Card</strong>：Agent 对外声明能力、接口、认证、安全要求和可用技能</li><li><strong>Task</strong>：协作以任务为核心，有状态和生命周期</li><li><strong>Message / Part</strong>：交换上下文、用户指令、文本、文件、结构化数据或媒体片段</li><li><strong>Artifact</strong>：任务产物，例如报告、文件、数据结果</li><li><strong>Transport</strong>：支持 HTTP(S)、JSON-RPC、SSE 流式更新、异步 push notification，也支持 gRPC/REST binding</li></ul>
+<p>适用场景恰恰说明了它的边界：多个供应商或不同框架的 Agent 需要协作；企业内不同业务域的 Agent 需要互相委托。单个 Agent 内部的工作流，不归 A2A 管。</p>
+<h2>MCP 的演进：从会话到无状态</h2>
+<p>MCP 2026-07-28 相对上一版 2025-11-25 的核心变化，是从&quot;初始化握手 + 会话状态&quot;改为&quot;无状态 + 每请求携带版本与能力&quot;：</p>
+<table><thead><tr><th>方面</th><th>2025-11-25 及更早</th><th>2026-07-28</th></tr></thead><tbody><tr><td>初始化</td><td><code>initialize</code> 后发送 <code>notifications/initialized</code></td><td>删除初始化握手；每个请求独立声明版本与能力</td></tr><tr><td>状态</td><td>HTTP 可通过 <code>Mcp-Session-Id</code> 维持协议会话</td><td>删除协议级会话；跨调用状态用服务端生成的显式 handle</td></tr><tr><td>版本与能力</td><td>在初始化阶段协商</td><td>请求 <code>_meta</code> 携带协议版本、客户端能力与身份；结果 <code>_meta</code> 建议携带服务端身份</td></tr><tr><td>服务发现</td><td>依赖初始化结果</td><td>服务端必须实现 <code>server/discover</code>；客户端可预先发现，也可直接请求后处理版本错误</td></tr><tr><td>通知</td><td>HTTP GET/SSE 与资源订阅接口</td><td>用长连接 POST <code>subscriptions/listen</code> 统一订阅变化通知</td></tr><tr><td>服务端反向请求</td><td>服务端直接发起 Roots、Sampling、Elicitation 等请求</td><td>改为多轮往返：返回 <code>input_required</code>，客户端补充输入后重试原请求</td></tr><tr><td>结果结构</td><td>普通结果无需统一类型字段</td><td>所有结果必须有 <code>resultType</code>，至少区分 <code>complete</code> 与 <code>input_required</code></td></tr><tr><td>长任务</td><td>Tasks 位于实验性核心协议</td><td>Tasks 移至可选扩展 <code>io.modelcontextprotocol/tasks</code>，以 handle 和轮询为核心</td></tr><tr><td>SSE 恢复</td><td>支持 <code>Last-Event-ID</code> 与事件重投</td><td>删除恢复与重投；断流后客户端以新 request ID 重发</td></tr><tr><td>缓存</td><td>缓存契约较弱</td><td>主要 list/read 结果要求 <code>ttlMs</code> 与 <code>cacheScope</code>，工具列表建议稳定排序</td></tr></tbody></table>
+<p>保持不变的主线：Host、Client、Server 架构，底层 JSON-RPC 2.0；核心原语仍是 Tools、Resources、Prompts；本地仍用 stdio，远程推荐 Streamable HTTP。</p>
+<h2>迁移的纪律：双时代、别只改版本号</h2>
+<p>协议演进最值得写进工程手册的是它的兼容策略：</p>
+<ol><li><strong>双时代实现</strong>：需要兼容旧生态时，现代请求走逐请求元数据，旧请求仍按 <code>initialize</code> 语义处理。仅支持现代协议的客户端不能直接与仅支持旧协议的服务端互通，反之亦然。</li><li><strong>先核对 SDK</strong>：使用官方 SDK 的项目先核对 SDK 是否支持新版本；不要只修改版本字符串，因为生命周期、通知流和结果 Schema 都发生了变化。</li><li><strong>弃用不等于删除</strong>：Roots、Sampling、Logging 已标记 Deprecated，但仍处于兼容窗口。看到 Deprecated 先查替代方向、再排期迁移。</li></ol>
+<h2>什么情况下不需要 A2A</h2>
+<p>回到架构判断。个人工作流的结论很直白：优先建设 <code>AGENTS.md</code> 和 Skills；只有当需要把多个独立 Agent 服务化、跨系统调用、跨团队/供应商协作时，A2A 才成为优先架构议题。</p>
+<p>这是整篇最想说的方法论：协议按连接形态选。Agent 连工具资源，用 MCP；Agent 之间对等委托，用 A2A；Agent 内部的工作流复用，用 Skill。还不到跨系统协作的阶段，硬上 A2A 只是多一层没人调用的抽象。</p>
+<p>MCP 接工具，A2A 连 Agent；知道什么时候&quot;不需要&quot;，和知道怎么&quot;用&quot;一样重要。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "Agent 的两条连线：MCP 接工具，A2A 连 Agent", "en": "Two Protocols for Agents: MCP for Tools, A2A for Agents"}, "body": {"zh": "<p>Agent 世界有两个开放协议，解决的是两种不同的连接问题：MCP 负责 Agent 和工具/资源之间的连线，A2A 负责 Agent 和 Agent 之间的连线。混淆两者的职责，是引入它们之前最常见的误判。</p>\n<h2>三层：Skill、MCP、A2A 各管什么</h2>\n<ul><li><strong>Skill</strong>：单个 Agent 内部的能力包和执行流程。</li><li><strong>MCP</strong>：Agent 连接工具、API、数据库、文件、外部资源的协议。</li><li><strong>A2A</strong>：独立 Agent 系统之间互相发现、沟通、委托和协作的开放协议。</li></ul>\n<p>典型链路：</p>\n<pre><code>用户\n  -&gt; 主 Agent\n    -&gt; 通过 A2A 委托专业 Agent\n      -&gt; 专业 Agent 内部使用 Skill\n      -&gt; 专业 Agent 通过 MCP 调工具/数据</code></pre>\n<p>三层互不替代：MCP 是外部能力连接协议，Skill 是 Agent 内部可复用的工作流；协议升级不会把两者合并成同一种资产。</p>\n<h2>A2A：Agent 和 Agent 的握手方式</h2>\n<p>A2A 最初由 Google 提出，后作为 Linux Foundation 下的开放项目演进。它处理的是对等或委托关系：一个主 Agent 发现并调用专业 Agent，但不需要知道对方的内部工具、记忆或实现细节。</p>\n<p>核心机制：</p>\n<ul><li><strong>Agent Card</strong>：Agent 对外声明能力、接口、认证、安全要求和可用技能</li><li><strong>Task</strong>：协作以任务为核心，有状态和生命周期</li><li><strong>Message / Part</strong>：交换上下文、用户指令、文本、文件、结构化数据或媒体片段</li><li><strong>Artifact</strong>：任务产物，例如报告、文件、数据结果</li><li><strong>Transport</strong>：支持 HTTP(S)、JSON-RPC、SSE 流式更新、异步 push notification，也支持 gRPC/REST binding</li></ul>\n<p>适用场景恰恰说明了它的边界：多个供应商或不同框架的 Agent 需要协作；企业内不同业务域的 Agent 需要互相委托。单个 Agent 内部的工作流，不归 A2A 管。</p>\n<h2>MCP 的演进：从会话到无状态</h2>\n<p>MCP 2026-07-28 相对上一版 2025-11-25 的核心变化，是从&quot;初始化握手 + 会话状态&quot;改为&quot;无状态 + 每请求携带版本与能力&quot;：</p>\n<table><thead><tr><th>方面</th><th>2025-11-25 及更早</th><th>2026-07-28</th></tr></thead><tbody><tr><td>初始化</td><td><code>initialize</code> 后发送 <code>notifications/initialized</code></td><td>删除初始化握手；每个请求独立声明版本与能力</td></tr><tr><td>状态</td><td>HTTP 可通过 <code>Mcp-Session-Id</code> 维持协议会话</td><td>删除协议级会话；跨调用状态用服务端生成的显式 handle</td></tr><tr><td>版本与能力</td><td>在初始化阶段协商</td><td>请求 <code>_meta</code> 携带协议版本、客户端能力与身份；结果 <code>_meta</code> 建议携带服务端身份</td></tr><tr><td>服务发现</td><td>依赖初始化结果</td><td>服务端必须实现 <code>server/discover</code>；客户端可预先发现，也可直接请求后处理版本错误</td></tr><tr><td>通知</td><td>HTTP GET/SSE 与资源订阅接口</td><td>用长连接 POST <code>subscriptions/listen</code> 统一订阅变化通知</td></tr><tr><td>服务端反向请求</td><td>服务端直接发起 Roots、Sampling、Elicitation 等请求</td><td>改为多轮往返：返回 <code>input_required</code>，客户端补充输入后重试原请求</td></tr><tr><td>结果结构</td><td>普通结果无需统一类型字段</td><td>所有结果必须有 <code>resultType</code>，至少区分 <code>complete</code> 与 <code>input_required</code></td></tr><tr><td>长任务</td><td>Tasks 位于实验性核心协议</td><td>Tasks 移至可选扩展 <code>io.modelcontextprotocol/tasks</code>，以 handle 和轮询为核心</td></tr><tr><td>SSE 恢复</td><td>支持 <code>Last-Event-ID</code> 与事件重投</td><td>删除恢复与重投；断流后客户端以新 request ID 重发</td></tr><tr><td>缓存</td><td>缓存契约较弱</td><td>主要 list/read 结果要求 <code>ttlMs</code> 与 <code>cacheScope</code>，工具列表建议稳定排序</td></tr></tbody></table>\n<p>保持不变的主线：Host、Client、Server 架构，底层 JSON-RPC 2.0；核心原语仍是 Tools、Resources、Prompts；本地仍用 stdio，远程推荐 Streamable HTTP。</p>\n<h2>迁移的纪律：双时代、别只改版本号</h2>\n<p>协议演进最值得写进工程手册的是它的兼容策略：</p>\n<ol><li><strong>双时代实现</strong>：需要兼容旧生态时，现代请求走逐请求元数据，旧请求仍按 <code>initialize</code> 语义处理。仅支持现代协议的客户端不能直接与仅支持旧协议的服务端互通，反之亦然。</li><li><strong>先核对 SDK</strong>：使用官方 SDK 的项目先核对 SDK 是否支持新版本；不要只修改版本字符串，因为生命周期、通知流和结果 Schema 都发生了变化。</li><li><strong>弃用不等于删除</strong>：Roots、Sampling、Logging 已标记 Deprecated，但仍处于兼容窗口。看到 Deprecated 先查替代方向、再排期迁移。</li></ol>\n<h2>什么情况下不需要 A2A</h2>\n<p>回到架构判断。个人工作流的结论很直白：优先建设 <code>AGENTS.md</code> 和 Skills；只有当需要把多个独立 Agent 服务化、跨系统调用、跨团队/供应商协作时，A2A 才成为优先架构议题。</p>\n<p>这是整篇最想说的方法论：协议按连接形态选。Agent 连工具资源，用 MCP；Agent 之间对等委托，用 A2A；Agent 内部的工作流复用，用 Skill。还不到跨系统协作的阶段，硬上 A2A 只是多一层没人调用的抽象。</p>\n<p>MCP 接工具，A2A 连 Agent；知道什么时候&quot;不需要&quot;，和知道怎么&quot;用&quot;一样重要。</p>", "en": "<p>The agent world has two open protocols, and they solve two different connection problems: MCP connects agents to tools and resources; A2A connects agents to agents. Confusing their responsibilities is the most common mistake before adopting either.</p>\n<h2>Three Layers: Skill, MCP, A2A — Each Owns One</h2>\n<ul><li><strong>Skill</strong>: a capability package and execution flow inside a single agent.</li><li><strong>MCP</strong>: the protocol an agent uses to connect to tools, APIs, databases, files, and external resources.</li><li><strong>A2A</strong>: the open protocol for discovery, communication, delegation, and collaboration between independent agent systems.</li></ul>\n<p>A typical chain:</p>\n<pre><code>User\n  -&gt; Primary agent\n    -&gt; Delegates via A2A to a specialist agent\n      -&gt; Specialist agent uses Skills internally\n      -&gt; Specialist agent calls tools/data via MCP</code></pre>\n<p>The three layers don&#x27;t substitute for each other: MCP is the external capability protocol, Skill is a reusable workflow inside an agent; a protocol upgrade never merges the two into one asset class.</p>\n<h2>A2A: How Agents Shake Hands with Agents</h2>\n<p>A2A was originally proposed by Google and later evolved as an open project under the Linux Foundation. It handles peer or delegated relationships: a primary agent discovers and calls a specialist agent without needing to know the other&#x27;s internal tools, memory, or implementation.</p>\n<p>Core mechanisms:</p>\n<ul><li><strong>Agent Card</strong>: the agent declares its capabilities, interfaces, authentication, security requirements, and available skills</li><li><strong>Task</strong>: collaboration is organized around tasks with state and lifecycle</li><li><strong>Message / Part</strong>: exchanging context, user instructions, text, files, structured data, or media fragments</li><li><strong>Artifact</strong>: task outputs, such as reports, files, or data results</li><li><strong>Transport</strong>: supports HTTP(S), JSON-RPC, SSE streaming updates, async push notifications, and also gRPC/REST bindings</li></ul>\n<p>Its applicable scenarios reveal its boundaries: agents from multiple vendors or different frameworks need to collaborate; agents from different business domains inside an enterprise need to delegate to each other. Workflows inside a single agent are not A2A&#x27;s business.</p>\n<h2>MCP&#x27;s Evolution: From Sessions to Stateless</h2>\n<p>The core change in MCP <code>2026-07-28</code> versus the previous <code>2025-11-25</code> is moving from &quot;initialize handshake + session state&quot; to &quot;stateless + version and capabilities on every request&quot;:</p>\n<table><thead><tr><th>Area</th><th><code>2025-11-25</code> and earlier</th><th><code>2026-07-28</code></th></tr></thead><tbody><tr><td>Initialization</td><td><code>initialize</code>, then <code>notifications/initialized</code></td><td>Handshake removed; each request independently declares version and capabilities</td></tr><tr><td>State</td><td>HTTP could hold a protocol session via <code>Mcp-Session-Id</code></td><td>Protocol-level sessions removed; cross-call state uses explicit server-generated handles</td></tr><tr><td>Version &amp; capabilities</td><td>Negotiated at initialization</td><td>Request <code>_meta</code> carries protocol version, client capabilities, and suggested client identity; result <code>_meta</code> is advised to carry server identity</td></tr><tr><td>Discovery</td><td>Relied on initialization results</td><td>Server must implement <code>server/discover</code>; clients can discover up front or just request and handle version errors</td></tr><tr><td>Notifications</td><td>HTTP GET/SSE and resource subscription endpoints</td><td>Long-lived POST <code>subscriptions/listen</code> unifies change notifications</td></tr><tr><td>Server-to-client requests</td><td>Server directly initiates Roots, Sampling, Elicitation, etc.</td><td>Replaced by multi round-trip requests: return <code>input_required</code>, client retries the original request after supplying input</td></tr><tr><td>Result structure</td><td>No uniform type field needed</td><td>Every result must carry <code>resultType</code>, at minimum distinguishing <code>complete</code> from <code>input_required</code></td></tr><tr><td>Long tasks</td><td>Tasks lived in the experimental core protocol</td><td>Tasks moved to the optional <code>io.modelcontextprotocol/tasks</code> extension, handle- and polling-centric</td></tr><tr><td>SSE recovery</td><td>Supported <code>Last-Event-ID</code> and event replay</td><td>Recovery and replay removed; after a drop, the client resends with a new request ID</td></tr><tr><td>Caching</td><td>Weak cache contract</td><td>Main list/read results require <code>ttlMs</code> and <code>cacheScope</code>; stable ordering of tool lists advised</td></tr></tbody></table>\n<p>What stayed: the Host–Client–Server architecture over JSON-RPC 2.0; Tools, Resources, and Prompts as core primitives; stdio locally, Streamable HTTP recommended for remote.</p>\n<h2>Migration Discipline: Dual-Era, Don&#x27;t Just Bump the Version String</h2>\n<p>The part of this protocol evolution most worth writing into an engineering handbook is its compatibility strategy:</p>\n<ol><li><strong>Dual-era implementation</strong>: when old ecosystems must be supported, modern requests go through per-request metadata while old requests are still handled with <code>initialize</code> semantics. A client supporting only the modern protocol cannot talk directly to a server supporting only the old one, and vice versa.</li><li><strong>Check the SDK first</strong>: projects using official SDKs must verify SDK support for the new version before anything else; don&#x27;t just change the version string, because the lifecycle, notification flow, and result schema all changed.</li><li><strong>Deprecated does not mean deleted</strong>: Roots, Sampling, and Logging are marked Deprecated but remain inside the compatibility window. When you see Deprecated, look up the replacement direction first and schedule the migration — it&#x27;s not an immediate removal.</li></ol>\n<h2>When You Don&#x27;t Need A2A</h2>\n<p>Back to the architecture judgment. The conclusion for personal workflows is blunt: build <code>AGENTS.md</code> and Skills first; A2A only becomes a priority when you need to service-ize multiple independent agents, call across systems, or collaborate across teams or vendors.</p>\n<p>That&#x27;s the methodology this piece wants to land: choose protocols by connection shape. Agent to tools/resources: MCP. Peer-to-peer delegation between agents: A2A. Reusable workflows inside an agent: Skill. Before you&#x27;re at the cross-system collaboration stage, bolting on A2A is just an extra layer of abstraction nobody calls.</p>\n<p>MCP connects tools, A2A connects agents — and knowing when &quot;not needed&quot; matters as much as knowing how to &quot;use&quot;.</p>"}, "prev": {"url": "/writing/21-ai-remembers-too-much", "t": {"zh": "AI 记得太多：一次记忆误记复盘", "en": "When AI Remembers Too Much"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>

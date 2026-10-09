@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多空间权限：交集，不是并集 — rotor</title>
+<meta name="description" content="空间、组织、项目三层求交集；按钮状态只是体验，服务端门禁才是边界">
+<link rel="canonical" href="https://www.rotor1996.top/writing/33-permission-intersection">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "多空间权限：交集，不是并集", "description": "空间、组织、项目三层求交集；按钮状态只是体验，服务端门禁才是边界", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-07", "mainEntityOfPage": "https://www.rotor1996.top/writing/33-permission-intersection"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>多空间权限：交集，不是并集</h1><p><strong>结论先行：</strong> 多空间应用的权限不能只看&quot;用户是谁&quot;，必须先看&quot;请求在哪个空间&quot;。完整检查顺序固定为六步：解析空间、固定归属、计算组织动作、叠加项目角色求交集、提交时快照归属、服务端最终裁决。前端按钮的状态只是体验提示，服务端门禁、资源归属快照、跨空间数据隔离才是正式安全边界。</p>
+<h2>第一步：先解析请求属于哪个空间</h2>
+<p>权限计算的第一步不是查用户身份，而是解析请求的作用域：这个请求属于个人空间，还是某个团队空间。</p>
+<ol><li>请求必须显式声明空间；旧值只按兼容规则映射，非法值直接拒绝。</li><li>缺失时只能按明确的默认规则选择，不能脑补。</li><li>作用域、组织、项目、系列是四个不同层级的对象，不能用一个组织 ID 或一个全局角色替代。</li></ol>
+<p>把四个层级混成一层，是多空间越权最常见的起点。</p>
+<h2>第二步：归属一旦固定，请求体改写不了</h2>
+<ol><li>个人空间的组织 ID 为空；团队空间绑定组织。</li><li>不能用请求体里的组织 ID 去覆盖已经解析出的作用域。</li><li>个人用户没加入团队，照样可以用个人空间；平台管理员也不能凭平台身份自动读取团队资源。</li></ol>
+<p>归属是解析出来的事实，不是客户端声称的事实。</p>
+<h2>第三步：能力是交集，只会缩小，不会放大</h2>
+<ol><li>管理员、创建者、审核者、只读成员各自只有明确的模块动作集合，多一个动作都没有。</li><li>项目或系列的负责人、编辑、审核者、只读者，再与组织动作求交集：组织层面能生成，不代表在当前项目里能编辑。</li><li>只读成员可以查看允许的数据，但不能通过直达链接、键盘入口、GET 副作用、缓存键或异步任务绕过写入门禁。</li></ol>
+<p>交集是设计的本意：组织角色回答&quot;能做什么动作&quot;，项目角色回答&quot;在哪个项目里&quot;，两个答案取交之后，才是这个人在这一次请求里的真实能力。验收时要准备双组织测试数据：同一个人在两个组织里的动作集合可能完全不同，只测一个组织等于没测。</p>
+<h2>第四步：异步任务按提交时快照，不随空间切换改写</h2>
+<p>任务、生成记录和推送，保存的是提交那一刻的空间与组织快照。用户之后切换空间，已提交的任务归属不变，也不允许把任务跨空间查询。</p>
+<p>没有快照的异步任务，等于把归属的决定权交给了&quot;查询的那一刻&quot;，而那一刻的空间上下文可能是错的。</p>
+<h2>第五步：正式边界在服务端，不在界面</h2>
+<ol><li>页面隐藏入口或置灰按钮，只是提示。直接调接口、媒体、任务、下载、导出，同样要过服务端门禁。</li><li>资源不存在时的 403 与 404 口径遵循接口契约，但响应、文件字节和缓存都不能泄露其他空间的资源。</li><li>浏览器刷新、前进后退、双账号同源会话、旧链接，必须纳入验收。只测&quot;按钮是不是灰的&quot;，等于没测。</li></ol>
+<p>验收有一套固定顺序：先准备双组织测试数据，再按接口、页面、缓存、下载、导出的顺序逐个验收，最后补上浏览器刷新和双账号场景。顺序不能乱：接口门禁没过，页面按钮测得再漂亮也没用。</p>
+<h2>一个真实教训</h2>
+<p>一个视频工作台项目里曾经出现过一次越权：历史数据的组织 ID 为空，按兼容规则回退之后，团队空间看到了别人的项目。根因正是归属和解析混在了一层——旧数据没有空间快照，兼容映射又给了它一个合法身份。修复方向和上面的检查顺序完全一致：解析、固定归属、求交集、服务端裁决，一步都不能省。</p>
+<h2>小结</h2>
+<p>多空间权限就三句话：先看请求在哪，再看人是谁，最后取交集。界面的状态是做给人看的，服务端的门禁才是做给绕路的人看的。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "多空间权限：交集，不是并集", "en": "Multi-Space Permissions: Intersection, Not Union"}, "body": {"zh": "<p><strong>结论先行：</strong> 多空间应用的权限不能只看&quot;用户是谁&quot;，必须先看&quot;请求在哪个空间&quot;。完整检查顺序固定为六步：解析空间、固定归属、计算组织动作、叠加项目角色求交集、提交时快照归属、服务端最终裁决。前端按钮的状态只是体验提示，服务端门禁、资源归属快照、跨空间数据隔离才是正式安全边界。</p>\n<h2>第一步：先解析请求属于哪个空间</h2>\n<p>权限计算的第一步不是查用户身份，而是解析请求的作用域：这个请求属于个人空间，还是某个团队空间。</p>\n<ol><li>请求必须显式声明空间；旧值只按兼容规则映射，非法值直接拒绝。</li><li>缺失时只能按明确的默认规则选择，不能脑补。</li><li>作用域、组织、项目、系列是四个不同层级的对象，不能用一个组织 ID 或一个全局角色替代。</li></ol>\n<p>把四个层级混成一层，是多空间越权最常见的起点。</p>\n<h2>第二步：归属一旦固定，请求体改写不了</h2>\n<ol><li>个人空间的组织 ID 为空；团队空间绑定组织。</li><li>不能用请求体里的组织 ID 去覆盖已经解析出的作用域。</li><li>个人用户没加入团队，照样可以用个人空间；平台管理员也不能凭平台身份自动读取团队资源。</li></ol>\n<p>归属是解析出来的事实，不是客户端声称的事实。</p>\n<h2>第三步：能力是交集，只会缩小，不会放大</h2>\n<ol><li>管理员、创建者、审核者、只读成员各自只有明确的模块动作集合，多一个动作都没有。</li><li>项目或系列的负责人、编辑、审核者、只读者，再与组织动作求交集：组织层面能生成，不代表在当前项目里能编辑。</li><li>只读成员可以查看允许的数据，但不能通过直达链接、键盘入口、GET 副作用、缓存键或异步任务绕过写入门禁。</li></ol>\n<p>交集是设计的本意：组织角色回答&quot;能做什么动作&quot;，项目角色回答&quot;在哪个项目里&quot;，两个答案取交之后，才是这个人在这一次请求里的真实能力。验收时要准备双组织测试数据：同一个人在两个组织里的动作集合可能完全不同，只测一个组织等于没测。</p>\n<h2>第四步：异步任务按提交时快照，不随空间切换改写</h2>\n<p>任务、生成记录和推送，保存的是提交那一刻的空间与组织快照。用户之后切换空间，已提交的任务归属不变，也不允许把任务跨空间查询。</p>\n<p>没有快照的异步任务，等于把归属的决定权交给了&quot;查询的那一刻&quot;，而那一刻的空间上下文可能是错的。</p>\n<h2>第五步：正式边界在服务端，不在界面</h2>\n<ol><li>页面隐藏入口或置灰按钮，只是提示。直接调接口、媒体、任务、下载、导出，同样要过服务端门禁。</li><li>资源不存在时的 403 与 404 口径遵循接口契约，但响应、文件字节和缓存都不能泄露其他空间的资源。</li><li>浏览器刷新、前进后退、双账号同源会话、旧链接，必须纳入验收。只测&quot;按钮是不是灰的&quot;，等于没测。</li></ol>\n<p>验收有一套固定顺序：先准备双组织测试数据，再按接口、页面、缓存、下载、导出的顺序逐个验收，最后补上浏览器刷新和双账号场景。顺序不能乱：接口门禁没过，页面按钮测得再漂亮也没用。</p>\n<h2>一个真实教训</h2>\n<p>一个视频工作台项目里曾经出现过一次越权：历史数据的组织 ID 为空，按兼容规则回退之后，团队空间看到了别人的项目。根因正是归属和解析混在了一层——旧数据没有空间快照，兼容映射又给了它一个合法身份。修复方向和上面的检查顺序完全一致：解析、固定归属、求交集、服务端裁决，一步都不能省。</p>\n<h2>小结</h2>\n<p>多空间权限就三句话：先看请求在哪，再看人是谁，最后取交集。界面的状态是做给人看的，服务端的门禁才是做给绕路的人看的。</p>", "en": "<p><strong>The conclusion first:</strong> in a multi-space application, permissions cannot be decided by &quot;who the user is&quot; alone — you must first determine &quot;which space this request belongs to.&quot; The check order is fixed in six steps: resolve the space, pin the ownership, compute organization actions, intersect with project roles, snapshot ownership at submit time, and let the server make the final call. Button states in the UI are only UX hints; the real security boundary is server-side gates, ownership snapshots of resources, and cross-space data isolation.</p>\n<h2>Step 1: Resolve Which Space the Request Belongs To</h2>\n<p>The first step of permission computation is not looking up the user&#x27;s identity — it is resolving the request&#x27;s scope: does this request belong to the personal space or a team space?</p>\n<ol><li>The request must declare its space explicitly; legacy values are mapped only by compatibility rules, and illegal values are rejected outright.</li><li>When the declaration is missing, a fallback may be chosen only by an explicit default rule — never by guessing.</li><li>Scope, organization, project, and series are four different layers of objects; they cannot be replaced by a single organization ID or a single global role.</li></ol>\n<p>Collapsing the four layers into one is the most common starting point of multi-space privilege leaks.</p>\n<h2>Step 2: Once Ownership Is Pinned, the Request Body Cannot Rewrite It</h2>\n<ol><li>The personal space has an empty organization ID; a team space is bound to an organization.</li><li>An organization ID inside the request body must never override the scope that was already resolved.</li><li>A user who has joined no team can still use the personal space; a platform administrator cannot automatically read team resources by virtue of platform identity.</li></ol>\n<p>Ownership is a resolved fact, not a claim made by the client.</p>\n<h2>Step 3: Capability Is an Intersection — It Only Shrinks, Never Grows</h2>\n<ol><li>Admins, creators, reviewers, and viewers each get only an explicitly defined set of module actions — not one action more.</li><li>The owner, editor, reviewer, and viewer roles of a project or series are then intersected with the organization actions: being able to generate at the organization level does not mean being able to edit in the current project.</li><li>Read-only members may view permitted data, but they cannot bypass the write gate through direct URLs, keyboard shortcuts, GET side effects, cache keys, or async tasks.</li></ol>\n<p>The intersection is the design&#x27;s intent: the organization role answers &quot;what actions are allowed,&quot; the project role answers &quot;in which project,&quot; and the overlap of the two is the person&#x27;s real capability for this one request. Acceptance testing must use dual-organization test data: the same person can hold completely different action sets in two organizations, and testing only one is the same as testing none.</p>\n<h2>Step 4: Async Tasks Snapshot Ownership at Submit Time, Not at Space Switches</h2>\n<p>Tasks, generation records, and push deliveries keep a snapshot of the space and organization taken at the moment of submission. If the user switches spaces afterward, already-submitted tasks keep their original ownership, and tasks must never be queried across spaces.</p>\n<p>An async task without a snapshot hands the ownership decision to &quot;the moment of the query&quot; — and the space context at that moment may be wrong.</p>\n<h2>Step 5: The Real Boundary Lives on the Server, Not in the UI</h2>\n<ol><li>Hiding an entry or graying out a button in the UI is only a hint. Direct API calls, media, tasks, downloads, and exports must pass the same server-side gate.</li><li>The exact 403 vs. 404 policy for missing resources follows the API contract, but responses, file bytes, and caches must never leak another space&#x27;s resources.</li><li>Browser refresh, back/forward navigation, two accounts in one origin session, and old links must all be part of acceptance. Testing only &quot;whether the button is gray&quot; is the same as not testing.</li></ol>\n<p>Acceptance follows a fixed order: prepare dual-organization test data first, then verify APIs, pages, caches, downloads, and exports one by one, and finally cover browser refresh and dual-account scenarios. The order matters: if the API gate fails, beautifully tested page buttons mean nothing.</p>\n<h2>A Real Lesson</h2>\n<p>A video-workbench project once had a privilege leak: legacy data had an empty organization ID, and after a compatibility-rule fallback, a team space could see another team&#x27;s projects. The root cause was exactly the mixing of ownership and resolution into one layer — the old data had no space snapshot, and the compatibility mapping gave it a legitimate identity. The fix follows the same check order above: resolve, pin ownership, intersect, and let the server decide — not a single step can be skipped.</p>\n<h2>Closing</h2>\n<p>Multi-space permissions in three sentences: look at where the request is first, then at who the person is, and finally take the intersection. UI states are made for people to see; server-side gates are made for the people who try to go around them.</p>"}, "prev": {"url": "/writing/31-api-contract-discipline", "t": {"zh": "没确认的接口契约，前端别先固化", "en": "Don't Hardcode Unconfirmed API Contracts"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>

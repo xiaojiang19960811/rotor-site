@@ -42,12 +42,19 @@ ARTS = [
  ("26","tinykit-decisions","solo","build","TinyKit：一个工具站的决策链","TinyKit: Anatomy of a Decision Chain","痛点调研→31 工具→API→MCP","Pain research → 31 tools → API → MCP."),
  ("27","video-pipeline-v2-v4","solo","build","AI 视频管线：v2 到 v4 的迭代","Video Pipeline: v2 to v4","三次评审返工；字幕/边距/缓存的生产坑","Three review rounds. Subtitles, margins, cache — production pitfalls."),
  ("28","gumroad-launch","solo","build","Gumroad 上架记：三个数字产品","Gumroad Launch Notes","$9/$29/$39 定价；PayPal 收款；中国卖家坑","$9/$29/$39 pricing, PayPal payout, traps for CN sellers."),
+ ("29","mcp-a2a","agent","garden","Agent 的两条连线：MCP 接工具，A2A 连 Agent","Two Protocols for Agents: MCP for Tools, A2A for Agents","Skill、MCP、A2A 各管一层；按连接形态选协议","Skill, MCP, A2A each own a layer; choose the protocol by connection shape."),
+ ("30","probe-vs-path","infra","log","“探测通过”的端点，未必是线上走的端点","The Endpoint You Probed Is Not the Path Production Takes","本地门禁比上游更严；探测端点与线上链路同构","A local gate stricter than upstream; probe the path production takes."),
+ ("31","api-contract-discipline","eng","garden","没确认的接口契约，前端别先固化","Don't Hardcode Unconfirmed API Contracts","契约三来源；定义缺失先确认再实现","Three contract sources; confirm before coding formal logic."),
+ ("32","online-update-502","infra","log","一键\"在线更新\"，点掉了一台线上服务","One Click on \"Online Update\" Took Down Production","迁移编号语义冲突：fork 的本地重编号，上游二进制看不懂","Migration-number collision: the upstream binary couldn't read the fork's renumbering."),
+ ("33","permission-intersection","eng","garden","多空间权限：交集，不是并集","Multi-Space Permissions: Intersection, Not Union","空间、组织、项目三层求交集；按钮状态只是体验，服务端门禁才是边界","Intersect space, org, and project roles; buttons are UX, server-side gates are the boundary."),
+ ("34","git-object-store-rebuild","infra","log","Git 对象库坏了：别修仓库，从远端重建","When Git's Object Store Breaks: Don't Repair, Rebuild from Remote","本地对象缺失先护住工作区，再从远端补回 pack","Missing local objects? Protect the worktree first, then fetch the pack from remote."),
+ ("35","user-said-data-gone","infra","log","用户说\"数据都没了\"：一次把缓存当替罪羊的复盘","When the User Says \"Data Is Gone\": A Cache Scapegoat Postmortem","两次\"数据都没了\"：一次真缓存，一次脚本中途抛错；node --check 查不出运行时顺序错","Two \"data is gone\" incidents: one real cache mismatch, one mid-script throw; node --check can't catch runtime ordering bugs."),
 ]
 
 # 只有这里列出的 id 才会生成页面（发布门控）
-LIVE = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28"}
+LIVE = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35"}
 # 发布日期（首页"最新"排序用）
-DATES = {"01": "2026-10-02", "02": "2026-10-02", "03": "2026-10-02", "04": "2026-10-02", "05": "2026-10-02", "06": "2026-10-02", "07": "2026-10-02", "08": "2026-10-02", "09": "2026-10-02", "10": "2026-10-02", "11": "2026-10-02", "12": "2026-10-02", "13": "2026-10-02", "14": "2026-10-02", "15": "2026-10-02", "16": "2026-10-02", "17": "2026-10-02", "18": "2026-10-02", "19": "2026-10-02", "20": "2026-10-02", "21": "2026-10-02", "22": "2026-10-02", "23": "2026-10-02", "24": "2026-10-02", "25": "2026-10-02", "26": "2026-10-02", "27": "2026-10-02", "28": "2026-10-02"}
+DATES = {"01": "2026-10-02", "02": "2026-10-02", "03": "2026-10-02", "04": "2026-10-02", "05": "2026-10-02", "06": "2026-10-02", "07": "2026-10-02", "08": "2026-10-02", "09": "2026-10-02", "10": "2026-10-02", "11": "2026-10-02", "12": "2026-10-02", "13": "2026-10-02", "14": "2026-10-02", "15": "2026-10-02", "16": "2026-10-02", "17": "2026-10-02", "18": "2026-10-02", "19": "2026-10-02", "20": "2026-10-02", "21": "2026-10-02", "22": "2026-10-02", "23": "2026-10-02", "24": "2026-10-02", "25": "2026-10-02", "26": "2026-10-02", "27": "2026-10-02", "28": "2026-10-02", "29": "2026-10-03", "30": "2026-10-04", "31": "2026-10-05", "32": "2026-10-06", "33": "2026-10-07", "34": "2026-10-08", "35": "2026-10-09"}
 
 COLLECTIONS = {
  "infra": ("AI 基础设施", "AI Infrastructure"),

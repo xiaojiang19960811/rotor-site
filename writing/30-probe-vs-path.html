@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>“探测通过”的端点，未必是线上走的端点 — rotor</title>
+<meta name="description" content="本地门禁比上游更严；探测端点与线上链路同构">
+<link rel="canonical" href="https://www.rotor1996.top/writing/30-probe-vs-path">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "“探测通过”的端点，未必是线上走的端点", "description": "本地门禁比上游更严；探测端点与线上链路同构", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-04", "mainEntityOfPage": "https://www.rotor1996.top/writing/30-probe-vs-path"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>“探测通过”的端点，未必是线上走的端点</h1><p><strong>结论先行：</strong> 一次 Codex 上下文压缩 503 的故障，最后证明不是上游 OpenAI 的问题，而是本地网关自己加的一道&quot;能力门禁&quot;太严，把本该原样转发的请求拦在了门口。更值得记住的是前半段的弯路：探测端点返回 200，让我们一度以为&quot;能力没问题&quot;——但探测的端点和线上真正走的链路，根本不是同一条协议。</p>
+<h2>时间线：探测通过，故障依旧</h2>
+<p>2026 年 8 月 3 日，自建的多模型网关开始集中出现一类报错：Codex 客户端做上下文压缩（remote compaction）时，网关对外返回 503。普通对话请求正常，只有自动压缩触发的请求失败。</p>
+<p>排障第一步是做能力探测。晚上 22:01，在后台对承载流量的上游账号执行了一次压缩能力探测，探测成功，数据库和缓存里都记下了&quot;该账号支持压缩&quot;。但 22:05 到 22:06 的真实压缩请求仍然 503，22:14 用最小参数复现也依然 503。</p>
+<p>探测通过，线上照挂。两者差了四分钟，差的是两个不同的东西。</p>
+<h2>定位：先看请求死在哪一层</h2>
+<p>网关日志里有一条关键线索：失败的请求在调度阶段记录了&quot;无可用账号&quot;，而失败记录里的上游账号 ID、上游模型、上游错误三个字段全部为空。这意味着请求<strong>在选中账号之前就失败了，根本没有出网关</strong>。同账号、同分组、同模型的普通请求当时是 200。</p>
+<p>这个判断把故障圈定在本地调度层，不在上游。后续排查不再盯着上游状态，转而审查本地 fork 在官方 remote compaction v2 原生链路之上，自己加的那层严格能力门禁：OpenAI 账号必须同时满足 Responses 可用、且标记为支持远程压缩，才能承接压缩请求。而标记的来源，正是上面那个 22:01 通过的旧探测。</p>
+<h2>真根因：探测的不是同一条协议</h2>
+<p>旧的压缩探测调用的是旧端点 <code>/v1/responses/compact</code>；而真正的 remote compaction v2，走的是带 beta 请求头和压缩触发参数的流式 <code>/v1/responses</code>。两者不是同一上游协议。探测通过只能证明旧端点可用，不能证明新链路具备能力——把旧端点的探测结果提升为新链路的准入证明，是这道门禁在逻辑上的原罪。</p>
+<p>修复也相应地干脆：handler 里不再为 remote compaction v2 注入本地的能力前置要求，原样转发给上游处理。回归验证用发布前相同的最小请求，HTTP 从 503 变为 200，SSE 里拿到了压缩任务的创建事件，日志确认请求已从接入侧成功选中账号并传到出站侧。</p>
+<p>值得一提的是发布纪律。修的是生产网关，晚上 22 点多动手：发布前先做了 PostgreSQL 自定义格式备份并校验，保留发布前的 rollback tag 和旧镜像，蓝绿切换、容器健康、致命日志计数逐项确认，最小请求回归从 503 变 200 才算收尾。排障的勇气，来自回滚按钮真实可用。</p>
+<h2>弯路值得单独记一笔</h2>
+<p>在这之前，团队先走了一条有官方依据的岔路：上游确实存在按客户端身份头分桶降载的已知行为（官方主分支有相关提交），于是先做了一个&quot;身份归一化&quot;的热修复，把已知的降载身份收敛到另一个身份。修完后 21:52 和 21:55 仍然复现同类 503，且失败依然停在本地选号阶段。实验证伪后，这个方向被正式排除，没有硬说&quot;可能修好了&quot;。先修已知原因是对的，但修完必须看数据，没数据支持就认栽、换方向。</p>
+<h2>收束</h2>
+<p>这次故障留下四条可复用的纪律：</p>
+<ol><li><strong>探测端点必须与线上链路同构。</strong> 探测的是旧协议，线上走的是新协议，探测的 200 一文不值。</li><li><strong>做代理转发，不要给自己加比上游更严的门。</strong> 网关的职责是原样转发；本地发明的准入条件，迟早拦截一个本该通过的请求。</li><li><strong>定位先看&quot;请求死在哪一层&quot;。</strong> 上游账号 ID 为空，是最便宜的定界证据。</li><li><strong>实验证伪要认。</strong> 修已知原因没修好，不是白修——它排除了一个选项，排除了也算进展。</li></ol>
+<p>&quot;探测通过&quot;四个字，只对探测过的那条路径负责。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "“探测通过”的端点，未必是线上走的端点", "en": "The Endpoint You Probed Is Not the Path Production Takes"}, "body": {"zh": "<p><strong>结论先行：</strong> 一次 Codex 上下文压缩 503 的故障，最后证明不是上游 OpenAI 的问题，而是本地网关自己加的一道&quot;能力门禁&quot;太严，把本该原样转发的请求拦在了门口。更值得记住的是前半段的弯路：探测端点返回 200，让我们一度以为&quot;能力没问题&quot;——但探测的端点和线上真正走的链路，根本不是同一条协议。</p>\n<h2>时间线：探测通过，故障依旧</h2>\n<p>2026 年 8 月 3 日，自建的多模型网关开始集中出现一类报错：Codex 客户端做上下文压缩（remote compaction）时，网关对外返回 503。普通对话请求正常，只有自动压缩触发的请求失败。</p>\n<p>排障第一步是做能力探测。晚上 22:01，在后台对承载流量的上游账号执行了一次压缩能力探测，探测成功，数据库和缓存里都记下了&quot;该账号支持压缩&quot;。但 22:05 到 22:06 的真实压缩请求仍然 503，22:14 用最小参数复现也依然 503。</p>\n<p>探测通过，线上照挂。两者差了四分钟，差的是两个不同的东西。</p>\n<h2>定位：先看请求死在哪一层</h2>\n<p>网关日志里有一条关键线索：失败的请求在调度阶段记录了&quot;无可用账号&quot;，而失败记录里的上游账号 ID、上游模型、上游错误三个字段全部为空。这意味着请求<strong>在选中账号之前就失败了，根本没有出网关</strong>。同账号、同分组、同模型的普通请求当时是 200。</p>\n<p>这个判断把故障圈定在本地调度层，不在上游。后续排查不再盯着上游状态，转而审查本地 fork 在官方 remote compaction v2 原生链路之上，自己加的那层严格能力门禁：OpenAI 账号必须同时满足 Responses 可用、且标记为支持远程压缩，才能承接压缩请求。而标记的来源，正是上面那个 22:01 通过的旧探测。</p>\n<h2>真根因：探测的不是同一条协议</h2>\n<p>旧的压缩探测调用的是旧端点 <code>/v1/responses/compact</code>；而真正的 remote compaction v2，走的是带 beta 请求头和压缩触发参数的流式 <code>/v1/responses</code>。两者不是同一上游协议。探测通过只能证明旧端点可用，不能证明新链路具备能力——把旧端点的探测结果提升为新链路的准入证明，是这道门禁在逻辑上的原罪。</p>\n<p>修复也相应地干脆：handler 里不再为 remote compaction v2 注入本地的能力前置要求，原样转发给上游处理。回归验证用发布前相同的最小请求，HTTP 从 503 变为 200，SSE 里拿到了压缩任务的创建事件，日志确认请求已从接入侧成功选中账号并传到出站侧。</p>\n<p>值得一提的是发布纪律。修的是生产网关，晚上 22 点多动手：发布前先做了 PostgreSQL 自定义格式备份并校验，保留发布前的 rollback tag 和旧镜像，蓝绿切换、容器健康、致命日志计数逐项确认，最小请求回归从 503 变 200 才算收尾。排障的勇气，来自回滚按钮真实可用。</p>\n<h2>弯路值得单独记一笔</h2>\n<p>在这之前，团队先走了一条有官方依据的岔路：上游确实存在按客户端身份头分桶降载的已知行为（官方主分支有相关提交），于是先做了一个&quot;身份归一化&quot;的热修复，把已知的降载身份收敛到另一个身份。修完后 21:52 和 21:55 仍然复现同类 503，且失败依然停在本地选号阶段。实验证伪后，这个方向被正式排除，没有硬说&quot;可能修好了&quot;。先修已知原因是对的，但修完必须看数据，没数据支持就认栽、换方向。</p>\n<h2>收束</h2>\n<p>这次故障留下四条可复用的纪律：</p>\n<ol><li><strong>探测端点必须与线上链路同构。</strong> 探测的是旧协议，线上走的是新协议，探测的 200 一文不值。</li><li><strong>做代理转发，不要给自己加比上游更严的门。</strong> 网关的职责是原样转发；本地发明的准入条件，迟早拦截一个本该通过的请求。</li><li><strong>定位先看&quot;请求死在哪一层&quot;。</strong> 上游账号 ID 为空，是最便宜的定界证据。</li><li><strong>实验证伪要认。</strong> 修已知原因没修好，不是白修——它排除了一个选项，排除了也算进展。</li></ol>\n<p>&quot;探测通过&quot;四个字，只对探测过的那条路径负责。</p>", "en": "<p><strong>The conclusion first:</strong> a wave of Codex context-compaction 503s turned out not to be OpenAI&#x27;s problem at all, but a &quot;capability gate&quot; our own multi-model gateway had added — one stricter than the upstream protocol, blocking requests it should have simply forwarded. The detour before that is the more valuable lesson: a probe against an endpoint returned 200, which briefly convinced us &quot;capability is fine&quot; — but the endpoint probed and the path production takes were never the same protocol.</p>\n<h2>Timeline: probe passed, outage continued</h2>\n<p>On August 3, 2026, our self-hosted multi-model gateway started returning 503s in bursts: whenever Codex clients triggered context compaction (remote compaction), the gateway failed the request. Ordinary chat requests were fine; only compaction-triggered requests broke.</p>\n<p>The first troubleshooting step was a capability probe. At 22:01 we ran a compaction-capability probe on the upstream account in the backend; it succeeded, and &quot;account supports compaction&quot; was recorded in both database and cache. Yet real compaction requests at 22:05–22:06 still returned 503, and a minimal reproduction at 22:14 still returned 503.</p>\n<p>The probe passed; production kept failing. Four minutes apart, two different things.</p>\n<h2>Pinpointing: first, find which layer the request died in</h2>\n<p>The gateway logs held the decisive clue: the failed requests were recorded at the scheduling stage as &quot;no available accounts,&quot; while the failure records had empty upstream account ID, upstream model, and upstream error fields. The request <strong>failed before account selection — it never left the gateway</strong>. Ordinary requests from the same account, same group, and same model were returning 200 at the time.</p>\n<p>That bounded the fault to the local scheduling layer, not upstream. Investigation stopped staring at upstream status and turned to the strict capability gate our local fork had added on top of the official remote compaction v2 chain: an OpenAI account had to be both Responses-capable and flagged as compaction-supported before it could serve a compaction request. And that flag&#x27;s source was the old probe that passed at 22:01.</p>\n<h2>The real root cause: the probed endpoint was not the production protocol</h2>\n<p>The old compaction probe called the legacy endpoint <code>/v1/responses/compact</code>; real remote compaction v2 travels over a streaming <code>/v1/responses</code> with beta headers and a compaction-trigger parameter. Two different upstream protocols. A passing probe only proves the legacy endpoint is alive — it cannot prove the new chain is capable. Promoting the old endpoint&#x27;s probe result into an admission ticket for the new chain was the gate&#x27;s original sin in logic.</p>\n<p>The fix was correspondingly decisive: the handler no longer injects a local capability precondition for remote compaction v2; requests are forwarded upstream as-is. The same minimal request used before the release went from 503 to 200; the SSE stream carried the compaction task&#x27;s creation events, and logs confirmed the request had moved from the ingress side to the egress side with an account successfully selected.</p>\n<p>One note on release discipline: this was a production gateway, touched after 22:00. Before release we took a PostgreSQL custom-format backup and validated it, kept the pre-release rollback tag and old images, and confirmed blue-green switchover, container health, and zero fatal-log counts one by one — the same minimal request going from 503 to 200 closed the loop. Troubleshooting courage comes from a rollback button that actually works.</p>\n<h2>The detour deserves its own paragraph</h2>\n<p>Before that, the team walked a well-sourced detour: upstream genuinely has a known behavior of bucketed load-shedding keyed on client identity headers (there is a relevant commit on the official main branch), so the first hotfix was an &quot;identity normalization&quot; that converged a known shed-prone identity into another one. After the release, the same compaction 503s recurred at 21:52 and 21:55 — still dying at local account selection. The experiment falsified that direction, and it was formally ruled out, without anyone insisting &quot;maybe it worked.&quot; Fixing the known cause first was right, but a fix has to be read off the data; when the data doesn&#x27;t support it, concede and change direction.</p>\n<h2>Closing</h2>\n<p>Four reusable disciplines from this outage:</p>\n<ol><li><strong>The probed endpoint must be isomorphic to the production path.</strong> Probing the old protocol while production travels the new one makes the probe&#x27;s 200 worthless.</li><li><strong>When you proxy, don&#x27;t invent gates stricter than upstream.</strong> A gateway&#x27;s job is faithful forwarding; every locally invented admission condition will eventually block a request that should have passed.</li><li><strong>Pinpointing starts with &quot;which layer did it die in.&quot;</strong> An empty upstream account ID is the cheapest scoping evidence there is.</li><li><strong>Own your falsified experiments.</strong> Fixing the known cause and missing is not wasted work — it ruled out an option, and a ruled-out option is progress.</li></ol>\n<p>&quot;Probe passed&quot; is only responsible for the path that was probed.</p>"}, "prev": {"url": "/writing/24-webrtc-white-screen", "t": {"zh": "WebRTC 白屏：先别急着上 TURN", "en": "WebRTC White Screen: Don't Rush to TURN"}}, "next": {"url": "/writing/32-online-update-502", "t": {"zh": "一键\"在线更新\"，点掉了一台线上服务", "en": "One Click on \"Online Update\" Took Down Production"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>

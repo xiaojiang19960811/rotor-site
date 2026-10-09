@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一键"在线更新"，点掉了一台线上服务 — rotor</title>
+<meta name="description" content="迁移编号语义冲突：fork 的本地重编号，上游二进制看不懂">
+<link rel="canonical" href="https://www.rotor1996.top/writing/32-online-update-502">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "一键\"在线更新\"，点掉了一台线上服务", "description": "迁移编号语义冲突：fork 的本地重编号，上游二进制看不懂", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-06", "mainEntityOfPage": "https://www.rotor1996.top/writing/32-online-update-502"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>一键&quot;在线更新&quot;，点掉了一台线上服务</h1><p><strong>结论先行：</strong> 一次深夜的线上 502，根因不是 Nginx、不是内存、不是数据库连不上，而是管理后台的一键&quot;在线更新&quot;按钮，把官方上游二进制直接换进了跑着本地 fork 的生产容器。Fork 的迁移编号被本地重编号过，上游二进制读不懂这套编号，把已经存在的字段又创建了一次，应用在启动迁移阶段报错、进入重启循环，Nginx 对着一个起不来的 upstream，只能对外返回 502。</p>
+<p>这次故障最值得记的不是技术细节，而是一条流程纪律：Fork 的生产环境，升级只能走自己设定的通道——选择性吸收上游、迁移重编号审计、不可变镜像、蓝绿发布。任何绕过这套通道的&quot;便捷入口&quot;，哪怕是产品自己带的一键更新按钮，都要当作禁区对待。</p>
+<h2>时间线：点了一下更新，服务起不来了</h2>
+<p>2026 年 8 月 14 日 18:49，管理接口先后处理了&quot;系统更新&quot;与&quot;系统重启&quot;两个请求。这是后台自带的官方在线更新入口，平时看起来无害。</p>
+<p>重启之后，应用主容器开始以退出码 1 反复重启，OOMKilled 为 false——不是被系统杀掉的，是进程自己起不来。同机上的数据库、缓存、Nginx 都正常，但本地 8080 端口没有任何监听。Nginx 因为 upstream 连接被拒绝，对公网返回 502。</p>
+<p>第一组证据把故障定在应用层内部：容器在反复重启，而依赖它的基础设施都健康。于是排查转向容器日志：新二进制在启动时先登记了上游的一条迁移，随后执行下一条迁移时，因为目标表的某个字段已经存在，直接报错退出。</p>
+<p>但数据库里明明有一条同类结构的迁移记录。为什么一条&quot;已执行&quot;的迁移会被执行两次？</p>
+<h2>根因：迁移编号冲突，语义映射丢失</h2>
+<p>答案藏在 fork 与上游的编号差异里。生产运行的 fork，历史上把上游的迁移做了本地重编号：同类结构在本地叫 216 和 217，而上游的对应版本叫 188 和 189。数据库里登记的是本地编号 216/217，字段也已经存在。</p>
+<p>一键在线更新换进来的是官方上游二进制，它只认识上游的编号体系。它登记了上游的 188，然后去执行上游的 189——而 189 要创建的字段，本地的 217 早就建好了。上游二进制不知道&quot;本地 216/217&quot;和&quot;上游 188/189&quot;是同一语义的两套编号，于是把已存在的字段当成从未执行过的迁移，又创建一次，事务报错，进程退出，容器进入重启循环。</p>
+<p>这里有两个关键判断：</p>
+<ol><li><strong>502 是外部表现，不是根因。</strong> Nginx 返回 502 的直接原因是 upstream 连不上，而 upstream 连不上的原因是应用在启动阶段死在了迁移执行。顺着&quot;502 看 Nginx&quot;的直觉走，会浪费时间；先看&quot;请求死在哪一层&quot;，才能一击即中。</li><li><strong>这不是哪条迁移写错了。</strong> 两套迁移各自都是对的，错的是让&quot;不认识本地编号的二进制&quot;接管了&quot;按本地编号登记的数据库&quot;。故障发生在升级通道，而不是代码本身。</li></ol>
+<h2>排障纪律：先只读诊断，再备份取证</h2>
+<p>这是一次生产故障，排障的第一原则是&quot;先看清楚，再动手&quot;。当时的处理是纯只读诊断：检查容器状态、日志、数据库迁移登记表、字段实际存在情况，全程没有恢复二进制、没有写数据库、没有重启或切换生产流量。</p>
+<p>确认恢复方案之前，先做了取证备份：把一键更新换进来的二进制、容器可写层里自动生成的旧二进制备份，以及本地不可变镜像里的原始二进制，一起保存到独立的恢复目录并计算 SHA-256 校验。结果证实了判断：备份的旧二进制与镜像原始二进制完全一致，一键更新换进来的二进制与两者都不同——容器里的二进制确实被替换了，证据链闭环。</p>
+<p>这一步的价值在于可逆性：先冻结现场、留下哈希，后面无论怎么操作，都有一个确定的回滚起点。</p>
+<h2>恢复：不可变镜像强制重建，数据库一笔不写</h2>
+<p>恢复方案没有去&quot;修&quot;数据库，也没有尝试在迁移登记表里手工补映射，而是直接用不可变的本地镜像对主服务做强制重建。整个恢复过程没有覆盖或删除数据库、缓存、Nginx 配置、数据卷、旧镜像和发布目录——数据库一笔没写。</p>
+<p>重建后容器恢复健康，重启计数归零，8080 端口重新监听，健康检查与生产入口全部返回正常。观察窗口里没有新的 panic、致命日志、迁移失败、校验和不一致或重复字段错误。数据库后验确认：上游 188 与本地 216/217 的登记都保留着，失败的那条上游 189 没有登记，一切停在故障前的状态。</p>
+<p>恢复成功的关键不是技术高超，而是承认一件事：当升级通道本身是错的，最快最安全的修复是回到最后一个已知的正确状态，而不是在错误的状态上继续打补丁。</p>
+<h2>防复发：四条禁区</h2>
+<p>这次故障留下四条正式纪律：</p>
+<ol><li><strong>Fork 的生产环境，禁用或拦截后台的官方在线更新入口。</strong> 升级继续走本地通道：选择性吸收上游改动、迁移重编号审计、不可变镜像、蓝绿发布。一键更新按钮在 fork 环境里不是便利功能，是事故入口。</li><li><strong>迁移编号是语义契约，不只是文件名。</strong> 只要做过本地重编号，就必须维护&quot;本地编号 ↔ 上游编号&quot;的语义映射，并且让任何要接触数据库的二进制都认得这套映射。文件名对上不等于语义对上。</li><li><strong>502 先看应用层，再看接入层。</strong> 上游连接被拒绝时，先查应用容器的存活与启动日志，确认&quot;谁在拒绝、死在哪一步&quot;，再决定看 Nginx 还是看代码。</li><li><strong>生产排障先只读、再取证、最后动手。</strong> 冻结现场、计算哈希、确认回滚起点之后，再执行恢复动作。</li></ol>
+<h2>收束</h2>
+<p>&quot;一键更新&quot;四个字，只对官方原版环境负责。Fork 的环境有自己的编号体系、自己的升级通道，把官方的便捷入口原样保留在生产后台，等于在防线里留了一扇不上锁的门。这次是迁移编号冲突，下次可能是别的——关掉的应该是那扇门，而不是每次都去救一次火。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "一键\"在线更新\"，点掉了一台线上服务", "en": "One Click on \"Online Update\" Took Down Production"}, "body": {"zh": "<p><strong>结论先行：</strong> 一次深夜的线上 502，根因不是 Nginx、不是内存、不是数据库连不上，而是管理后台的一键&quot;在线更新&quot;按钮，把官方上游二进制直接换进了跑着本地 fork 的生产容器。Fork 的迁移编号被本地重编号过，上游二进制读不懂这套编号，把已经存在的字段又创建了一次，应用在启动迁移阶段报错、进入重启循环，Nginx 对着一个起不来的 upstream，只能对外返回 502。</p>\n<p>这次故障最值得记的不是技术细节，而是一条流程纪律：Fork 的生产环境，升级只能走自己设定的通道——选择性吸收上游、迁移重编号审计、不可变镜像、蓝绿发布。任何绕过这套通道的&quot;便捷入口&quot;，哪怕是产品自己带的一键更新按钮，都要当作禁区对待。</p>\n<h2>时间线：点了一下更新，服务起不来了</h2>\n<p>2026 年 8 月 14 日 18:49，管理接口先后处理了&quot;系统更新&quot;与&quot;系统重启&quot;两个请求。这是后台自带的官方在线更新入口，平时看起来无害。</p>\n<p>重启之后，应用主容器开始以退出码 1 反复重启，OOMKilled 为 false——不是被系统杀掉的，是进程自己起不来。同机上的数据库、缓存、Nginx 都正常，但本地 8080 端口没有任何监听。Nginx 因为 upstream 连接被拒绝，对公网返回 502。</p>\n<p>第一组证据把故障定在应用层内部：容器在反复重启，而依赖它的基础设施都健康。于是排查转向容器日志：新二进制在启动时先登记了上游的一条迁移，随后执行下一条迁移时，因为目标表的某个字段已经存在，直接报错退出。</p>\n<p>但数据库里明明有一条同类结构的迁移记录。为什么一条&quot;已执行&quot;的迁移会被执行两次？</p>\n<h2>根因：迁移编号冲突，语义映射丢失</h2>\n<p>答案藏在 fork 与上游的编号差异里。生产运行的 fork，历史上把上游的迁移做了本地重编号：同类结构在本地叫 216 和 217，而上游的对应版本叫 188 和 189。数据库里登记的是本地编号 216/217，字段也已经存在。</p>\n<p>一键在线更新换进来的是官方上游二进制，它只认识上游的编号体系。它登记了上游的 188，然后去执行上游的 189——而 189 要创建的字段，本地的 217 早就建好了。上游二进制不知道&quot;本地 216/217&quot;和&quot;上游 188/189&quot;是同一语义的两套编号，于是把已存在的字段当成从未执行过的迁移，又创建一次，事务报错，进程退出，容器进入重启循环。</p>\n<p>这里有两个关键判断：</p>\n<ol><li><strong>502 是外部表现，不是根因。</strong> Nginx 返回 502 的直接原因是 upstream 连不上，而 upstream 连不上的原因是应用在启动阶段死在了迁移执行。顺着&quot;502 看 Nginx&quot;的直觉走，会浪费时间；先看&quot;请求死在哪一层&quot;，才能一击即中。</li><li><strong>这不是哪条迁移写错了。</strong> 两套迁移各自都是对的，错的是让&quot;不认识本地编号的二进制&quot;接管了&quot;按本地编号登记的数据库&quot;。故障发生在升级通道，而不是代码本身。</li></ol>\n<h2>排障纪律：先只读诊断，再备份取证</h2>\n<p>这是一次生产故障，排障的第一原则是&quot;先看清楚，再动手&quot;。当时的处理是纯只读诊断：检查容器状态、日志、数据库迁移登记表、字段实际存在情况，全程没有恢复二进制、没有写数据库、没有重启或切换生产流量。</p>\n<p>确认恢复方案之前，先做了取证备份：把一键更新换进来的二进制、容器可写层里自动生成的旧二进制备份，以及本地不可变镜像里的原始二进制，一起保存到独立的恢复目录并计算 SHA-256 校验。结果证实了判断：备份的旧二进制与镜像原始二进制完全一致，一键更新换进来的二进制与两者都不同——容器里的二进制确实被替换了，证据链闭环。</p>\n<p>这一步的价值在于可逆性：先冻结现场、留下哈希，后面无论怎么操作，都有一个确定的回滚起点。</p>\n<h2>恢复：不可变镜像强制重建，数据库一笔不写</h2>\n<p>恢复方案没有去&quot;修&quot;数据库，也没有尝试在迁移登记表里手工补映射，而是直接用不可变的本地镜像对主服务做强制重建。整个恢复过程没有覆盖或删除数据库、缓存、Nginx 配置、数据卷、旧镜像和发布目录——数据库一笔没写。</p>\n<p>重建后容器恢复健康，重启计数归零，8080 端口重新监听，健康检查与生产入口全部返回正常。观察窗口里没有新的 panic、致命日志、迁移失败、校验和不一致或重复字段错误。数据库后验确认：上游 188 与本地 216/217 的登记都保留着，失败的那条上游 189 没有登记，一切停在故障前的状态。</p>\n<p>恢复成功的关键不是技术高超，而是承认一件事：当升级通道本身是错的，最快最安全的修复是回到最后一个已知的正确状态，而不是在错误的状态上继续打补丁。</p>\n<h2>防复发：四条禁区</h2>\n<p>这次故障留下四条正式纪律：</p>\n<ol><li><strong>Fork 的生产环境，禁用或拦截后台的官方在线更新入口。</strong> 升级继续走本地通道：选择性吸收上游改动、迁移重编号审计、不可变镜像、蓝绿发布。一键更新按钮在 fork 环境里不是便利功能，是事故入口。</li><li><strong>迁移编号是语义契约，不只是文件名。</strong> 只要做过本地重编号，就必须维护&quot;本地编号 ↔ 上游编号&quot;的语义映射，并且让任何要接触数据库的二进制都认得这套映射。文件名对上不等于语义对上。</li><li><strong>502 先看应用层，再看接入层。</strong> 上游连接被拒绝时，先查应用容器的存活与启动日志，确认&quot;谁在拒绝、死在哪一步&quot;，再决定看 Nginx 还是看代码。</li><li><strong>生产排障先只读、再取证、最后动手。</strong> 冻结现场、计算哈希、确认回滚起点之后，再执行恢复动作。</li></ol>\n<h2>收束</h2>\n<p>&quot;一键更新&quot;四个字，只对官方原版环境负责。Fork 的环境有自己的编号体系、自己的升级通道，把官方的便捷入口原样保留在生产后台，等于在防线里留了一扇不上锁的门。这次是迁移编号冲突，下次可能是别的——关掉的应该是那扇门，而不是每次都去救一次火。</p>", "en": "<p><strong>The conclusion first:</strong> a late-night production 502 was not caused by Nginx, memory, or an unreachable database. Its root cause was the one-click &quot;online update&quot; button in the admin backend, which swapped the official upstream binary directly into a production container that had been running a local fork. The fork&#x27;s migration numbers had been locally renumbered, and the upstream binary could not read that numbering: it tried to create a column that already existed, the app died in the startup-migration phase and entered a restart loop, and Nginx — facing an upstream that would never come up — could only return 502 to the public.</p>\n<p>The most memorable part of this incident is not the technical detail, but a process discipline: a forked production environment may only upgrade through its own channel — selective absorption of upstream changes, migration-renumbering audits, immutable images, blue-green deployment. Any &quot;convenient entry&quot; that bypasses this channel, even the product&#x27;s own one-click update button, must be treated as a forbidden zone.</p>\n<h2>Timeline: one click on update, service won&#x27;t come back</h2>\n<p>On August 14, 2026, at 18:49, the admin interface processed two requests in sequence: &quot;system update&quot; and &quot;system restart&quot;. It was the backend&#x27;s built-in official online-update entry point — seemingly harmless.</p>\n<p>After the restart, the application container began restarting with exit code 1, OOMKilled false — it was not killed by the system; the process itself could not start. The database, cache, and Nginx on the same host were all healthy, but nothing was listening on local port 8080. Because the upstream connection was refused, Nginx returned 502 to the public internet.</p>\n<p>The first round of evidence pinned the fault inside the application layer: the container was restarting in a loop while all the infrastructure it depended on was healthy. So troubleshooting turned to the container logs: at startup, the new binary first registered one upstream migration, then failed executing the next one — because the column it tried to add already existed in the target table.</p>\n<p>But the database clearly held an executed record for an equivalent migration. Why would an &quot;already executed&quot; migration be executed twice?</p>\n<h2>Root cause: migration-number collision, semantic mapping lost</h2>\n<p>The answer hides in the numbering difference between the fork and the upstream. The fork running in production had historically renumbered upstream migrations locally: the same schema structure was numbered 216 and 217 locally, while the upstream equivalents were 188 and 189. The database registered the local numbers 216/217, and the columns already existed.</p>\n<p>The one-click update had pulled in the official upstream binary, which only understands the upstream numbering. It registered upstream 188, then executed upstream 189 — but the column 189 wanted to create had already been created by local 217. The upstream binary had no idea that &quot;local 216/217&quot; and &quot;upstream 188/189&quot; were two numberings of the same semantics, so it treated the existing column as a never-executed migration and created it again. The transaction failed, the process exited, and the container entered a restart loop.</p>\n<p>Two judgments matter here:</p>\n<ol><li><strong>502 is the external symptom, not the root cause.</strong> Nginx returned 502 because the upstream was unreachable; the upstream was unreachable because the app died during startup migration. Following the &quot;502 means look at Nginx&quot; instinct wastes time; asking &quot;which layer did the request die in&quot; hits the mark in one shot.</li><li><strong>No migration was written wrong.</strong> Both numbering schemes were correct on their own. The mistake was letting a binary that &quot;doesn&#x27;t understand local numbering&quot; take over &quot;a database registered with local numbering&quot;. The failure happened in the upgrade channel, not in the code.</li></ol>\n<h2>Troubleshooting discipline: read-only diagnosis first, then backup and forensics</h2>\n<p>This was a production incident, and the first rule of troubleshooting is &quot;see clearly before touching anything&quot;. The response at the time was purely read-only diagnosis: container state, logs, the database&#x27;s migration registry, and the actual column existence were inspected — without restoring binaries, writing to the database, or restarting/switching production traffic.</p>\n<p>Before confirming the recovery plan, forensics backups were taken: the binary swapped in by the one-click update, the auto-generated backup of the old binary in the container&#x27;s writable layer, and the pristine binary from the local immutable image were all saved to an isolated recovery directory with SHA-256 hashes computed. The result closed the evidence chain: the backed-up old binary was byte-identical to the image&#x27;s pristine binary, while the one-click-updated binary differed from both — confirming the binary in the container had indeed been replaced.</p>\n<p>This step&#x27;s value is reversibility. In a production incident, the most dangerous thing is &quot;fixing things without knowing what you&#x27;ve changed&quot;. Freezing the scene and keeping hashes means every later action has a defined rollback point.</p>\n<h2>Recovery: forced rebuild from the immutable image, zero writes to the database</h2>\n<p>The recovery did not &quot;fix&quot; the database, nor did it hand-patch the migration registry. Instead, the main service was force-recreated directly from the immutable local image. The whole recovery overwrote nothing — not the database, cache, Nginx configuration, volumes, old images, or release directories. Not a single write went to the database.</p>\n<p>After the rebuild the container was healthy, the restart counter reset to zero, and port 8080 was listening again. The local health check and the production domains&#x27; HTTPS and HTTP endpoints all returned normal. The observation window showed no new panics, fatal logs, migration failures, checksum mismatches, or duplicate-column errors. A post-recovery database check confirmed: the registrations for upstream 188 and local 216/217 were all intact, and the failed upstream 189 was never registered. Everything stopped exactly at the pre-incident state.</p>\n<p>The key to the successful recovery was not technical brilliance, but admitting one thing: when the upgrade channel itself is wrong, the fastest and safest fix is to return to the last known-good state — not to keep patching on top of the broken one.</p>\n<h2>Prevention: four forbidden zones</h2>\n<p>This incident left four formal rules:</p>\n<ol><li><strong>In a forked production environment, disable or intercept the backend&#x27;s official online-update entry.</strong> Upgrades continue through the local channel: selective upstream absorption, migration-renumbering audits, immutable images, blue-green deployment. The one-click update button in a forked environment is not a convenience feature — it is an incident entry point.</li><li><strong>Migration numbers are a semantic contract, not just filenames.</strong> Once local renumbering exists, the semantic mapping of &quot;local numbers ↔ upstream numbers&quot; must be maintained, and every binary that touches the database must understand it. Matching filenames is not matching semantics.</li><li><strong>For a 502, check the application layer before the edge layer.</strong> When the upstream connection is refused, first inspect the app container&#x27;s liveness and startup logs to establish &quot;who is refusing and at which step it died&quot;, then decide whether to look at Nginx or at code.</li><li><strong>Troubleshoot production read-only first, then forensics, then action.</strong> Freeze the scene, compute hashes, confirm the rollback point — and only then execute recovery. Avoid writing to the database during recovery whenever possible.</li></ol>\n<h2>Closing</h2>\n<p>The words &quot;one-click update&quot; are only guaranteed for the official, unmodified environment. A forked environment has its own numbering scheme and its own upgrade channel; keeping the official convenience entry intact in a production backend is leaving an unlocked door inside your defenses. This time it was a migration-number collision; next time it could be something else. The door should be locked shut — not rescued one fire at a time.</p>"}, "prev": {"url": "/writing/30-probe-vs-path", "t": {"zh": "“探测通过”的端点，未必是线上走的端点", "en": "The Endpoint You Probed Is Not the Path Production Takes"}}, "next": {"url": "/writing/34-git-object-store-rebuild", "t": {"zh": "Git 对象库坏了：别修仓库，从远端重建", "en": "When Git's Object Store Breaks: Don't Repair, Rebuild from Remote"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
