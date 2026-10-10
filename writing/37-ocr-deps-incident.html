@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pip install 成功了，不等于能推理 — rotor</title>
+<meta name="description" content="安装、导入、pip check、真实推理是四个证据；没写出来的版本，不是你的配置">
+<link rel="canonical" href="https://www.rotor1996.top/writing/37-ocr-deps-incident">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "pip install 成功了，不等于能推理", "description": "安装、导入、pip check、真实推理是四个证据；没写出来的版本，不是你的配置", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-11", "mainEntityOfPage": "https://www.rotor1996.top/writing/37-ocr-deps-incident"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>pip install 成功了，不等于能推理</h1><p>一次 CPU 容器里装 OCR 依赖的排障，最终锁定的是五个版本号，而不是一个。因为在这个过程里我们发现：<strong>安装成功、导入成功、pip check 通过、mock 通过、真实推理成功，是五个互相不能替代的结论。</strong> 你在哪一层停下来，就把哪一层的假阴性留给了生产。</p>
+<h2>故障链条：三个不兼容，一层层往下掉</h2>
+<p>起点是一个需要在 CPU 容器里跑 OCR 的项目，目标版本是 PaddleOCR 3.0.3。</p>
+<ul><li><strong>第一层：自动解析的次生依赖不兼容</strong>。只指定了 PaddleOCR，安装器自动抓来 PaddleX 3.7.2，结果它和 PaddleOCR 的 PaddlePredictorOption 构造参数对不上。显式锁定 PaddleX 3.0.3 之后，这层消失。</li><li><strong>第二层：旧依赖的旧依赖拖走了解析器</strong>。PaddleX 3.0.3 依赖旧版 LangChain 的 docstore 命名空间，安装器转头又自动抓来 LangChain 1.x，import 直接失败。只能把 LangChain 也固定在 0.3 系列。</li><li><strong>第三层：未声明的隐性依赖</strong>。前两层修好后，Paddle 导入时才发现它依赖 setuptools，而这依赖根本没在包元数据里声明。补上 setuptools 75.8.0，清除掉残留的 LangGraph 1.x（新依赖遗留的不用包），pip check 才真正通过。</li></ul>
+<p>最终组合：PaddlePaddle 3.0.0、PaddleOCR 3.0.3、PaddleX 3.0.3、LangChain 0.3 系列、setuptools 75.8.0。这份组合只对这个项目的这一版本有效，不是所有 Paddle 版本的通用建议。</p>
+<h2>为什么自动解析总坑人</h2>
+<p>回头看三层故障，有一个共同的根：<strong>只锁定了自己关心的包，把次生依赖的解析权留给了安装器。</strong> 每次 <code>pip install</code> 的解析结果都是一次独立的决策——当时的仓库状态、当时的其他包、当时解析器的启发式规则，都会改变它。你以为你在重现一个环境，实际上你每次都在重新掷骰子。</p>
+<p>这个经验的泛化版本是：<strong>锁定的粒度要覆盖到&quot;谁有权做决定&quot;。</strong> 如果某个包的行为依赖于它的依赖版本，那么它的依赖版本也是你的配置，不是安装器的配置。PaddleX 依赖 LangChain 的命名空间，这意味着 LangChain 的大版本是这个项目的事实配置，不管它在你的 requirements 里有没有出现。没写出来的配置，就不是配置。</p>
+<p>这个角度也解释了为什么&quot;上次能装这次不能&quot;这种问题总是查起来很贵：两次安装的解析输入根本不在同一个版本空间里，你比较的是两个不同的实验，却期待相同的结论。真正可重复的构建，只认锁定的版本清单，不认&quot;上次装成功了&quot;这个历史事件。</p>
+<h2>五个证据，不能互相替代</h2>
+<p>这次复盘最有价值的结论不在版本号，而在证据分层：</p>
+<table><thead><tr><th>证据</th><th>能说明</th><th>不能说明</th></tr></thead><tbody><tr><td>pip install 成功</td><td>安装器按当次解析结果装完了包</td><td>解析结果在下一次安装时相同；依赖互相兼容</td></tr><tr><td>import 成功</td><td>模块名空间能加载</td><td>构造参数、运行时行为、端到端链路</td></tr><tr><td>pip check 通过</td><td>声明依赖的版本区间互相满足</td><td>未声明的隐性依赖；真实推理</td></tr><tr><td>mock / 健康接口通过</td><td>模拟条件下的前端行为</td><td>模型加载、真实数据、CPU 推理路径</td></tr><tr><td>真实推理成功</td><td>指定版本在指定环境、指定样本下跑通</td><td>字段准确率、业务事实正确、长期不退化</td></tr></tbody></table>
+<p>事后验证我们走了两层真实推理：CPU 上识别合成图片的负数（确认推理链路不是在瞎跑），再对 66 页实际扫描件做 OCR。后者只证明了解析链可运行，字段准确率和业务事实正确是另一个问题，需要另一套评测来证明——一次真实推理的通过，也不能自动升级成&quot;识别正确&quot;。</p>
+<h2>闭环规则：怎么防止复发</h2>
+<p>这次的复发检查清单只针对&quot;升级相关依赖&quot;这一个动作：</p>
+<ol><li><strong>在独立镜像里验证</strong>，不污染生产镜像；四件事按顺序走：import、pip check、模型加载、真实图片推理，缺一层都不能说验证完成。</li><li><strong>真实图片不能省</strong>：mock 测试跑的是接口形状，模型权重、CPU 算子、图像定位都在真实推理里。验证时保留负数、关键字段和图像定位的检查项，这些才是推理链路真实跑过的痕迹。</li><li><strong>模型缓存独立持久化</strong>：别让每次构建重新拉模型，也别让缓存污染结论。</li><li><strong>新版本不直接全量升级</strong>：当前组合能不能被新版本替换，仍待一次完整的独立验证；版本号涨了，证据不涨——没证据的升级就是赌。</li></ol>
+<p>一句话收束：<strong>依赖问题从不在你停下的那一层暴露，它永远躲在你没验证的那一层。</strong></p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "pip install 成功了，不等于能推理", "en": "Pip Install Succeeded. Inference Still Broke."}, "body": {"zh": "<p>一次 CPU 容器里装 OCR 依赖的排障，最终锁定的是五个版本号，而不是一个。因为在这个过程里我们发现：<strong>安装成功、导入成功、pip check 通过、mock 通过、真实推理成功，是五个互相不能替代的结论。</strong> 你在哪一层停下来，就把哪一层的假阴性留给了生产。</p>\n<h2>故障链条：三个不兼容，一层层往下掉</h2>\n<p>起点是一个需要在 CPU 容器里跑 OCR 的项目，目标版本是 PaddleOCR 3.0.3。</p>\n<ul><li><strong>第一层：自动解析的次生依赖不兼容</strong>。只指定了 PaddleOCR，安装器自动抓来 PaddleX 3.7.2，结果它和 PaddleOCR 的 PaddlePredictorOption 构造参数对不上。显式锁定 PaddleX 3.0.3 之后，这层消失。</li><li><strong>第二层：旧依赖的旧依赖拖走了解析器</strong>。PaddleX 3.0.3 依赖旧版 LangChain 的 docstore 命名空间，安装器转头又自动抓来 LangChain 1.x，import 直接失败。只能把 LangChain 也固定在 0.3 系列。</li><li><strong>第三层：未声明的隐性依赖</strong>。前两层修好后，Paddle 导入时才发现它依赖 setuptools，而这依赖根本没在包元数据里声明。补上 setuptools 75.8.0，清除掉残留的 LangGraph 1.x（新依赖遗留的不用包），pip check 才真正通过。</li></ul>\n<p>最终组合：PaddlePaddle 3.0.0、PaddleOCR 3.0.3、PaddleX 3.0.3、LangChain 0.3 系列、setuptools 75.8.0。这份组合只对这个项目的这一版本有效，不是所有 Paddle 版本的通用建议。</p>\n<h2>为什么自动解析总坑人</h2>\n<p>回头看三层故障，有一个共同的根：<strong>只锁定了自己关心的包，把次生依赖的解析权留给了安装器。</strong> 每次 <code>pip install</code> 的解析结果都是一次独立的决策——当时的仓库状态、当时的其他包、当时解析器的启发式规则，都会改变它。你以为你在重现一个环境，实际上你每次都在重新掷骰子。</p>\n<p>这个经验的泛化版本是：<strong>锁定的粒度要覆盖到&quot;谁有权做决定&quot;。</strong> 如果某个包的行为依赖于它的依赖版本，那么它的依赖版本也是你的配置，不是安装器的配置。PaddleX 依赖 LangChain 的命名空间，这意味着 LangChain 的大版本是这个项目的事实配置，不管它在你的 requirements 里有没有出现。没写出来的配置，就不是配置。</p>\n<p>这个角度也解释了为什么&quot;上次能装这次不能&quot;这种问题总是查起来很贵：两次安装的解析输入根本不在同一个版本空间里，你比较的是两个不同的实验，却期待相同的结论。真正可重复的构建，只认锁定的版本清单，不认&quot;上次装成功了&quot;这个历史事件。</p>\n<h2>五个证据，不能互相替代</h2>\n<p>这次复盘最有价值的结论不在版本号，而在证据分层：</p>\n<table><thead><tr><th>证据</th><th>能说明</th><th>不能说明</th></tr></thead><tbody><tr><td>pip install 成功</td><td>安装器按当次解析结果装完了包</td><td>解析结果在下一次安装时相同；依赖互相兼容</td></tr><tr><td>import 成功</td><td>模块名空间能加载</td><td>构造参数、运行时行为、端到端链路</td></tr><tr><td>pip check 通过</td><td>声明依赖的版本区间互相满足</td><td>未声明的隐性依赖；真实推理</td></tr><tr><td>mock / 健康接口通过</td><td>模拟条件下的前端行为</td><td>模型加载、真实数据、CPU 推理路径</td></tr><tr><td>真实推理成功</td><td>指定版本在指定环境、指定样本下跑通</td><td>字段准确率、业务事实正确、长期不退化</td></tr></tbody></table>\n<p>事后验证我们走了两层真实推理：CPU 上识别合成图片的负数（确认推理链路不是在瞎跑），再对 66 页实际扫描件做 OCR。后者只证明了解析链可运行，字段准确率和业务事实正确是另一个问题，需要另一套评测来证明——一次真实推理的通过，也不能自动升级成&quot;识别正确&quot;。</p>\n<h2>闭环规则：怎么防止复发</h2>\n<p>这次的复发检查清单只针对&quot;升级相关依赖&quot;这一个动作：</p>\n<ol><li><strong>在独立镜像里验证</strong>，不污染生产镜像；四件事按顺序走：import、pip check、模型加载、真实图片推理，缺一层都不能说验证完成。</li><li><strong>真实图片不能省</strong>：mock 测试跑的是接口形状，模型权重、CPU 算子、图像定位都在真实推理里。验证时保留负数、关键字段和图像定位的检查项，这些才是推理链路真实跑过的痕迹。</li><li><strong>模型缓存独立持久化</strong>：别让每次构建重新拉模型，也别让缓存污染结论。</li><li><strong>新版本不直接全量升级</strong>：当前组合能不能被新版本替换，仍待一次完整的独立验证；版本号涨了，证据不涨——没证据的升级就是赌。</li></ol>\n<p>一句话收束：<strong>依赖问题从不在你停下的那一层暴露，它永远躲在你没验证的那一层。</strong></p>", "en": "<p>A troubleshooting session for installing OCR dependencies in a CPU container ended with five pinned version numbers instead of one. Along the way we learned this: <strong>install success, import success, pip check passing, mock passing, and real inference succeeding are five mutually non-substitutable conclusions.</strong> Wherever you stop in the stack, you leave that layer&#x27;s false negatives to production.</p>\n<h2>The Failure Chain: Three Incompatibilities, Falling Layer by Layer</h2>\n<p>The starting point was a project that needed to run OCR in a CPU container, targeting PaddleOCR 3.0.3.</p>\n<ul><li><strong>Layer one: auto-resolved transitive dependencies are incompatible.</strong> Only PaddleOCR was pinned, so the installer auto-fetched PaddleX 3.7.2 — whose PaddlePredictorOption constructor signature no longer matched PaddleOCR&#x27;s expectations. Explicitly pinning PaddleX 3.0.3 cleared this layer.</li><li><strong>Layer two: an old dependency dragged the resolver along.</strong> PaddleX 3.0.3 depends on old LangChain&#x27;s docstore namespace; the installer then auto-fetched LangChain 1.x, and the import failed outright. LangChain had to be pinned to the 0.3 series as well.</li><li><strong>Layer three: undeclared hidden dependencies.</strong> With the first two fixed, Paddle&#x27;s import revealed a dependency on setuptools that was never declared in the package metadata. Adding setuptools 75.8.0 and removing the leftover unused LangGraph 1.x packages (remnants of the newer dependency) finally made pip check pass.</li></ul>\n<p>The final combination: PaddlePaddle 3.0.0, PaddleOCR 3.0.3, PaddleX 3.0.3, LangChain 0.3 series, setuptools 75.8.0. This combination is valid only for this project at this version — not general advice for all Paddle releases.</p>\n<h2>Why Auto-Resolution Keeps Hurting You</h2>\n<p>Looking back, all three failures shared one root: <strong>we pinned only the packages we cared about and left the resolution of transitive dependencies to the installer.</strong> Every <code>pip install</code> resolution is an independent decision — the registry state, the other packages, and the resolver&#x27;s heuristics at that moment all shape the result. You think you are reproducing an environment; in reality you are rolling the dice again each time.</p>\n<p>The generalizable version: <strong>pinning granularity must cover &quot;who gets to decide.&quot;</strong> If a package&#x27;s behavior depends on its dependency&#x27;s version, then that dependency&#x27;s version is your configuration, not the installer&#x27;s — whether or not it appears in your requirements file. Configuration you never wrote down is not configuration.</p>\n<p>This also explains why &quot;it installed fine last time&quot; problems are always expensive to debug: the two installs never lived in the same version space. You are comparing two different experiments and expecting identical conclusions. A truly reproducible build recognizes only the pinned version manifest, never the historical event of &quot;it installed successfully once.&quot;</p>\n<h2>Five Proofs That Do Not Substitute for Each Other</h2>\n<p>The most valuable takeaway of this postmortem is not the version numbers but the evidence ladder:</p>\n<table><thead><tr><th>Evidence</th><th>Proves</th><th>Does not prove</th></tr></thead><tbody><tr><td>pip install succeeded</td><td>The installer finished with this resolution</td><td>The resolution repeats next time; dependencies are compatible</td></tr><tr><td>import succeeded</td><td>The module namespace loads</td><td>Constructor signatures, runtime behavior, end-to-end paths</td></tr><tr><td>pip check passed</td><td>Declared dependency ranges are mutually satisfiable</td><td>Undeclared hidden dependencies; real inference</td></tr><tr><td>mock / health endpoint passed</td><td>Front-end behavior under simulated conditions</td><td>Model loading, real data, the CPU inference path</td></tr><tr><td>real inference succeeded</td><td>This version runs on this environment with these samples</td><td>Field accuracy, business correctness, no long-term regression</td></tr></tbody></table>\n<p>The follow-up verification ran two layers of real inference: recognizing negative numbers on synthetic images on CPU (confirming the inference path wasn&#x27;t hallucinating), then OCR on 66 pages of real scans. The latter only proves the parsing pipeline runs; field accuracy and business correctness are a different claim requiring a different evaluation suite. Even a passing real-inference run does not automatically upgrade to &quot;the recognition is correct.&quot;</p>\n<h2>The Closure Rules: Preventing Recurrence</h2>\n<p>This recurrence checklist targets one action only — &quot;upgrading a related dependency&quot;:</p>\n<ol><li><strong>Verify in an isolated image</strong>, never touching the production image; walk the four steps in order: import, pip check, model loading, real-image inference. Skip one layer and the verification is incomplete.</li><li><strong>Real images are not optional</strong>: mocks test interface shapes; model weights, CPU operators, and image localization only live in real inference. Keep negative numbers, key fields, and image-localization checks in the verification — those are the traces of an inference path actually exercised.</li><li><strong>Persist the model cache independently</strong>: don&#x27;t re-download models on every build, and don&#x27;t let cache pollution contaminate conclusions.</li><li><strong>Never upgrade wholesale</strong>: whether a new version can replace the current combination still awaits a full independent verification. The version number went up; the evidence didn&#x27;t — an evidence-less upgrade is a gamble.</li></ol>\n<p>One line to close: <strong>dependency problems never surface at the layer where you stopped; they always hide in the layer you didn&#x27;t verify.</strong></p>"}, "prev": {"url": "/writing/35-user-said-data-gone", "t": {"zh": "用户说\"数据都没了\"：一次把缓存当替罪羊的复盘", "en": "When the User Says \"Data Is Gone\": A Cache Scapegoat Postmortem"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
