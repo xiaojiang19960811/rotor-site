@@ -65,7 +65,7 @@ The two cases map exactly onto gate one and gate three: one dropped intent at th
 
 Tests for execution orchestration cannot only verify the Planner's output. They must cover separately: capability paths, authorization rejections, dependency failures, resource-lock contention, node recovery, the real state of external handlers, duplicate submissions, and the final user-visible results.
 
-Mocks can verify UI and orchestration shape, but they cannot replace end-to-end verification against real external systems. This complements the release-evidence chain: that piece explains which verification results support which release conclusions; this piece explains what may execute and when side effects happen.
+Mocks can verify UI and orchestration shape, but they cannot replace end-to-end verification against real external systems. This complements [No. 9, "Done" Is Not "Verified"](/writing/09-done-vs-verified): that piece explains which verification results support which release conclusions; this piece explains what may execute and when side effects happen.
 
 ## In short
 
