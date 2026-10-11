@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「可用」是市场状态，不是通行证 — rotor</title>
+<meta name="description" content="目录升级≠你的安装副本更新；“可用”不等于“你能用”">
+<link rel="canonical" href="https://www.rotor1996.top/writing/38-available-not-a-pass">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "「可用」是市场状态，不是通行证", "description": "目录升级≠你的安装副本更新；“可用”不等于“你能用”", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-12", "mainEntityOfPage": "https://www.rotor1996.top/writing/38-available-not-a-pass"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>「可用」是市场状态，不是通行证</h1><p><strong>结论先行：</strong> 一个 Skill 或插件在能力市场上标着&quot;可用&quot;，真正的信息量只有一句话：它通过了目录的质量门，当前可以被分发。用户真正想知道的是八个独立问题：质量过关吗？来源读得到吗？我看得见吗？我装得下来吗？我跑得起来吗？能碰业务数据吗？允许外部写入吗？其中任何一个问题的答案，都不能从&quot;可用&quot;两个字推导出来。</p>
+<h2>一个词，八个对象</h2>
+<p>AI 能力资产包括 Skill、插件、提示词流程、MCP 接入、Automation 和其他可复用的 Agent 工作流。治理它们的重点，不是把所有东西塞进同一个仓库，而是给发现、验证、发布、分发、安装、授权、运行、升级和退役划清边界。实践中至少有八个对象必须分别建模：</p>
+<ol><li><strong>实现资产</strong>：独立的仓库、版本、入口脚本和依赖。</li><li><strong>目录资产</strong>：稳定 ID、名称、说明、状态、来源和安装方式。</li><li><strong>候选草稿</strong>：想法、AI 补全的字段、待维护的内容，不能自动写回正式资产。</li><li><strong>分发信息</strong>：Marketplace、企业镜像、制品或 Git 安装入口。</li><li><strong>安装副本</strong>：用户环境里的具体版本，不自动随目录状态更新。</li><li><strong>运行配置</strong>：MCP、OAuth、环境变量、模型 Provider 和本机私有规则。</li><li><strong>权限与授权</strong>：来源读取、资产可见、安装获取、业务数据访问、外部写入。</li><li><strong>验证证据</strong>：结构校验、安装、触发、真实任务、权限和外部写入复核。</li></ol>
+<p>为什么要拆？因为这八个东西由不同的人、在不同的时间、靠不同的证据产生。最经典的混淆是把目录条目和用户安装副本当成同一个对象：目录里升级了，不代表用户机器上的副本跟着更新了。另一个混淆是让 AI 直接把候选草稿&quot;转正&quot;：AI 可以整理想法、补齐字段、生成评测用例，但把候选提升为&quot;可用&quot;必须是维护者的确认动作。</p>
+<h2>「可用」不等于「你能用」</h2>
+<p>权限至少要分八层判断：来源读取、资产管理、目录可见、获取安装、本地执行、工具连接、数据访问、外部写入。每一层回答不同的问题，证据各自独立。</p>
+<p>三个最容易被骗的结论：</p>
+<ul><li><strong>「可用」只说资产质量和市场状态。</strong> 它不表示当前用户已经拿到了来源仓库、安装渠道、业务系统或数据的权限。</li><li><strong>技术会话存在不等于授权。</strong> 已登录的浏览器、可用的 MCP 连接、本机已有的凭据，只证明连接还在，不构成任意读取、修改或发布的授权。发现、发布、安装、配置、访问数据、执行外部写入是六个不同的动作，前一步完成不自动授权后一步。</li><li><strong>全链路通了，不等于写权限自动开了。</strong> 在一个工时回填的真实场景里，Skill、浏览器登录态和任务候选都就绪之后，创建任务和提交工时仍然是两次独立授权；响应不明时先查询状态，不能直接重试。</li></ul>
+<h2>验证按风险逐层，结论不能互借</h2>
+<p>能力资产的验证按风险逐层推进：结构与 front matter；单元测试与静态安全检查；隔离环境安装；新线程中的触发与可理解性；使用者权限下的只读真实任务；经独立确认的外部写入，并在写入后反查结果；升级、回滚、卸载能力。</p>
+<p>每次验证还要绑定：实现版本、安装副本、运行环境、使用者权限、真实任务、时间和未覆盖边界。这是和<a href="/writing/09-done-vs-verified">第 9 篇《&quot;已完成&quot;不等于&quot;已验证&quot;》</a>配套的证据观：目录状态、安装成功、一次真实任务成功、持续可用——四个结论不能互相替代。</p>
+<p>AI 在这个链条里有明确的边界。它可以识别重复任务并生成候选，从允许读取的来源提取说明和边界，生成候选测试和维护建议，在正式登记的候选集里排序并解释理由。它不可以：把候选自动提升为正式；使用服务账号权限替用户取得运行时业务权限；因为浏览器、MCP 或凭据可用而执行外部写入；把一次安装或演示成功外推为所有用户、环境和版本可用。</p>
+<p>退役也是治理的一部分：来源仓库移动或权限撤销、依赖失效、目录说明与实现不一致、安装副本长期未升级——在退役规则确认之前，不自动删除正式资产、用户安装副本或历史证据。</p>
+<h2>小结</h2>
+<p>能力资产治理的核心动作只有一个：把一个词拆成一组事实。&quot;可用&quot;拆成谁、在哪个版本、什么环境、以什么权限、装了什么、验证了什么。每一句都单独回答，单独验证。从此看到&quot;可用&quot;两个字，先问：对谁可用，在哪儿可用，能用到哪一层？</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "「可用」是市场状态，不是通行证", "en": "\"Available\" Is a Market Status, Not a Pass"}, "body": {"zh": "<p><strong>结论先行：</strong> 一个 Skill 或插件在能力市场上标着&quot;可用&quot;，真正的信息量只有一句话：它通过了目录的质量门，当前可以被分发。用户真正想知道的是八个独立问题：质量过关吗？来源读得到吗？我看得见吗？我装得下来吗？我跑得起来吗？能碰业务数据吗？允许外部写入吗？其中任何一个问题的答案，都不能从&quot;可用&quot;两个字推导出来。</p>\n<h2>一个词，八个对象</h2>\n<p>AI 能力资产包括 Skill、插件、提示词流程、MCP 接入、Automation 和其他可复用的 Agent 工作流。治理它们的重点，不是把所有东西塞进同一个仓库，而是给发现、验证、发布、分发、安装、授权、运行、升级和退役划清边界。实践中至少有八个对象必须分别建模：</p>\n<ol><li><strong>实现资产</strong>：独立的仓库、版本、入口脚本和依赖。</li><li><strong>目录资产</strong>：稳定 ID、名称、说明、状态、来源和安装方式。</li><li><strong>候选草稿</strong>：想法、AI 补全的字段、待维护的内容，不能自动写回正式资产。</li><li><strong>分发信息</strong>：Marketplace、企业镜像、制品或 Git 安装入口。</li><li><strong>安装副本</strong>：用户环境里的具体版本，不自动随目录状态更新。</li><li><strong>运行配置</strong>：MCP、OAuth、环境变量、模型 Provider 和本机私有规则。</li><li><strong>权限与授权</strong>：来源读取、资产可见、安装获取、业务数据访问、外部写入。</li><li><strong>验证证据</strong>：结构校验、安装、触发、真实任务、权限和外部写入复核。</li></ol>\n<p>为什么要拆？因为这八个东西由不同的人、在不同的时间、靠不同的证据产生。最经典的混淆是把目录条目和用户安装副本当成同一个对象：目录里升级了，不代表用户机器上的副本跟着更新了。另一个混淆是让 AI 直接把候选草稿&quot;转正&quot;：AI 可以整理想法、补齐字段、生成评测用例，但把候选提升为&quot;可用&quot;必须是维护者的确认动作。</p>\n<h2>「可用」不等于「你能用」</h2>\n<p>权限至少要分八层判断：来源读取、资产管理、目录可见、获取安装、本地执行、工具连接、数据访问、外部写入。每一层回答不同的问题，证据各自独立。</p>\n<p>三个最容易被骗的结论：</p>\n<ul><li><strong>「可用」只说资产质量和市场状态。</strong> 它不表示当前用户已经拿到了来源仓库、安装渠道、业务系统或数据的权限。</li><li><strong>技术会话存在不等于授权。</strong> 已登录的浏览器、可用的 MCP 连接、本机已有的凭据，只证明连接还在，不构成任意读取、修改或发布的授权。发现、发布、安装、配置、访问数据、执行外部写入是六个不同的动作，前一步完成不自动授权后一步。</li><li><strong>全链路通了，不等于写权限自动开了。</strong> 在一个工时回填的真实场景里，Skill、浏览器登录态和任务候选都就绪之后，创建任务和提交工时仍然是两次独立授权；响应不明时先查询状态，不能直接重试。</li></ul>\n<h2>验证按风险逐层，结论不能互借</h2>\n<p>能力资产的验证按风险逐层推进：结构与 front matter；单元测试与静态安全检查；隔离环境安装；新线程中的触发与可理解性；使用者权限下的只读真实任务；经独立确认的外部写入，并在写入后反查结果；升级、回滚、卸载能力。</p>\n<p>每次验证还要绑定：实现版本、安装副本、运行环境、使用者权限、真实任务、时间和未覆盖边界。这是和<a href=\"/writing/09-done-vs-verified\">第 9 篇《&quot;已完成&quot;不等于&quot;已验证&quot;》</a>配套的证据观：目录状态、安装成功、一次真实任务成功、持续可用——四个结论不能互相替代。</p>\n<p>AI 在这个链条里有明确的边界。它可以识别重复任务并生成候选，从允许读取的来源提取说明和边界，生成候选测试和维护建议，在正式登记的候选集里排序并解释理由。它不可以：把候选自动提升为正式；使用服务账号权限替用户取得运行时业务权限；因为浏览器、MCP 或凭据可用而执行外部写入；把一次安装或演示成功外推为所有用户、环境和版本可用。</p>\n<p>退役也是治理的一部分：来源仓库移动或权限撤销、依赖失效、目录说明与实现不一致、安装副本长期未升级——在退役规则确认之前，不自动删除正式资产、用户安装副本或历史证据。</p>\n<h2>小结</h2>\n<p>能力资产治理的核心动作只有一个：把一个词拆成一组事实。&quot;可用&quot;拆成谁、在哪个版本、什么环境、以什么权限、装了什么、验证了什么。每一句都单独回答，单独验证。从此看到&quot;可用&quot;两个字，先问：对谁可用，在哪儿可用，能用到哪一层？</p>", "en": "<p><strong>The short version:</strong> When a skill or plugin is marked &quot;available&quot; in a capability marketplace, the real information content is exactly one sentence: it passed the catalog&#x27;s quality gate and can currently be distributed. The user actually wants eight separate questions answered: did the quality pass? Is the source readable? Can I see it? Can I install it? Will it run? Can it touch business data? Is external write allowed? None of these answers can be derived from the two words &quot;available&quot;.</p>\n<h2>One word, eight objects</h2>\n<p>AI capability assets include skills, plugins, prompt workflows, MCP connections, automations, and other reusable agent workflows. The point of governing them is not to stuff everything into one repository, but to draw clear boundaries around discovery, verification, publishing, distribution, installation, authorization, operation, upgrades, and retirement. In practice, at least eight objects must be modeled separately:</p>\n<ol><li><strong>Implementation asset</strong>: an independent repository, version, entry scripts, and dependencies.</li><li><strong>Catalog asset</strong>: stable ID, name, description, status, source, and installation method.</li><li><strong>Candidate draft</strong>: ideas, AI-completed fields, and content pending maintenance — must never be written back into formal assets automatically.</li><li><strong>Distribution info</strong>: marketplace, enterprise mirror, artifact, or Git installation entry.</li><li><strong>Installed copy</strong>: the specific version in the user&#x27;s environment, which does not update automatically when the catalog status changes.</li><li><strong>Runtime configuration</strong>: MCP, OAuth, environment variables, model providers, and local private rules.</li><li><strong>Permissions and authorization</strong>: source reads, asset visibility, install acquisition, business data access, and external writes.</li><li><strong>Verification evidence</strong>: structure checks, installation, triggering, real tasks, permission reviews, and external-write re-verification.</li></ol>\n<p>Why split them? Because the eight are produced by different people, at different times, on different evidence. The classic confusion is treating a catalog entry and the user&#x27;s installed copy as the same object: the catalog got upgraded, but that does not mean the copy on the user&#x27;s machine followed. Another confusion is letting AI &quot;graduate&quot; a candidate draft: AI can organize ideas, fill in fields, and generate evaluation cases, but promoting a candidate to &quot;available&quot; must be a maintainer&#x27;s confirmation.</p>\n<h2>&quot;Available&quot; does not mean &quot;usable by you&quot;</h2>\n<p>Permissions must be judged on at least eight layers: source reads, asset management, catalog visibility, install acquisition, local execution, tool connections, data access, and external writes. Each layer answers a different question, with its own evidence.</p>\n<p>Three conclusions that fool people most easily:</p>\n<ul><li><strong>&quot;Available&quot; only speaks to asset quality and market status.</strong> It says nothing about whether the current user holds permissions for the source repository, installation channels, business systems, or data.</li><li><strong>A live technical session is not authorization.</strong> A logged-in browser, a working MCP connection, or credentials on the local machine only prove the connection is alive — they do not constitute authorization to read, modify, or publish anything. Discovery, publishing, installation, configuration, data access, and external writes are six different actions; finishing one never authorizes the next.</li><li><strong>An end-to-end green pipeline does not auto-open write access.</strong> In a real worklog-backfill scenario, with the skill, the browser session, and the task candidates all ready, creating the task and submitting the worklog were still two separate authorizations; on an unclear response, you query the state first instead of retrying directly.</li></ul>\n<h2>Verify in layers by risk; conclusions cannot borrow each other</h2>\n<p>Verification of a capability asset climbs in layers by risk: structure and front matter; unit tests and static security checks; installation in an isolated environment; triggering and comprehensibility in a fresh thread; read-only real tasks under the user&#x27;s permissions; externally confirmed external writes, with the result re-checked afterward; upgrade, rollback, and uninstall capability.</p>\n<p>Each verification must also be bound to: the implementation version, the installed copy, the runtime environment, the user&#x27;s permissions, the real task, the time, and the uncovered boundaries. This is the same evidence view as <a href=\"/writing/09-done-vs-verified\">article #9, &quot;\\&quot;Done\\&quot; Is Not \\&quot;Verified\\&quot;</a>: catalog status, successful installation, one successful real task, and sustained availability — four conclusions that cannot substitute for each other.</p>\n<p>AI has a clear boundary in this chain. It may identify repeated tasks and generate candidates, extract descriptions and boundaries from sources it is allowed to read, generate candidate tests and maintenance suggestions, and rank within the formally registered candidate set with explanations. It may not: automatically promote candidates to formal status; use a service account&#x27;s permissions to obtain runtime business permissions for a user; perform external writes just because the browser, MCP, or credentials are available; or extrapolate one successful install or demo to all users, environments, and versions.</p>\n<p>Retirement is also part of governance: source repository moves or permission revocations, dependency failures, catalog descriptions drifting from the implementation, installed copies long un-upgraded — before retirement rules are confirmed, never automatically delete formal assets, user installed copies, or historical evidence.</p>\n<h2>The wrap-up</h2>\n<p>The one core move of capability-asset governance: split a word into a set of facts. &quot;Available&quot; splits into who, at which version, in which environment, with which permissions, what was installed, and what was verified. Each answered separately, each verified separately. From now on, when you see &quot;available&quot;, ask: available to whom, where, and down to which layer?</p>"}, "prev": {"url": "/writing/36-agent-side-effect-gates", "t": {"zh": "模型只管提计划：Agent 副作用的三道门", "en": "The Model Only Proposes Plans: Three Gates for Agent Side Effects"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
