@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>模型给完了，本地再说不行 — rotor</title>
+<meta name="description" content="完整返回、校验通过、归属有效、计费对账是四件事；本地拒绝另记原因，不借模型背锅">
+<link rel="canonical" href="https://www.rotor1996.top/writing/40-model-done-local-no">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "模型给完了，本地再说不行", "description": "完整返回、校验通过、归属有效、计费对账是四件事；本地拒绝另记原因，不借模型背锅", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-14", "mainEntityOfPage": "https://www.rotor1996.top/writing/40-model-done-local-no"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>模型给完了，本地再说不行</h1><p><strong>结论先行：</strong> 模型完整返回是一件事，这批结果能不能发布是另一件事。完整返回、业务校验通过、执行归属仍有效、计费已对账，是四个不能互相替代的结论。任何一个没成立，本地都要有勇气说不行，并且把&quot;为什么不行&quot;记成自己的责任，不借模型或网关背锅。</p>
+<h2>四个结论，各说各的</h2>
+<p>一次 Agent 调用跑完，面前通常摆着四个问题：</p>
+<ol><li><strong>模型完整返回</strong>：stop 正常、结束帧齐、用量数据齐备，这是传输层的事实。</li><li><strong>业务校验通过</strong>：内容符合业务规则，没有明显跑偏，这是业务层的事实。</li><li><strong>执行归属仍有效</strong>：任务的归属（用户、空间、授权租约）在执行过程中没有失效或变更，这是权限层的事实。</li><li><strong>计费已对账</strong>：用量已记录、定价来源明确，这是账目的事实。</li></ol>
+<p>第一条成立不代表第二条成立，第二条成立不代表第三条成立。每一层都有自己的证据，也都有自己的守卫。把&quot;结果都回来了&quot;当成万能通行证，等于让传输层给权限层和账目层背书，它没这个资格。</p>
+<h2>真实场景：返回完整，但归属没了</h2>
+<p>来源：知识库 2026-10-11 记录，一个 Agent 项目的离线验证。</p>
+<p>场景：一次完整调用跑完，模型给了完整结果，业务校验也过了。但在本地发布前的归属复核发现，任务的执行归属已经变更：授权租约的范围与执行开始时不一致。按规则，禁止发布依然有效，这批结果不能发出去。</p>
+<p>这种时候最容易犯两种错，一种比一种常见：</p>
+<ul><li><strong>看在模型完整的份上放行。</strong> 结果都出来了，守卫再拦岂不是浪费？但归属是安全边界，不是装饰。业务校验只证明内容没问题；归属失效证明的是这批内容已经不归你管。发出去，轻则计费对不上账，重则越权发布。</li><li><strong>把这次拒绝记成模型或网关失败。</strong> 日志里写&quot;模型调用失败&quot;或者&quot;网关异常&quot;。这是污染观测数据：模型和网关都干得好好的，是本地授权层说不行。</li></ul>
+<p>记录里定下的处理规则：</p>
+<ul><li>保留既有的传输诊断原样：stop、结束帧、用量数据一个不动，它们证明模型确实完整返回了。</li><li>本地拒绝另记原因（比如归属变更），由统筹层上报，不触发中断补偿流程。</li><li>本地拒绝就是本地拒绝，不归责模型或网关。</li></ul>
+<h2>谁的锅写谁的名</h2>
+<p>为什么这条值得单独写一篇？因为&quot;完整返回&quot;太有欺骗性。传输层一片绿灯，人心里就松了；守卫拦下来，看起来像在浪费一次成功的调用。</p>
+<p>但归因诚实是观测的第一要求：一次失败被记成谁的责任，决定了以后往哪修。本地授权拒绝被记成网关异常，下次排障就去查网关，真正的归属续期逻辑永远修不到。谁的锅写谁的名，看似道德问题，实际是排障效率问题。</p>
+<h2>本地拒绝怎么写进日志</h2>
+<p>记日志也有纪律。正确的一次本地拒绝记录，至少包含三部分：</p>
+<ol><li><strong>原样保留上游证据</strong>：stop 原因、结束帧、用量数据不做任何改写。后人读日志时，要能一眼看出模型确实干完了自己的事。</li><li><strong>独立字段写本地原因</strong>：拒绝归属哪个本地守卫、依据哪条规则、当时看到的归属状态是什么。不跟上游诊断混在同一个字段里。</li><li><strong>明确后续动作</strong>：是重试归属续期再发、还是永久丢弃、由谁来决策。日志不写后续动作，就等于把决策推给了下一次排障的人。</li></ol>
+<p>这套记法还有一个附带好处：当上游真的出问题时（比如网关超时），日志风格一致，排障的人不需要猜&quot;这个失败到底是谁报的&quot;。</p>
+<h2>跟前一篇的关系</h2>
+<p>第 36 篇讲执行前的三道门：模型只管提计划，凡是副作用都要过门再执行。这一篇是它的镜像：执行后的守卫也不能省。计划是提议，执行要授权，返回了还要再问一遍&quot;你现在还发得起吗&quot;。</p>
+<p>一条 Agent 流水线，前端和后端各有守卫。少了任何一端，另一端再严密都补不上。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "模型给完了，本地再说不行", "en": "The Model Finished. Local Said No."}, "body": {"zh": "<p><strong>结论先行：</strong> 模型完整返回是一件事，这批结果能不能发布是另一件事。完整返回、业务校验通过、执行归属仍有效、计费已对账，是四个不能互相替代的结论。任何一个没成立，本地都要有勇气说不行，并且把&quot;为什么不行&quot;记成自己的责任，不借模型或网关背锅。</p>\n<h2>四个结论，各说各的</h2>\n<p>一次 Agent 调用跑完，面前通常摆着四个问题：</p>\n<ol><li><strong>模型完整返回</strong>：stop 正常、结束帧齐、用量数据齐备，这是传输层的事实。</li><li><strong>业务校验通过</strong>：内容符合业务规则，没有明显跑偏，这是业务层的事实。</li><li><strong>执行归属仍有效</strong>：任务的归属（用户、空间、授权租约）在执行过程中没有失效或变更，这是权限层的事实。</li><li><strong>计费已对账</strong>：用量已记录、定价来源明确，这是账目的事实。</li></ol>\n<p>第一条成立不代表第二条成立，第二条成立不代表第三条成立。每一层都有自己的证据，也都有自己的守卫。把&quot;结果都回来了&quot;当成万能通行证，等于让传输层给权限层和账目层背书，它没这个资格。</p>\n<h2>真实场景：返回完整，但归属没了</h2>\n<p>来源：知识库 2026-10-11 记录，一个 Agent 项目的离线验证。</p>\n<p>场景：一次完整调用跑完，模型给了完整结果，业务校验也过了。但在本地发布前的归属复核发现，任务的执行归属已经变更：授权租约的范围与执行开始时不一致。按规则，禁止发布依然有效，这批结果不能发出去。</p>\n<p>这种时候最容易犯两种错，一种比一种常见：</p>\n<ul><li><strong>看在模型完整的份上放行。</strong> 结果都出来了，守卫再拦岂不是浪费？但归属是安全边界，不是装饰。业务校验只证明内容没问题；归属失效证明的是这批内容已经不归你管。发出去，轻则计费对不上账，重则越权发布。</li><li><strong>把这次拒绝记成模型或网关失败。</strong> 日志里写&quot;模型调用失败&quot;或者&quot;网关异常&quot;。这是污染观测数据：模型和网关都干得好好的，是本地授权层说不行。</li></ul>\n<p>记录里定下的处理规则：</p>\n<ul><li>保留既有的传输诊断原样：stop、结束帧、用量数据一个不动，它们证明模型确实完整返回了。</li><li>本地拒绝另记原因（比如归属变更），由统筹层上报，不触发中断补偿流程。</li><li>本地拒绝就是本地拒绝，不归责模型或网关。</li></ul>\n<h2>谁的锅写谁的名</h2>\n<p>为什么这条值得单独写一篇？因为&quot;完整返回&quot;太有欺骗性。传输层一片绿灯，人心里就松了；守卫拦下来，看起来像在浪费一次成功的调用。</p>\n<p>但归因诚实是观测的第一要求：一次失败被记成谁的责任，决定了以后往哪修。本地授权拒绝被记成网关异常，下次排障就去查网关，真正的归属续期逻辑永远修不到。谁的锅写谁的名，看似道德问题，实际是排障效率问题。</p>\n<h2>本地拒绝怎么写进日志</h2>\n<p>记日志也有纪律。正确的一次本地拒绝记录，至少包含三部分：</p>\n<ol><li><strong>原样保留上游证据</strong>：stop 原因、结束帧、用量数据不做任何改写。后人读日志时，要能一眼看出模型确实干完了自己的事。</li><li><strong>独立字段写本地原因</strong>：拒绝归属哪个本地守卫、依据哪条规则、当时看到的归属状态是什么。不跟上游诊断混在同一个字段里。</li><li><strong>明确后续动作</strong>：是重试归属续期再发、还是永久丢弃、由谁来决策。日志不写后续动作，就等于把决策推给了下一次排障的人。</li></ol>\n<p>这套记法还有一个附带好处：当上游真的出问题时（比如网关超时），日志风格一致，排障的人不需要猜&quot;这个失败到底是谁报的&quot;。</p>\n<h2>跟前一篇的关系</h2>\n<p>第 36 篇讲执行前的三道门：模型只管提计划，凡是副作用都要过门再执行。这一篇是它的镜像：执行后的守卫也不能省。计划是提议，执行要授权，返回了还要再问一遍&quot;你现在还发得起吗&quot;。</p>\n<p>一条 Agent 流水线，前端和后端各有守卫。少了任何一端，另一端再严密都补不上。</p>", "en": "<p><strong>Conclusion first:</strong> A full model response is one thing; whether the results may ship is another. A full response, passed business checks, still-valid execution ownership, and reconciled billing are four conclusions that cannot substitute for each other. If any one of them fails, the local layer must have the courage to say no — and must own the reason itself, not blame the model or the gateway.</p>\n<h2>Four Conclusions, Each Speaks for Itself</h2>\n<p>When an agent call finishes, four questions sit in front of you:</p>\n<ol><li><strong>Full model response</strong>: stop normal, end frames complete, usage data present — a transport-layer fact.</li><li><strong>Business checks passed</strong>: the content follows business rules and did not drift — a business-layer fact.</li><li><strong>Execution ownership still valid</strong>: the task&#x27;s ownership (user, space, authorization lease) did not lapse or change during execution — a permission-layer fact.</li><li><strong>Billing reconciled</strong>: usage recorded, pricing source clear — an accounting fact.</li></ol>\n<p>The first being true says nothing about the second; the second says nothing about the third. Each layer has its own evidence and its own guard. Treating &quot;the results came back&quot; as a universal pass means letting the transport layer vouch for the permission and billing layers — and it has no authority to do so.</p>\n<h2>A Real Case: Complete Response, Ownership Gone</h2>\n<p>Source: knowledge-base record from 2026-10-11, an offline validation in an agent project.</p>\n<p>The scenario: a complete call finished, the model returned full results, business checks passed. But the ownership review before local publishing found the task&#x27;s execution ownership had changed: the authorization lease&#x27;s scope no longer matched what it was when execution started. By the rules, the publish ban still stood — this batch could not ship.</p>\n<p>Two mistakes are easy here, one more common than the other:</p>\n<ul><li><strong>Letting it through because the model finished.</strong> The results are already out — blocking them now looks like waste. But ownership is a security boundary, not decoration. Business checks only prove the content is fine; lapsed ownership proves this content is no longer yours to ship. Ship it, and at best billing won&#x27;t reconcile; at worst you&#x27;ve published across your authorization boundary.</li><li><strong>Logging the rejection as a model or gateway failure.</strong> Writing &quot;model call failed&quot; or &quot;gateway error&quot; in the logs. That pollutes observability: the model and the gateway did their jobs fine — it was the local authorization layer that said no.</li></ul>\n<p>The handling rules established in that record:</p>\n<ul><li>Keep the existing transport diagnostics untouched: stop reasons, end frames, usage data. They prove the model did complete.</li><li>Record the local rejection cause separately (e.g., ownership changed), report it up through the orchestration layer, and do not trigger the interruption-compensation flow.</li><li>A local rejection is a local rejection. Do not attribute it to the model or the gateway.</li></ul>\n<h2>Name the Blame Correctly</h2>\n<p>Why does this deserve its own article? Because &quot;a complete response&quot; is deeply deceptive. A transport layer glowing green relaxes the human; a guard blocking the shipment looks like waste.</p>\n<p>But honest attribution is the first requirement of observability: whoever a failure is recorded against determines where the next fix goes. A local authorization rejection recorded as a gateway error sends the next investigation to the gateway, while the real ownership-renewal logic never gets fixed. Naming the blame correctly sounds like a moral issue; it is actually an efficiency issue.</p>\n<h2>How to Log a Local Rejection</h2>\n<p>Logging has its own discipline. A correct local-rejection record carries at least three parts:</p>\n<ol><li><strong>Preserve upstream evidence verbatim</strong>: stop reasons, end frames, usage data, untouched. Future readers must see at a glance that the model finished its part.</li><li><strong>Local cause in its own field</strong>: which local guard rejected, by which rule, what ownership state was observed. Never mix it into the same field as upstream diagnostics.</li><li><strong>State the next action</strong>: retry ownership renewal and ship, discard permanently, and who decides. A log without a next action delegates the decision to the next person debugging.</li></ol>\n<p>This style has a side benefit: when the upstream genuinely fails (say, a gateway timeout), the logs read the same way, and nobody has to guess &quot;who actually reported this failure.&quot;</p>\n<h2>Relation to the Previous Article</h2>\n<p>Article 36 covered the three gates before execution: the model only proposes plans; anything with side effects passes the gates first. This article is its mirror image: the guard after execution is just as necessary. A plan is a proposal; execution needs authorization; and after the response arrives you still ask once more — &quot;can you still afford to ship this?&quot;</p>\n<p>An agent pipeline has guards on both ends. Lose either one, and no amount of strictness on the other can compensate.</p>"}, "prev": {"url": "/writing/38-available-not-a-pass", "t": {"zh": "「可用」是市场状态，不是通行证", "en": "\"Available\" Is a Market Status, Not a Pass"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
