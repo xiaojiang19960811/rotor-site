@@ -34,7 +34,7 @@ Neutral keepalives may go downstream before timeout, but must never block intern
 
 The budget rules have shipped to production, but the retrospective isn't closed. The wiki's open items are honest: keep watching TTFT distribution, budget trigger counts, swap success rates, and actual internal failover effects across time windows; whether to grayscale-disable the WS pre-downgrade or bring it under server-side budgets remains undecided.
 
-That matches the evidence view from the verification article: shipping proves "the rule is deployed," not "the problem is solved." Whether budgets truly catch the long tail shows in continuous production data, not in a successful release.
+That matches the evidence view from [the verification article](/writing/09-done-vs-verified): shipping proves "the rule is deployed," not "the problem is solved." Whether budgets truly catch the long tail shows in continuous production data, not in a successful release.
 
 ## Split into stages when debugging
 

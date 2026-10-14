@@ -50,6 +50,6 @@ This style has a side benefit: when the upstream genuinely fails (say, a gateway
 
 ## Relation to the Previous Article
 
-Article 36 covered the three gates before execution: the model only proposes plans; anything with side effects passes the gates first. This article is its mirror image: the guard after execution is just as necessary. A plan is a proposal; execution needs authorization; and after the response arrives you still ask once more — "can you still afford to ship this?"
+[Article 36](/writing/36-agent-side-effect-gates) covered the three gates before execution: the model only proposes plans; anything with side effects passes the gates first. This article is its mirror image: the guard after execution is just as necessary. A plan is a proposal; execution needs authorization; and after the response arrives you still ask once more — "can you still afford to ship this?"
 
 An agent pipeline has guards on both ends. Lose either one, and no amount of strictness on the other can compensate.

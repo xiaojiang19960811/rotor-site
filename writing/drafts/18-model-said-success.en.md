@@ -27,7 +27,7 @@ The third deserves unpacking. The correct way to verify "booking succeeded" is t
 
 Qwen-CUA reports 86.2 on OSWorld-Verified, with larger variants reporting 87.6. These come from the project's README and technical report — self-reported results, never independently reproduced.
 
-They're useful for understanding the project's goals and training methods, but they don't translate into production success rates. Benchmarks run clean; real business has login states, resolution differences, long flows, and dirty states of every kind. Treating a benchmark score as a launch success rate upgrades a "lab conclusion" into a "production conclusion" — the exact evidence-level mismatch from the earlier article on verification.
+They're useful for understanding the project's goals and training methods, but they don't translate into production success rates. Benchmarks run clean; real business has login states, resolution differences, long flows, and dirty states of every kind. Treating a benchmark score as a launch success rate upgrades a "lab conclusion" into a "production conclusion" — the exact evidence-level mismatch from [the earlier article on verification](/writing/09-done-vs-verified).
 
 ## Dividing work with traditional automation
 
