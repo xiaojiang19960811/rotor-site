@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>上游不收的补丁，自己养：一个思考标签解析补丁的生命周期 — rotor</title>
+<meta name="description" content="上游不收补丁不是终点，而是养护的起点：移植、验证、过期都要自己管">
+<link rel="canonical" href="https://www.rotor1996.top/writing/43-upstream-wont-merge-patch">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "上游不收的补丁，自己养：一个思考标签解析补丁的生命周期", "description": "上游不收补丁不是终点，而是养护的起点：移植、验证、过期都要自己管", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-17", "mainEntityOfPage": "https://www.rotor1996.top/writing/43-upstream-wont-merge-patch"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>上游不收的补丁，自己养：一个思考标签解析补丁的生命周期</h1><p><strong>结论先行：</strong> 上游不收你的补丁，不是补丁的终点，而是补丁生命周期的起点：从此补丁由你养。合并进自己的分支只是第一步，之后要管移植、管验证、管过期，直到上游采纳或者补丁不再需要。</p>
+<h2>问题：思考内容混进了正文</h2>
+<p>某模型经网关走 Chat Completions 返回时，思考内容有两种形态：无工具探测时走独立字段，有工具探测时以 <code>&lt;think&gt;</code> 标签混在正文里，还可能未闭合就转入工具调用。客户端只按独立字段解析，思考就会被当成正文显示，未闭合的标签也会原样露出。</p>
+<p>一个细节决定修法：标签由网关产生还是由更上游产生，当时尚未归因。归因未完成不等于不能动手：先修客户端可修的部分，把解析规则写严，不等归因结论。</p>
+<h2>补丁的边界：默认关闭，显式开启</h2>
+<p>新解析规则的边界写在补丁里：</p>
+<ol><li><strong>默认关闭</strong>：只在显式开启的模型条目上生效，不影响其他模型。</li><li><strong>只认开头</strong>：只转换文本块开头的精确标签，标签外的正文保持原样，不按内容或语言推断哪段是思考。</li><li><strong>支持残缺输入</strong>：支持跨分片与未闭合段，保留工具调用，对齐流式、持久化消息和回放元数据。</li><li><strong>不碰历史</strong>：不改写历史会话，不动 Agent 核心，不动界面折叠组件。</li></ol>
+<p>边界越窄，补丁越安全：它只解决标签解析这一个问题，不顺手重构周围代码。只认开头还有一层用意：正文里也可能出现标签字样，认位置不认内容，就不会把用户正文里提到的标签当成思考剥掉。规则越机械，误伤越少。</p>
+<h2>独立评审：作者自测通过不等于评审通过</h2>
+<p>补丁提交后，一位独立评审者复现并修复了两处缺陷：标签前缀尚未识别时，交错的工具块抢先发布；空思考标签剥离后，流程仍报告成功。两类回归都是先失败、修复后通过，解析器覆盖率保持 100%。</p>
+<p>评审的价值不在挑错数量，而在复现：评审者亲手跑出失败用例，而不是只读代码给意见。只读代码的评审，看不出时序与边界问题。这两处缺陷也属于同一类：边界上的语义走样。标签还没认出来时，交错内容已经发出去了；思考剥空了，流程还按成功上报。解析规则的 bug 很少长在主路径上，大都长在边界上：开头、结尾、空值、交错。评审要盯的正是这四个地方。</p>
+<h2>合并之后：养补丁的四份清单</h2>
+<p>补丁合并进自己的分支后，真正的养护才开始。</p>
+<ol><li><strong>定向移植</strong>：已安装的客户端不整体覆盖旧版，只替换适配文件，保留新版其他适配行为。验证结束后，把默认模型恢复为验证前的值，不留测试配置。</li><li><strong>真实验证</strong>：单元测试通过不等于客户端可用。真实会话验证：一块 309 字符的独立思考、一次工具调用、正文无标签；界面展开、收起、刷新后再次展开，逐项确认。</li><li><strong>上游反馈</strong>：官方贡献指南说明暂不接受外部补丁，那就改走官方讨论区发帖，并回读确认正文与分类。同时在官方基线之上移植一份公开参考分支，200 余项定向测试与 65 项解析、加载、看门狗测试通过，解析器覆盖率 100%，留给上游采纳与否的决定，但不等待上游。</li><li><strong>过期管理</strong>：共享源码尚未吸收补丁，试验包也不含补丁。不能把某一个安装版的补丁验收，外推到另一个包。每次整包升级、重装，都要重新移植、重新验证。补丁没有一劳永逸，只有每次都要问一遍：还在吗，还生效吗。</li></ol>
+<p>还有一条诚实纪律：没有 CI 记录的远端，不报 CI 通过。证据缺哪一层，就写缺哪一层。</p>
+<h2>收束</h2>
+<p><a href="/writing/42-client-distribution-isolation">第 42 篇《一个客户端，两种身份：隔离在发行时做，不在运行时判》</a>讲的是发行时的身份边界，这里讲的是补丁的生命周期边界。PR 合并只是补丁找到了第一个家；上游不收，家就得自己一直搭下去。正如<a href="/writing/09-done-vs-verified">第 9 篇《&quot;已完成&quot;不等于&quot;已验证&quot;》</a>所说：合并完成不等于验证完成，养补丁的活，合并之后才算开始。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "上游不收的补丁，自己养：一个思考标签解析补丁的生命周期", "en": "When Upstream Won't Take Your Patch, You Maintain It Yourself: The Lifecycle of a Thinking-Tag Parser Patch"}, "body": {"zh": "<p><strong>结论先行：</strong> 上游不收你的补丁，不是补丁的终点，而是补丁生命周期的起点：从此补丁由你养。合并进自己的分支只是第一步，之后要管移植、管验证、管过期，直到上游采纳或者补丁不再需要。</p>\n<h2>问题：思考内容混进了正文</h2>\n<p>某模型经网关走 Chat Completions 返回时，思考内容有两种形态：无工具探测时走独立字段，有工具探测时以 <code>&lt;think&gt;</code> 标签混在正文里，还可能未闭合就转入工具调用。客户端只按独立字段解析，思考就会被当成正文显示，未闭合的标签也会原样露出。</p>\n<p>一个细节决定修法：标签由网关产生还是由更上游产生，当时尚未归因。归因未完成不等于不能动手：先修客户端可修的部分，把解析规则写严，不等归因结论。</p>\n<h2>补丁的边界：默认关闭，显式开启</h2>\n<p>新解析规则的边界写在补丁里：</p>\n<ol><li><strong>默认关闭</strong>：只在显式开启的模型条目上生效，不影响其他模型。</li><li><strong>只认开头</strong>：只转换文本块开头的精确标签，标签外的正文保持原样，不按内容或语言推断哪段是思考。</li><li><strong>支持残缺输入</strong>：支持跨分片与未闭合段，保留工具调用，对齐流式、持久化消息和回放元数据。</li><li><strong>不碰历史</strong>：不改写历史会话，不动 Agent 核心，不动界面折叠组件。</li></ol>\n<p>边界越窄，补丁越安全：它只解决标签解析这一个问题，不顺手重构周围代码。只认开头还有一层用意：正文里也可能出现标签字样，认位置不认内容，就不会把用户正文里提到的标签当成思考剥掉。规则越机械，误伤越少。</p>\n<h2>独立评审：作者自测通过不等于评审通过</h2>\n<p>补丁提交后，一位独立评审者复现并修复了两处缺陷：标签前缀尚未识别时，交错的工具块抢先发布；空思考标签剥离后，流程仍报告成功。两类回归都是先失败、修复后通过，解析器覆盖率保持 100%。</p>\n<p>评审的价值不在挑错数量，而在复现：评审者亲手跑出失败用例，而不是只读代码给意见。只读代码的评审，看不出时序与边界问题。这两处缺陷也属于同一类：边界上的语义走样。标签还没认出来时，交错内容已经发出去了；思考剥空了，流程还按成功上报。解析规则的 bug 很少长在主路径上，大都长在边界上：开头、结尾、空值、交错。评审要盯的正是这四个地方。</p>\n<h2>合并之后：养补丁的四份清单</h2>\n<p>补丁合并进自己的分支后，真正的养护才开始。</p>\n<ol><li><strong>定向移植</strong>：已安装的客户端不整体覆盖旧版，只替换适配文件，保留新版其他适配行为。验证结束后，把默认模型恢复为验证前的值，不留测试配置。</li><li><strong>真实验证</strong>：单元测试通过不等于客户端可用。真实会话验证：一块 309 字符的独立思考、一次工具调用、正文无标签；界面展开、收起、刷新后再次展开，逐项确认。</li><li><strong>上游反馈</strong>：官方贡献指南说明暂不接受外部补丁，那就改走官方讨论区发帖，并回读确认正文与分类。同时在官方基线之上移植一份公开参考分支，200 余项定向测试与 65 项解析、加载、看门狗测试通过，解析器覆盖率 100%，留给上游采纳与否的决定，但不等待上游。</li><li><strong>过期管理</strong>：共享源码尚未吸收补丁，试验包也不含补丁。不能把某一个安装版的补丁验收，外推到另一个包。每次整包升级、重装，都要重新移植、重新验证。补丁没有一劳永逸，只有每次都要问一遍：还在吗，还生效吗。</li></ol>\n<p>还有一条诚实纪律：没有 CI 记录的远端，不报 CI 通过。证据缺哪一层，就写缺哪一层。</p>\n<h2>收束</h2>\n<p><a href=\"/writing/42-client-distribution-isolation\">第 42 篇《一个客户端，两种身份：隔离在发行时做，不在运行时判》</a>讲的是发行时的身份边界，这里讲的是补丁的生命周期边界。PR 合并只是补丁找到了第一个家；上游不收，家就得自己一直搭下去。正如<a href=\"/writing/09-done-vs-verified\">第 9 篇《&quot;已完成&quot;不等于&quot;已验证&quot;》</a>所说：合并完成不等于验证完成，养补丁的活，合并之后才算开始。</p>", "en": "<p><strong>Conclusion first:</strong> Upstream rejecting your patch is not the end of the patch. It is the start of its lifecycle: from then on, you maintain it. Merging it into your own branch is only the first step. After that you own the porting, the verification, and the expiry, until upstream adopts it or the patch is no longer needed.</p>\n<h2>The problem: thinking content leaked into the body text</h2>\n<p>When a certain model returns through a gateway over Chat Completions, its thinking content comes in two shapes: without tool probing it travels in a dedicated field; with tool probing it arrives mixed into the body text inside <code>&lt;think&gt;</code> tags, and may switch into a tool call before the tag ever closes. A client that only parses the dedicated field will display thinking as body text, and will also expose unclosed tags verbatim.</p>\n<p>One detail decides how to fix it: whether the tags are produced by the gateway or by something further upstream was not yet determined. An unfinished root-cause analysis does not mean no fix: first fix what the client can fix, write the parsing rules strictly, and do not wait for the attribution verdict.</p>\n<h2>The patch boundary: off by default, on by explicit choice</h2>\n<p>The new parsing rules carry their boundary inside the patch:</p>\n<ol><li><strong>Off by default</strong>: it only takes effect on model entries where it is explicitly enabled, and does not affect other models.</li><li><strong>Only the opening</strong>: it only converts the exact tag at the start of a text block. Text outside the tag stays as is. Nothing is inferred to be thinking from content or language.</li><li><strong>Tolerates incomplete input</strong>: it supports cross-chunk and unclosed segments, preserves tool calls, and keeps streaming, persisted messages, and replay metadata aligned.</li><li><strong>Leaves history alone</strong>: it does not rewrite past sessions, touch the agent core, or touch the UI folding component.</li></ol>\n<p>The narrower the boundary, the safer the patch: it solves exactly one problem, tag parsing, and does not refactor the surrounding code along the way.</p>\n<h2>Independent review: the author&#x27;s tests passing is not review passing</h2>\n<p>After the patch was submitted, an independent reviewer reproduced and fixed two defects: interleaved tool blocks were published early while the tag prefix was not yet recognized; and after an empty thinking tag was stripped, the flow still reported success. Both regression classes failed first and passed after the fix, with parser coverage staying at 100%.</p>\n<p>The value of review is not the number of defects found. It is reproduction: the reviewer ran the failing cases by hand instead of only reading the code and offering opinions. A review that only reads code cannot see timing and boundary problems.</p>\n<h2>After the merge: four checklists for keeping the patch alive</h2>\n<p>Once the patch is merged into your own branch, the real maintenance begins.</p>\n<ol><li><strong>Directed porting</strong>: the installed client is not overwritten with an old build as a whole. Only the adapter file is replaced, keeping the newer build&#x27;s other adapter behavior. After verification, the default model is restored to its pre-verification value, leaving no test configuration behind.</li><li><strong>Real verification</strong>: unit tests passing does not mean the client works. Real-session verification: one 309-character block of independent thinking, one tool call, no tags in the body text; expand, collapse, and expand again after refresh in the UI, confirmed item by item.</li><li><strong>Upstream feedback</strong>: the official contribution guide says external patches are not accepted for now, so the route changes to posting in the official discussion forum, then reading the post back to confirm its body and category. At the same time, a public reference branch is ported onto the official baseline: 200-plus directed tests plus 65 parser, loader, and watchdog tests pass, with parser coverage at 100%. The adopt-or-not decision is left to upstream, but nobody waits for upstream.</li><li><strong>Expiry management</strong>: the shared source has not yet absorbed the patch, and the trial package does not contain it either. The patch acceptance of one installed build cannot be extrapolated to another package. Every full-package upgrade or reinstall means porting again and verifying again. A patch is never once-and-done. Every time, the question must be asked again: is it still there, and does it still work.</li></ol>\n<p>One more honesty rule: a remote with no CI records is not reported as CI-passing. Whatever layer of evidence is missing gets written down as missing.</p>\n<h2>Closing</h2>\n<p><a href=\"/writing/42-client-distribution-isolation\">Article 42, One Client, Two Identities: Isolate at Distribution Time, Not at Runtime</a> is about identity boundaries at distribution time. This article is about the lifecycle boundary of a patch. A PR merge only gives the patch its first home. When upstream won&#x27;t take it, you keep building that home yourself. As <a href=\"/writing/09-done-vs-verified\">Article 9, Done Is Not Verified</a> puts it: merged does not mean verified, and the work of keeping a patch alive only starts after the merge.</p>"}, "prev": {"url": "/writing/41-framework-migration-review", "t": {"zh": "换框架之前，先回答五个问题", "en": "Before Switching Frameworks, Answer Five Questions"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
