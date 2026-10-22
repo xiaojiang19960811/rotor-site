@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「有两个渠道」不等于真有两个 — rotor</title>
+<meta name="description" content="用户以为分组里有两个上游渠道，实际只绑定了一个，还被手动暂停了四天；候选集为空（pool=0）与"全被排除"是两回事，日志里 excluded=0 是关键诊断位">
+<link rel="canonical" href="https://www.rotor1996.top/writing/48-empty-pool-503">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "「有两个渠道」不等于真有两个", "description": "用户以为分组里有两个上游渠道，实际只绑定了一个，还被手动暂停了四天；候选集为空（pool=0）与\"全被排除\"是两回事，日志里 excluded=0 是关键诊断位", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-22", "mainEntityOfPage": "https://www.rotor1996.top/writing/48-empty-pool-503"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>「有两个渠道」不等于真有两个</h1><p>今天下午，一个分组里的两款新模型请求全量 503，持续近两小时。用户的问题很直接：&quot;这个模型明明有两个渠道，为什么打完 A 就不打 B 了？&quot;</p>
+<p>排查完发现三个事实，每个都值得写下来：</p>
+<ol><li>分组里从来就没有 B：用户口中的&quot;两个渠道&quot;（上游账号 A 和 B），在该分组的绑定表里只有 A 一条记录，B 从没加进来过，分组也没配兜底分组。</li><li>A 四天前就被手动停掉了：审计日志显示管理员在 10 月 17 日把它置为不可调度，调度快照同步为空池。</li><li>所以调度器根本没做&quot;从 A 切到 B&quot;的尝试：候选集本身就是空的，日志里的 <code>pool=0</code> 和 <code>excluded_account_count: 0</code> 把这点说得很清楚。</li></ol>
+<h2>诊断位：pool=0 和&quot;全被排除&quot;是两回事</h2>
+<p>这是本次排查最有价值的一节。看到 503，第一反应是&quot;账号都被拦下来了&quot;，然后去翻每个账号为什么被排除。但日志里有两个数，指向的是另一个方向：</p>
+<ol><li><code>pool=0</code>：进入候选集的账号数为 0。</li><li><code>excluded_account_count: 0</code>：被逐条排除的账号数为 0。</li></ol>
+<p>&quot;全被排除&quot;的意思是：有一批候选人，每个都检查过，每条排除都有理由。而&quot;候选集是空的&quot;的意思是：根本没有人进池子，连被检查的机会都没有。两种现象对应的排查动作完全不同：</p>
+<ol><li>全被排除：逐条看排除理由（上游报错、额度、模型映射）。</li><li>候选集为空：先查分组绑定了谁、开关状态是什么，再查账号。</li></ol>
+<p>如果先入为主按&quot;全被排除&quot;去查，会在排除理由里找半天，而真正的问题在绑定表里：一张根本不在错误堆栈里的表。</p>
+<h2>两个开关：一个会自己恢复，一个停在原地</h2>
+<p>排查时还发现两个&quot;暂停&quot;长得像、语义完全不同的开关：</p>
+<ol><li><strong>临时不可调度</strong>（<code>temp_unschedulable_until</code>）：时间窗语义。查询条件是&quot;空或已过期&quot;，过期自动恢复。本次这个值停在 10 月 16 日，早已过期，不是原因。</li><li><strong>可调度</strong>（<code>schedulable</code>）：独立硬开关，只能通过管理端手动改动，到期不会自愈。本次被置为 false 的正是它，从 10 月 17 日停到 10 月 21 日，没有任何自动恢复。</li></ol>
+<p>两者还有一个可观测的区别：自动错误隔离会同时把账号状态写成 error，本次账号状态一直是 active，可据此排除自动隔离路径：暂停是人做的，不是系统做的。</p>
+<p>教训：系统里有两个语义不同的&quot;停&quot;，排查时先区分语义再下结论。看到&quot;不可调度&quot;先问一句：是哪一种？会不会自己好？</p>
+<h2>空池持续了两小时，没有人报警</h2>
+<p>从 16:00 到 17:57，分组调度持续返回 pool=0，失败近两小时才被用户发现。调度日志里只有一条 WARN，没有告警。</p>
+<p>候选集为空是调度层最值得报警的事件之一：它比&quot;错误率高&quot;更严重，因为错误率高至少说明还有人在尝试，而空池意味着&quot;这条路没有任何退路&quot;。一个持续的 pool=0，应该在第一分钟就触发告警，而不是等用户带着 503 来找你。</p>
+<p>处置方向也很明确：一条分组线如果要承诺&quot;两路&quot;，就把两个上游账号都绑进分组，并配好兜底分组；被手动暂停的账号恢复只是一次开关操作；但在此之前，先让 pool=0 能自己喊出来。</p>
+<h2>收束</h2>
+<p>排查调度问题时记住三句：</p>
+<ol><li>用户说&quot;有两路&quot;时，先去绑定表里数一数，别在重试逻辑里找答案。</li><li>日志说 pool=0 时，先看 excluded 是不是 0：是 0 就查池子构型，不是 0 再查排除理由。</li><li>系统里有两个&quot;停&quot;时，先确认哪个会自己恢复，哪个停在原地等人。</li></ol>
+<p>感觉&quot;有退路&quot;和&quot;真有退路&quot;之间，差的往往就是一次&quot;数一数&quot;。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "「有两个渠道」不等于真有两个", "en": "\"Two Channels\" Doesn't Mean Two Are Actually Bound"}, "body": {"zh": "<p>今天下午，一个分组里的两款新模型请求全量 503，持续近两小时。用户的问题很直接：&quot;这个模型明明有两个渠道，为什么打完 A 就不打 B 了？&quot;</p>\n<p>排查完发现三个事实，每个都值得写下来：</p>\n<ol><li>分组里从来就没有 B：用户口中的&quot;两个渠道&quot;（上游账号 A 和 B），在该分组的绑定表里只有 A 一条记录，B 从没加进来过，分组也没配兜底分组。</li><li>A 四天前就被手动停掉了：审计日志显示管理员在 10 月 17 日把它置为不可调度，调度快照同步为空池。</li><li>所以调度器根本没做&quot;从 A 切到 B&quot;的尝试：候选集本身就是空的，日志里的 <code>pool=0</code> 和 <code>excluded_account_count: 0</code> 把这点说得很清楚。</li></ol>\n<h2>诊断位：pool=0 和&quot;全被排除&quot;是两回事</h2>\n<p>这是本次排查最有价值的一节。看到 503，第一反应是&quot;账号都被拦下来了&quot;，然后去翻每个账号为什么被排除。但日志里有两个数，指向的是另一个方向：</p>\n<ol><li><code>pool=0</code>：进入候选集的账号数为 0。</li><li><code>excluded_account_count: 0</code>：被逐条排除的账号数为 0。</li></ol>\n<p>&quot;全被排除&quot;的意思是：有一批候选人，每个都检查过，每条排除都有理由。而&quot;候选集是空的&quot;的意思是：根本没有人进池子，连被检查的机会都没有。两种现象对应的排查动作完全不同：</p>\n<ol><li>全被排除：逐条看排除理由（上游报错、额度、模型映射）。</li><li>候选集为空：先查分组绑定了谁、开关状态是什么，再查账号。</li></ol>\n<p>如果先入为主按&quot;全被排除&quot;去查，会在排除理由里找半天，而真正的问题在绑定表里：一张根本不在错误堆栈里的表。</p>\n<h2>两个开关：一个会自己恢复，一个停在原地</h2>\n<p>排查时还发现两个&quot;暂停&quot;长得像、语义完全不同的开关：</p>\n<ol><li><strong>临时不可调度</strong>（<code>temp_unschedulable_until</code>）：时间窗语义。查询条件是&quot;空或已过期&quot;，过期自动恢复。本次这个值停在 10 月 16 日，早已过期，不是原因。</li><li><strong>可调度</strong>（<code>schedulable</code>）：独立硬开关，只能通过管理端手动改动，到期不会自愈。本次被置为 false 的正是它，从 10 月 17 日停到 10 月 21 日，没有任何自动恢复。</li></ol>\n<p>两者还有一个可观测的区别：自动错误隔离会同时把账号状态写成 error，本次账号状态一直是 active，可据此排除自动隔离路径：暂停是人做的，不是系统做的。</p>\n<p>教训：系统里有两个语义不同的&quot;停&quot;，排查时先区分语义再下结论。看到&quot;不可调度&quot;先问一句：是哪一种？会不会自己好？</p>\n<h2>空池持续了两小时，没有人报警</h2>\n<p>从 16:00 到 17:57，分组调度持续返回 pool=0，失败近两小时才被用户发现。调度日志里只有一条 WARN，没有告警。</p>\n<p>候选集为空是调度层最值得报警的事件之一：它比&quot;错误率高&quot;更严重，因为错误率高至少说明还有人在尝试，而空池意味着&quot;这条路没有任何退路&quot;。一个持续的 pool=0，应该在第一分钟就触发告警，而不是等用户带着 503 来找你。</p>\n<p>处置方向也很明确：一条分组线如果要承诺&quot;两路&quot;，就把两个上游账号都绑进分组，并配好兜底分组；被手动暂停的账号恢复只是一次开关操作；但在此之前，先让 pool=0 能自己喊出来。</p>\n<h2>收束</h2>\n<p>排查调度问题时记住三句：</p>\n<ol><li>用户说&quot;有两路&quot;时，先去绑定表里数一数，别在重试逻辑里找答案。</li><li>日志说 pool=0 时，先看 excluded 是不是 0：是 0 就查池子构型，不是 0 再查排除理由。</li><li>系统里有两个&quot;停&quot;时，先确认哪个会自己恢复，哪个停在原地等人。</li></ol>\n<p>感觉&quot;有退路&quot;和&quot;真有退路&quot;之间，差的往往就是一次&quot;数一数&quot;。</p>", "en": "<p>This afternoon, requests for two new models in one group all returned 503, lasting nearly two hours. The user&#x27;s question was direct: &quot;This model clearly has two channels. Why did it stop at A and never try B?&quot;</p>\n<p>The investigation surfaced three facts, each worth writing down:</p>\n<ol><li>B was never in the group: the &quot;two channels&quot; the user described (upstream accounts A and B) showed only one record, A, in the group&#x27;s binding table. B had never been added, and the group had no fallback group configured.</li><li>A had been manually paused four days earlier: the audit log showed an admin marking it unschedulable on October 17, and the scheduler snapshot went empty-pool in sync.</li><li>So the scheduler never even attempted the &quot;fail over from A to B&quot; path: the candidate set was empty from the start, as <code>pool=0</code> and <code>excluded_account_count: 0</code> in the log made clear.</li></ol>\n<h2>The Diagnostic Bit: pool=0 and &quot;All Excluded&quot; Are Two Different Things</h2>\n<p>This is the most valuable section of the investigation. Seeing 503, the first instinct is &quot;all accounts got blocked,&quot; followed by digging through why each account was excluded. But the log carried two numbers pointing in another direction:</p>\n<ol><li><code>pool=0</code>: zero accounts entered the candidate set.</li><li><code>excluded_account_count: 0</code>: zero accounts were individually excluded.</li></ol>\n<p>&quot;All excluded&quot; means: there was a batch of candidates, each was checked, each exclusion has a reason. &quot;Empty candidate set&quot; means: nobody ever entered the pool, not even getting the chance to be checked. The two call for completely different investigation moves:</p>\n<ol><li>All excluded: walk through each exclusion reason (upstream errors, quota, model mapping).</li><li>Empty candidate set: check who is bound to the group and what the switches say, then look at accounts.</li></ol>\n<p>If you assume &quot;all excluded&quot; and go hunting, you will spend a long time inside exclusion reasons while the real problem sits in the binding table: a table that never appears in the error stack.</p>\n<h2>Two Switches: One Heals Itself, One Stays Put</h2>\n<p>The investigation also turned up two &quot;pauses&quot; that look alike but have completely different semantics:</p>\n<ol><li><strong>Temporary unschedulable</strong> (<code>temp_unschedulable_until</code>): time-window semantics. The query condition is &quot;null or expired,&quot; so it recovers automatically on expiry. This time its value sat at October 16, long expired — not the cause.</li><li><strong>Schedulable</strong> (<code>schedulable</code>): an independent hard switch, changeable only manually through the admin panel, never self-healing on expiry. This one was set to false on October 17 and stayed there through October 21, with no automatic recovery.</li></ol>\n<p>There is one more observable difference between them: automatic error isolation also flips the account status to error. Here the account status stayed active throughout, which rules out the automatic isolation path: the pause was made by a human, not by the system.</p>\n<p>Lesson: when a system has two different kinds of &quot;stop,&quot; distinguish their semantics before concluding. On seeing &quot;unschedulable,&quot; first ask: which kind? Will it heal on its own?</p>\n<h2>An Empty Pool Ran for Two Hours, and Nobody Was Paged</h2>\n<p>From 16:00 to 17:57, group scheduling kept returning pool=0, and the failure went unnoticed for nearly two hours until the user reported it. The scheduler log had a single WARN and no alert.</p>\n<p>An empty candidate set is one of the most alert-worthy events in a scheduling layer: it is worse than &quot;high error rate,&quot; because a high error rate at least means someone is still trying, while an empty pool means &quot;this path has no fallback at all.&quot; A persistent pool=0 should page in the first minute, not wait for the user to arrive with 503s.</p>\n<p>The remediation is equally clear: if a group line promises &quot;two routes,&quot; bind both upstream accounts into the group and configure a fallback group; restoring a manually paused account is a single switch flip. But before any of that, make pool=0 able to speak for itself.</p>\n<h2>Closing</h2>\n<p>Three lines to remember when debugging scheduling:</p>\n<ol><li>When the user says &quot;two routes,&quot; count them in the binding table first — don&#x27;t look for answers in the retry logic.</li><li>When the log says pool=0, check whether excluded is 0 first: if it is, investigate the pool&#x27;s shape; if not, investigate the exclusion reasons.</li><li>When the system has two kinds of &quot;stop,&quot; first confirm which one heals itself and which one sits there waiting for a human.</li></ol>\n<p>Between &quot;feeling like there is a fallback&quot; and &quot;actually having one,&quot; the difference is often a single act of counting.</p>"}, "prev": {"url": "/writing/47-two-lines-shared-repo-split", "t": {"zh": "靠分支名分辨的两条线，早晚会混", "en": "Two Lines Told Apart by Branch Names Alone Will Mix Sooner or Later"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
