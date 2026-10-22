@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发布前，先证明旧包没有新功能 — rotor</title>
+<meta name="description" content="三条独立证据证明旧包没有新功能；蓝绿候选验证完才切流；没验的写进边界清单">
+<link rel="canonical" href="https://www.rotor1996.top/writing/49-prove-old-build-lacks-feature">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "发布前，先证明旧包没有新功能", "description": "三条独立证据证明旧包没有新功能；蓝绿候选验证完才切流；没验的写进边界清单", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-23", "mainEntityOfPage": "https://www.rotor1996.top/writing/49-prove-old-build-lacks-feature"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>发布前，先证明旧包没有新功能</h1><p>结论先行：上线一个新功能之前，第一件事不是准备新包，而是用证据证明旧包确实没有这个功能。&quot;新包里包含了功能&quot;是正面断言，好验证；&quot;旧包里没有这个功能&quot;是缺席断言，最容易被想当然糊弄过去。</p>
+<p>最常见的发布乌龙不是新包坏了，而是两种把假设当证据：以为旧包没有、其实某个分支早就合进去了；或者以为新包有了、其实构建时漏掉了目标提交。两种错误同一个根因：没有人真正验证过&quot;缺席&quot;。</p>
+<h2>三条证据，三个层面</h2>
+<p>这次发布的新功能，是多模型网关的&quot;搜索/抓取工具 API 透传&quot;：网关新增两个接口，成功产生内容时按次计费。发布前，旧包到底&quot;有没有&quot;这个功能，用了三条互相独立的证据：</p>
+<ol><li><strong>构建时间线</strong>：线上镜像的构建时间早于目标提交的时间。一个在提交之后才构建的产物，不可能包含这次提交。</li><li><strong>产物二进制</strong>：对运行中旧容器的二进制做字符串扫描，新接口路径的出现次数为 0。产物层面没有。</li><li><strong>运行时探测</strong>：向新接口发真实请求，返回 404。行为层面没有。</li></ol>
+<p>三条证据来自三个不同层面，互相不能替代：时间线只能证明理论上不可能有，二进制扫描证明产物里确实没有，运行时探测证明行为上确实没有。任何一条单独成立都有缺口：时间线对，但产物可能被覆盖过；产物里没有，但请求可能被路由劫持。缺席的证明，必须三层对齐。</p>
+<h2>候选槽位：先验证，再切流</h2>
+<p>新包不直接替换旧包，而是先在候选槽位启动：不同的端口，同样的数据目录、网络与环境变量。切流前要过三层检查：</p>
+<ol><li>健康检查 200：服务活着。</li><li>新接口返回 401：路由存在且鉴权生效。这里的 401 是好消息，它证明请求走进了网关的鉴权链，而不是被某个中间件半路吃掉。</li><li>静态资源可访问：前端构建产物没坏。</li></ol>
+<p>候选槽位的价值在第一次启动就兑现了：构建标签漏掉了时区数据依赖，候选容器启动即退出，问题被拦在切流之前。真正的切流只用了约 4 秒。切换完成后，候选槽位的容器经过验证即删除，不长期保留，避免两个&quot;生产&quot;长期并存。</p>
+<h2>回滚：发布前就绪</h2>
+<p>回滚方案不写在事后，写在发布前。旧镜像在发布前打好保留标签；这次变更只改接口与路由，不涉及数据结构迁移，所以回滚只需把标签切回去，不需要数据回退。回滚脚本、旧镜像、切换命令，发布前全部就位。</p>
+<h2>诚实边界：没验的写下来</h2>
+<p>一次发布还包括两条&quot;没有验证&quot;的声明，同样写进发布记录：</p>
+<ol><li>候选容器与主容器共享同一份数据约 6 分钟，两套后台任务同时跑过，没有发现数据异常。但这只是观察，不是隔离验证的证据，不能写成结论。</li><li>真实的按次扣费链路没有做端到端验证，只验证了路由、鉴权与分组校验。新功能的计费正确性，留待后续专项验证。</li></ol>
+<p>另外，事后补测发现了第二条接入路径的问题：同一功能同时注册在官方路径与根路径下，根路径的请求被前端中间件当成页面路由，返回 200 的 HTML。验证只覆盖了官方路径，另一条路径的缺口记为修复项，下次发布前先补回归断言。</p>
+<h2>收束</h2>
+<p>一次完整发布至少回答四个问题：旧包确实没有（缺席证据）、候选确实可用（隔离验证）、回滚确实能退（回退路径）、没验的确实列出（边界清单）。发布不是&quot;新包上线了&quot;，而是这四个问题的答案都写下来了。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "发布前，先证明旧包没有新功能", "en": "Before Release, Prove the Old Build Lacks the Feature"}, "body": {"zh": "<p>结论先行：上线一个新功能之前，第一件事不是准备新包，而是用证据证明旧包确实没有这个功能。&quot;新包里包含了功能&quot;是正面断言，好验证；&quot;旧包里没有这个功能&quot;是缺席断言，最容易被想当然糊弄过去。</p>\n<p>最常见的发布乌龙不是新包坏了，而是两种把假设当证据：以为旧包没有、其实某个分支早就合进去了；或者以为新包有了、其实构建时漏掉了目标提交。两种错误同一个根因：没有人真正验证过&quot;缺席&quot;。</p>\n<h2>三条证据，三个层面</h2>\n<p>这次发布的新功能，是多模型网关的&quot;搜索/抓取工具 API 透传&quot;：网关新增两个接口，成功产生内容时按次计费。发布前，旧包到底&quot;有没有&quot;这个功能，用了三条互相独立的证据：</p>\n<ol><li><strong>构建时间线</strong>：线上镜像的构建时间早于目标提交的时间。一个在提交之后才构建的产物，不可能包含这次提交。</li><li><strong>产物二进制</strong>：对运行中旧容器的二进制做字符串扫描，新接口路径的出现次数为 0。产物层面没有。</li><li><strong>运行时探测</strong>：向新接口发真实请求，返回 404。行为层面没有。</li></ol>\n<p>三条证据来自三个不同层面，互相不能替代：时间线只能证明理论上不可能有，二进制扫描证明产物里确实没有，运行时探测证明行为上确实没有。任何一条单独成立都有缺口：时间线对，但产物可能被覆盖过；产物里没有，但请求可能被路由劫持。缺席的证明，必须三层对齐。</p>\n<h2>候选槽位：先验证，再切流</h2>\n<p>新包不直接替换旧包，而是先在候选槽位启动：不同的端口，同样的数据目录、网络与环境变量。切流前要过三层检查：</p>\n<ol><li>健康检查 200：服务活着。</li><li>新接口返回 401：路由存在且鉴权生效。这里的 401 是好消息，它证明请求走进了网关的鉴权链，而不是被某个中间件半路吃掉。</li><li>静态资源可访问：前端构建产物没坏。</li></ol>\n<p>候选槽位的价值在第一次启动就兑现了：构建标签漏掉了时区数据依赖，候选容器启动即退出，问题被拦在切流之前。真正的切流只用了约 4 秒。切换完成后，候选槽位的容器经过验证即删除，不长期保留，避免两个&quot;生产&quot;长期并存。</p>\n<h2>回滚：发布前就绪</h2>\n<p>回滚方案不写在事后，写在发布前。旧镜像在发布前打好保留标签；这次变更只改接口与路由，不涉及数据结构迁移，所以回滚只需把标签切回去，不需要数据回退。回滚脚本、旧镜像、切换命令，发布前全部就位。</p>\n<h2>诚实边界：没验的写下来</h2>\n<p>一次发布还包括两条&quot;没有验证&quot;的声明，同样写进发布记录：</p>\n<ol><li>候选容器与主容器共享同一份数据约 6 分钟，两套后台任务同时跑过，没有发现数据异常。但这只是观察，不是隔离验证的证据，不能写成结论。</li><li>真实的按次扣费链路没有做端到端验证，只验证了路由、鉴权与分组校验。新功能的计费正确性，留待后续专项验证。</li></ol>\n<p>另外，事后补测发现了第二条接入路径的问题：同一功能同时注册在官方路径与根路径下，根路径的请求被前端中间件当成页面路由，返回 200 的 HTML。验证只覆盖了官方路径，另一条路径的缺口记为修复项，下次发布前先补回归断言。</p>\n<h2>收束</h2>\n<p>一次完整发布至少回答四个问题：旧包确实没有（缺席证据）、候选确实可用（隔离验证）、回滚确实能退（回退路径）、没验的确实列出（边界清单）。发布不是&quot;新包上线了&quot;，而是这四个问题的答案都写下来了。</p>", "en": "<p>Conclusion first: before shipping a new feature, the first job is not preparing the new build — it is proving with evidence that the old build genuinely lacks this feature. &quot;The new build contains the feature&quot; is a positive claim and easy to verify; &quot;the old build does not contain the feature&quot; is a claim of absence, and the easiest to hand-wave away.</p>\n<p>The most common release mishaps are not broken new builds, but two ways of treating assumptions as evidence: believing the old build lacks something that some branch had already merged in; or believing the new build has something that the build actually missed. Same root cause in both: nobody ever verified the absence.</p>\n<h2>Three Pieces of Evidence, Three Layers</h2>\n<p>The feature being shipped was a &quot;search/fetch tool API passthrough&quot; for a multi-model gateway: the gateway added two endpoints, billed per successful call with content. Before the release, whether the old build &quot;had&quot; this feature was established with three independent pieces of evidence:</p>\n<ol><li><strong>Build timeline</strong>: the production image was built before the target commit. A build produced after that commit cannot possibly contain it.</li><li><strong>Product binary</strong>: a string scan of the running old container&#x27;s binary showed zero occurrences of the new endpoint paths. The feature is absent at the artifact level.</li><li><strong>Runtime probing</strong>: real requests to the new endpoints returned 404. The feature is absent at the behavioral level.</li></ol>\n<p>The three pieces come from three different layers and cannot substitute for one another: the timeline only proves theoretical impossibility, the binary scan proves the artifact genuinely lacks it, and runtime probing proves it is behaviorally absent. Any single one leaves a gap: the timeline may be right while the artifact was overwritten; the artifact may lack it while requests get hijacked by routing. Proving absence requires all three layers to agree.</p>\n<h2>Candidate Slot: Verify Before Switching</h2>\n<p>The new build does not replace the old one directly. It first starts in a candidate slot: a different port, the same data directory, network, and environment variables. Three checks must pass before traffic switches:</p>\n<ol><li>Health check returns 200: the service is alive.</li><li>The new endpoints return 401: the routes exist and authentication is enforced. A 401 here is good news — it proves the request reached the gateway&#x27;s auth chain instead of being eaten by some middleware halfway.</li><li>Static assets are reachable: the frontend build is not broken.</li></ol>\n<p>The candidate slot paid for itself on the very first start: a missing timezone-data build tag made the candidate container exit on launch, and the problem was caught before any traffic switched. The actual switch took about 4 seconds. Once verified, the candidate container is removed — no keeping two &quot;productions&quot; around.</p>\n<h2>Rollback: Ready Before Release</h2>\n<p>The rollback plan is written before the release, not after. The old image gets a retention tag before the release; this change only touched handlers and routes with no data-structure migration, so rollback only needs switching the tag back, with no data downgrade. The rollback script, the old image, and the switch command are all in place before release day.</p>\n<h2>Honest Boundaries: Write Down What Was Not Verified</h2>\n<p>A release also carries two &quot;not verified&quot; statements, recorded alongside:</p>\n<ol><li>The candidate container shared the same database for about 6 minutes, with two sets of background tasks running at once, and no data anomaly was observed. That is an observation, not isolation-verification evidence, and it must not be written up as a conclusion.</li><li>The real per-call billing path had no end-to-end verification — only routes, authentication, and group validation were checked. Billing correctness for the new feature awaits a dedicated verification.</li></ol>\n<p>A follow-up probe also found an issue on the second access path: the same feature was registered under both the official path and the root path, and requests to the root path were treated as page routes by the frontend middleware, returning 200 with HTML. Verification had only covered the official path; the gap on the other path is logged as a fix item, with a regression assertion to be added before the next release.</p>\n<h2>Closing</h2>\n<p>A complete release answers at least four questions: the old build truly lacks it (evidence of absence), the candidate truly works (isolated verification), the rollback truly rolls back (a working retreat path), and the unverified is truly listed (a boundary checklist). A release is not &quot;the new build is live&quot; — it is these four answers, all written down.</p>"}, "prev": {"url": "/writing/44-timeout-misreported-as-protocol", "t": {"zh": "报错说协议错，未必是协议错", "en": "The Error Said \"Protocol.\" It Was a Timeout."}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
