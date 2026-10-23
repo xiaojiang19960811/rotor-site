@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「是管理员」不等于「有管理员权限」 — rotor</title>
+<meta name="description" content="安装包选"为所有用户安装"后向导直接消失、无 UAC 提示：文件继承了父目录的低完整性标签，Windows 取用户与文件完整性较低者启动进程；排障先看 icacls 的 Mandatory Label，不看账号名">
+<link rel="canonical" href="https://www.rotor1996.top/writing/50-low-integrity-install-exit">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "「是管理员」不等于「有管理员权限」", "description": "安装包选\"为所有用户安装\"后向导直接消失、无 UAC 提示：文件继承了父目录的低完整性标签，Windows 取用户与文件完整性较低者启动进程；排障先看 icacls 的 Mandatory Label，不看账号名", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-24", "mainEntityOfPage": "https://www.rotor1996.top/writing/50-low-integrity-install-exit"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>「是管理员」不等于「有管理员权限」</h1><p>结论先行：Windows 上&quot;账号是管理员&quot;和&quot;进程实际拿到管理员权限&quot;是两件事。一个桌面客户端的安装包放在工程目录里双击，选择&quot;为所有用户安装&quot;后向导直接消失：无报错、无 UAC 提示。根因不在账号、不在 UAC，而在文件本身：安装包继承了父目录的低完整性标签，Windows 按&quot;用户完整性&quot;与&quot;文件完整性&quot;取低者启动进程，安装器的提权子进程拿不到所需级别，直接退出。</p>
+<h2>现象：无提示的消失</h2>
+<p>双击安装包 → 安装向导出现 → 选择&quot;为所有用户安装&quot; → 向导直接消失。没有错误对话框，没有 UAC 提权弹窗，没有日志提示。第一反应通常是：UAC 坏了？安装包坏了？账号权限不够？</p>
+<p>逐一排除：账号确实在管理员组；同一个安装包复制到普通下载目录，就能正常弹出 UAC 并继续。文件没坏，账号没问题，问题跟着&quot;目录&quot;走。</p>
+<h2>对照实验：同一文件，换目录就好</h2>
+<p>对原目录和下载目录的两份安装包做哈希对照：摘要一致，文件本身没有区别。再用同一个诊断程序在两个目录分别读取进程完整性，结果一边是低完整性、提权检查失败，一边是高完整性、提权检查通过。两次诊断里，账号类型读数都是管理员。</p>
+<p>账号身份完全相同，进程的实际完整性却一高一低。<strong>&quot;是管理员&quot;描述的是账号，&quot;能不能提权&quot;描述的是进程。</strong></p>
+<h2>定义：完整性级别是第二道门</h2>
+<p>Windows 除了 ACL（谁能读写），还有一道强制完整性控制（Mandatory Integrity Control）：完整性级别。创建进程时，系统取&quot;用户令牌完整性&quot;和&quot;可执行文件完整性&quot;两者中的较低者，作为新进程的完整性。</p>
+<p>低完整性标签可以通过继承从父目录传下来：目录被标了低完整性，里面落下的文件跟着变低。安装包从构建流程落到工程目录，顺手继承了低标签。此后无论什么账号双击它，进程完整性都先被文件这一头按住。</p>
+<p>NSIS 的&quot;为所有用户安装&quot;要走提权子进程。子进程要往系统级目录写文件，需要的完整性拿不到，就以退出码 0x666666 直接退出，外层向导跟着消失。连 UAC 弹窗的机会都没有：弹窗只在&quot;能提权&quot;时出现，&quot;根本不够格提权&quot;时直接出局。</p>
+<h2>排障顺序：先看文件，再看账号</h2>
+<p>这次复盘沉淀下来的顺序：</p>
+<ol><li><strong>先看退出码</strong>：安装器消失不是&quot;没反应&quot;，NSIS 给了 0x666666。有退出码就有方向。</li><li><strong>查文件的强制标签</strong>：用 <code>icacls &lt;安装包&gt;</code> 看有没有 Low Mandatory Level；有就逐级往上查父目录，找到标签的源头。</li><li><strong>读实际完整性，不读账号名</strong>：用诊断手段读进程的实际完整性级别。账号在管理员组、右键&quot;以管理员身份运行&quot;，都不能代替这一次读取。</li><li><strong>隔离变量</strong>：复制到无低完整性继承的普通目录再启动，确认&quot;换目录就好&quot;，把&quot;文件坏了&quot;彻底排除。</li></ol>
+<p>以及三条&quot;不要&quot;：不要据此去改账户配置，不要关 UAC，不要批量重置工程目录的 ACL。标签的源头（哪个工具、何时设置的）还没核实，动手改 ACL 是在修一个没确诊的病。</p>
+<h2>收束</h2>
+<p>下次安装器无提示闪退，别先怀疑账号和 UAC：先问文件是从哪个目录来的，再用 icacls 看它继承了什么。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "「是管理员」不等于「有管理员权限」", "en": "\"Admin Account\" Doesn't Mean \"Admin Privileges\""}, "body": {"zh": "<p>结论先行：Windows 上&quot;账号是管理员&quot;和&quot;进程实际拿到管理员权限&quot;是两件事。一个桌面客户端的安装包放在工程目录里双击，选择&quot;为所有用户安装&quot;后向导直接消失：无报错、无 UAC 提示。根因不在账号、不在 UAC，而在文件本身：安装包继承了父目录的低完整性标签，Windows 按&quot;用户完整性&quot;与&quot;文件完整性&quot;取低者启动进程，安装器的提权子进程拿不到所需级别，直接退出。</p>\n<h2>现象：无提示的消失</h2>\n<p>双击安装包 → 安装向导出现 → 选择&quot;为所有用户安装&quot; → 向导直接消失。没有错误对话框，没有 UAC 提权弹窗，没有日志提示。第一反应通常是：UAC 坏了？安装包坏了？账号权限不够？</p>\n<p>逐一排除：账号确实在管理员组；同一个安装包复制到普通下载目录，就能正常弹出 UAC 并继续。文件没坏，账号没问题，问题跟着&quot;目录&quot;走。</p>\n<h2>对照实验：同一文件，换目录就好</h2>\n<p>对原目录和下载目录的两份安装包做哈希对照：摘要一致，文件本身没有区别。再用同一个诊断程序在两个目录分别读取进程完整性，结果一边是低完整性、提权检查失败，一边是高完整性、提权检查通过。两次诊断里，账号类型读数都是管理员。</p>\n<p>账号身份完全相同，进程的实际完整性却一高一低。<strong>&quot;是管理员&quot;描述的是账号，&quot;能不能提权&quot;描述的是进程。</strong></p>\n<h2>定义：完整性级别是第二道门</h2>\n<p>Windows 除了 ACL（谁能读写），还有一道强制完整性控制（Mandatory Integrity Control）：完整性级别。创建进程时，系统取&quot;用户令牌完整性&quot;和&quot;可执行文件完整性&quot;两者中的较低者，作为新进程的完整性。</p>\n<p>低完整性标签可以通过继承从父目录传下来：目录被标了低完整性，里面落下的文件跟着变低。安装包从构建流程落到工程目录，顺手继承了低标签。此后无论什么账号双击它，进程完整性都先被文件这一头按住。</p>\n<p>NSIS 的&quot;为所有用户安装&quot;要走提权子进程。子进程要往系统级目录写文件，需要的完整性拿不到，就以退出码 0x666666 直接退出，外层向导跟着消失。连 UAC 弹窗的机会都没有：弹窗只在&quot;能提权&quot;时出现，&quot;根本不够格提权&quot;时直接出局。</p>\n<h2>排障顺序：先看文件，再看账号</h2>\n<p>这次复盘沉淀下来的顺序：</p>\n<ol><li><strong>先看退出码</strong>：安装器消失不是&quot;没反应&quot;，NSIS 给了 0x666666。有退出码就有方向。</li><li><strong>查文件的强制标签</strong>：用 <code>icacls &lt;安装包&gt;</code> 看有没有 Low Mandatory Level；有就逐级往上查父目录，找到标签的源头。</li><li><strong>读实际完整性，不读账号名</strong>：用诊断手段读进程的实际完整性级别。账号在管理员组、右键&quot;以管理员身份运行&quot;，都不能代替这一次读取。</li><li><strong>隔离变量</strong>：复制到无低完整性继承的普通目录再启动，确认&quot;换目录就好&quot;，把&quot;文件坏了&quot;彻底排除。</li></ol>\n<p>以及三条&quot;不要&quot;：不要据此去改账户配置，不要关 UAC，不要批量重置工程目录的 ACL。标签的源头（哪个工具、何时设置的）还没核实，动手改 ACL 是在修一个没确诊的病。</p>\n<h2>收束</h2>\n<p>下次安装器无提示闪退，别先怀疑账号和 UAC：先问文件是从哪个目录来的，再用 icacls 看它继承了什么。</p>", "en": "<p>Conclusion first: on Windows, &quot;the account is an administrator&quot; and &quot;the process actually holds administrator privileges&quot; are two different things. A desktop client&#x27;s installer, launched from an engineering directory, made its setup wizard vanish the moment &quot;install for all users&quot; was selected: no error, no UAC prompt. The root cause was neither the account nor UAC, but the file itself: the installer had inherited a low integrity label from its parent directory, and Windows starts a process at the lower of the user integrity level and the file integrity level. The installer&#x27;s elevation child process never reached the level it needed and exited directly.</p>\n<h2>The symptom: a silent disappearance</h2>\n<p>Double-click the installer → the setup wizard appears → select &quot;install for all users&quot; → the wizard vanishes. No error dialog, no UAC elevation prompt, no log hint. The usual first guesses: is UAC broken? Is the installer corrupt? Does the account lack privileges?</p>\n<p>Eliminated one by one: the account was genuinely in the Administrators group; the same installer copied to an ordinary Downloads folder popped the UAC prompt and continued normally. The file was fine, the account was fine — the problem followed the directory.</p>\n<h2>The controlled experiment: same file, different directory</h2>\n<p>Hash comparison of the installers in the original directory and the Downloads folder: identical digests, no difference in the file itself. Then the same diagnostic program read process integrity in each directory: low integrity with a failed elevation check on one side, high integrity with a passed check on the other. In both diagnostics, the account type read as Administrator.</p>\n<p>Identical account identity, yet the actual process integrity differed. <strong>&quot;Is an administrator&quot; describes the account; &quot;can elevate&quot; describes the process.</strong></p>\n<h2>The definition: integrity level is a second gate</h2>\n<p>Beyond ACLs (who can read and write), Windows has Mandatory Integrity Control: integrity levels. When a process is created, the system takes the lower of the user token&#x27;s integrity and the executable file&#x27;s integrity as the new process&#x27;s integrity.</p>\n<p>A low integrity label propagates down from a parent directory through inheritance: once a directory carries the low label, files landing inside it pick it up. The installer, dropped into the engineering directory by the build flow, inherited the low label along the way. From then on, no matter which account double-clicked it, the file side held the process&#x27;s integrity down.</p>\n<p>NSIS&#x27;s &quot;install for all users&quot; path goes through an elevated child process. That child needs to write into system-level directories; denied the integrity it required, it exited directly with code 0x666666, taking the outer wizard with it. There wasn&#x27;t even a chance for a UAC prompt: the prompt only appears when elevation is possible — when elevation was never on the table, the process simply left.</p>\n<h2>The troubleshooting order: check the file before the account</h2>\n<p>The order this postmortem settled on:</p>\n<ol><li><strong>Read the exit code first</strong>: a vanishing installer is not &quot;no response&quot; — NSIS gave 0x666666. An exit code is a direction.</li><li><strong>Check the file&#x27;s mandatory label</strong>: run <code>icacls &lt;installer&gt;</code> and look for Low Mandatory Level; if present, walk up the parent directories to find where the label came from.</li><li><strong>Read actual integrity, not the account name</strong>: measure the process&#x27;s real integrity level with a diagnostic. Membership in Administrators, or &quot;run as administrator&quot;, is no substitute for that one reading.</li><li><strong>Isolate the variable</strong>: copy the installer to an ordinary directory with no low-integrity inheritance and launch it there; confirming &quot;a different directory fixes it&quot; rules out &quot;the file is corrupt&quot; for good.</li></ol>\n<p>And three don&#x27;ts: don&#x27;t reconfigure the account over this, don&#x27;t turn off UAC, don&#x27;t batch-reset the engineering directory&#x27;s ACLs. The label&#x27;s origin — which tool set it, and when — is still unverified; changing ACLs now would be treating an undiagnosed condition.</p>\n<h2>Closing</h2>\n<p>Next time an installer vanishes without a word, don&#x27;t blame the account or UAC first: ask which directory the file came from, then use icacls to see what it inherited.</p>"}, "prev": {"url": "/writing/48-empty-pool-503", "t": {"zh": "「有两个渠道」不等于真有两个", "en": "\"Two Channels\" Doesn't Mean Two Are Actually Bound"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>

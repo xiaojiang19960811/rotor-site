@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>https://www.rotor1996.top/</loc><lastmod>2026-10-23</lastmod></url>
-<url><loc>https://www.rotor1996.top/writing/</loc><lastmod>2026-10-23</lastmod></url>
+<url><loc>https://www.rotor1996.top/</loc><lastmod>2026-10-24</lastmod></url>
+<url><loc>https://www.rotor1996.top/writing/</loc><lastmod>2026-10-24</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/01-newsletter-newsroom</loc><lastmod>2026-10-02</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/02-persona-from-briefs</loc><lastmod>2026-10-02</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/03-fork-selective-upgrade</loc><lastmod>2026-10-02</lastmod></url>
@@ -51,4 +51,5 @@
 <url><loc>https://www.rotor1996.top/writing/47-two-lines-shared-repo-split</loc><lastmod>2026-10-21</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/48-empty-pool-503</loc><lastmod>2026-10-22</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/49-prove-old-build-lacks-feature</loc><lastmod>2026-10-23</lastmod></url>
+<url><loc>https://www.rotor1996.top/writing/50-low-integrity-install-exit</loc><lastmod>2026-10-24</lastmod></url>
 </urlset>
