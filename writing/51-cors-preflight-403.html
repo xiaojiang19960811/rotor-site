@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>预检 403：跨域放行要分三段查 — rotor</title>
+<meta name="description" content="预检、鉴权、健康检查各查各的；白名单缺口只在预检段现形">
+<link rel="canonical" href="https://www.rotor1996.top/writing/51-cors-preflight-403">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "预检 403：跨域放行要分三段查", "description": "预检、鉴权、健康检查各查各的；白名单缺口只在预检段现形", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-25", "mainEntityOfPage": "https://www.rotor1996.top/writing/51-cors-preflight-403"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>预检 403：跨域放行要分三段查</h1><p>结论先行：浏览器跨域调用生图接口失败，返回的 403 来自预检，不来自鉴权。浏览器在发实际请求之前，会先发一个 OPTIONS 预检问一句&quot;我这个来源能不能跨域&quot;；预检被拒，实际请求根本不会发出去，密钥对错、模型状态都还没轮到被问。根因是当前生产槽的跨域白名单没有配置：白名单为空，应用层直接拒绝一切预检。</p>
+<h2>现象：失败发生在请求之前</h2>
+<p>AI 画布项目的前端跨域调用多模型网关的生图接口，调用失败。第一反应容易往两个方向跑：密钥是不是错了，或者反向代理是不是拦了。但这两个方向都假设&quot;请求已经发到服务端并被处理&quot;，而预检失败时这个前提根本不成立。</p>
+<p>区分的关键证据只有一条：绕过反向代理、直连应用发 OPTIONS，同样返回 403；启动日志也明确提示跨域白名单为空。反向代理不在这条链路上，密钥也不在链路上。问题在应用层的白名单配置本身。</p>
+<p>还有一个容易忽略的点：预检是浏览器自动发出的，前端代码里并没有显式写这次请求。所以前端日志里往往只看到调用失败，看不到失败来自哪一段；必须到浏览器网络面板里找那次 OPTIONS 请求，或者直接用命令行复现一次预检，才能把&quot;哪一段&quot;钉死。看不见的请求，更要主动去找。</p>
+<h2>定义：三段检查各问各的</h2>
+<p>一次跨域调用里有三段检查，每段回答不同的问题，混在一起查只会互相掩盖：</p>
+<table><thead><tr><th>检查段</th><th>问的问题</th><th>本次的答案</th></tr></thead><tbody><tr><td>预检</td><td>这个来源允不允许跨域</td><td>403：白名单为空，来源不在放行之列</td></tr><tr><td>实际请求</td><td>凭证对不对、有没有权限</td><td>未走到这一步；修复后无密钥请求返回 401 且带正确跨域头，证明进了鉴权流程</td></tr><tr><td>健康检查</td><td>服务活没活</td><td>内外健康检查均为正常，生产槽运行且健康</td></tr></tbody></table>
+<p>健康检查正常只能证明服务活着，证明不了跨域放行；预检通过只能证明来源被放行，证明不了鉴权通过。每一项证据只回答它自己的问题，不能互相顶替。这是这篇最值得带走的一条：<strong>排障先分段，再定位</strong>。</p>
+<h2>三个误判</h2>
+<ol><li><strong>把预检 403 当鉴权失败</strong>：预检不带业务凭证，它的 403 与密钥无关。真正&quot;进了鉴权&quot;的信号是实际请求返回 401：无密钥被拒，但响应带了正确的跨域头，说明请求已经穿过跨域层、到达鉴权层。403 与 401 长得像，所在的层完全不同。</li><li><strong>直连也失败就怪反向代理</strong>：直连绕过了反向代理，结果还是 403，这恰恰排除了反向代理。排障里&quot;绕过一层结果不变&quot;不是白做，它是排除法成立的证据：被绕过的那层不是根因所在。</li><li><strong>旧运行目录有放行，就以为新目录也有</strong>：历史放行配置属于旧运行目录，不能代表新运行目录的生效状态。配置跟着运行目录走，换槽不自动继承。蓝绿双槽同理：回退到备用槽时必须另行核验它的跨域配置，不能假设它共享了本次修改。</li></ol>
+<h2>修复：只改一处，留好回路</h2>
+<p>修复只动了当前生产槽的配置：把画布前端的来源放进白名单，允许携带凭证，然后重启该槽。镜像、代码、反向代理、数据库都没有动。原配置事先做了备份，回滚就是恢复备份再重启该槽，一步到位。</p>
+<p>但这次修复的验证边界要说清楚：验证走到了&quot;目标来源预检返回 204 且带精确的放行来源，不受信任的来源预检仍被 403，实际请求能进鉴权流程，健康检查正常&quot;。真实生图尚未验证：预检通过不等于生图成功，就像健康检查正常不等于跨域放行一样。每一层只认自己那层的证据，验证清单上&quot;待验证&quot;的一项不能提前划掉。</p>
+<h2>发布核对：加两项</h2>
+<p>这次复盘给发布核对加了两项硬性检查：</p>
+<ol><li><strong>用实际浏览器来源做预检</strong>：不能只查同源健康接口。健康接口同源可达，不走跨域逻辑，查它查不出白名单缺口。</li><li><strong>检查实际响应头</strong>：预检响应要带精确的放行来源，实际请求的响应也要带正确的跨域头。只看状态码不够，头信息才是跨域放行是否生效的证据。</li></ol>
+<h2>收束</h2>
+<p>下次跨域调用失败，先问失败发生在哪一段：预检、鉴权还是健康。段分清了，白名单缺口、密钥问题、服务宕机就不会互相背锅。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "预检 403：跨域放行要分三段查", "en": "A 403 on Preflight: Check CORS in Three Separate Stages"}, "body": {"zh": "<p>结论先行：浏览器跨域调用生图接口失败，返回的 403 来自预检，不来自鉴权。浏览器在发实际请求之前，会先发一个 OPTIONS 预检问一句&quot;我这个来源能不能跨域&quot;；预检被拒，实际请求根本不会发出去，密钥对错、模型状态都还没轮到被问。根因是当前生产槽的跨域白名单没有配置：白名单为空，应用层直接拒绝一切预检。</p>\n<h2>现象：失败发生在请求之前</h2>\n<p>AI 画布项目的前端跨域调用多模型网关的生图接口，调用失败。第一反应容易往两个方向跑：密钥是不是错了，或者反向代理是不是拦了。但这两个方向都假设&quot;请求已经发到服务端并被处理&quot;，而预检失败时这个前提根本不成立。</p>\n<p>区分的关键证据只有一条：绕过反向代理、直连应用发 OPTIONS，同样返回 403；启动日志也明确提示跨域白名单为空。反向代理不在这条链路上，密钥也不在链路上。问题在应用层的白名单配置本身。</p>\n<p>还有一个容易忽略的点：预检是浏览器自动发出的，前端代码里并没有显式写这次请求。所以前端日志里往往只看到调用失败，看不到失败来自哪一段；必须到浏览器网络面板里找那次 OPTIONS 请求，或者直接用命令行复现一次预检，才能把&quot;哪一段&quot;钉死。看不见的请求，更要主动去找。</p>\n<h2>定义：三段检查各问各的</h2>\n<p>一次跨域调用里有三段检查，每段回答不同的问题，混在一起查只会互相掩盖：</p>\n<table><thead><tr><th>检查段</th><th>问的问题</th><th>本次的答案</th></tr></thead><tbody><tr><td>预检</td><td>这个来源允不允许跨域</td><td>403：白名单为空，来源不在放行之列</td></tr><tr><td>实际请求</td><td>凭证对不对、有没有权限</td><td>未走到这一步；修复后无密钥请求返回 401 且带正确跨域头，证明进了鉴权流程</td></tr><tr><td>健康检查</td><td>服务活没活</td><td>内外健康检查均为正常，生产槽运行且健康</td></tr></tbody></table>\n<p>健康检查正常只能证明服务活着，证明不了跨域放行；预检通过只能证明来源被放行，证明不了鉴权通过。每一项证据只回答它自己的问题，不能互相顶替。这是这篇最值得带走的一条：<strong>排障先分段，再定位</strong>。</p>\n<h2>三个误判</h2>\n<ol><li><strong>把预检 403 当鉴权失败</strong>：预检不带业务凭证，它的 403 与密钥无关。真正&quot;进了鉴权&quot;的信号是实际请求返回 401：无密钥被拒，但响应带了正确的跨域头，说明请求已经穿过跨域层、到达鉴权层。403 与 401 长得像，所在的层完全不同。</li><li><strong>直连也失败就怪反向代理</strong>：直连绕过了反向代理，结果还是 403，这恰恰排除了反向代理。排障里&quot;绕过一层结果不变&quot;不是白做，它是排除法成立的证据：被绕过的那层不是根因所在。</li><li><strong>旧运行目录有放行，就以为新目录也有</strong>：历史放行配置属于旧运行目录，不能代表新运行目录的生效状态。配置跟着运行目录走，换槽不自动继承。蓝绿双槽同理：回退到备用槽时必须另行核验它的跨域配置，不能假设它共享了本次修改。</li></ol>\n<h2>修复：只改一处，留好回路</h2>\n<p>修复只动了当前生产槽的配置：把画布前端的来源放进白名单，允许携带凭证，然后重启该槽。镜像、代码、反向代理、数据库都没有动。原配置事先做了备份，回滚就是恢复备份再重启该槽，一步到位。</p>\n<p>但这次修复的验证边界要说清楚：验证走到了&quot;目标来源预检返回 204 且带精确的放行来源，不受信任的来源预检仍被 403，实际请求能进鉴权流程，健康检查正常&quot;。真实生图尚未验证：预检通过不等于生图成功，就像健康检查正常不等于跨域放行一样。每一层只认自己那层的证据，验证清单上&quot;待验证&quot;的一项不能提前划掉。</p>\n<h2>发布核对：加两项</h2>\n<p>这次复盘给发布核对加了两项硬性检查：</p>\n<ol><li><strong>用实际浏览器来源做预检</strong>：不能只查同源健康接口。健康接口同源可达，不走跨域逻辑，查它查不出白名单缺口。</li><li><strong>检查实际响应头</strong>：预检响应要带精确的放行来源，实际请求的响应也要带正确的跨域头。只看状态码不够，头信息才是跨域放行是否生效的证据。</li></ol>\n<h2>收束</h2>\n<p>下次跨域调用失败，先问失败发生在哪一段：预检、鉴权还是健康。段分清了，白名单缺口、密钥问题、服务宕机就不会互相背锅。</p>", "en": "<p>Conclusion first: when a browser&#x27;s cross-origin call to an image-generation endpoint failed, the 403 came from the preflight, not from authentication. Before sending the actual request, the browser first sends an OPTIONS preflight asking &quot;is my origin allowed across origins?&quot;; if the preflight is refused, the actual request is never sent, and the key&#x27;s correctness or the model&#x27;s state never even gets asked. The root cause was that the current production slot&#x27;s CORS allowlist was not configured: with an empty allowlist, the application layer refused every preflight outright.</p>\n<h2>The Failure: It Happened Before the Request</h2>\n<p>The AI canvas project&#x27;s frontend called the multi-model gateway&#x27;s image-generation endpoint across origins, and the call failed. The first instincts point in two directions: the key must be wrong, or the reverse proxy must be blocking it. But both directions assume &quot;the request already reached the server and was processed&quot; — and when a preflight fails, that premise does not hold at all.</p>\n<p>The single decisive piece of evidence: bypassing the reverse proxy and sending OPTIONS straight to the application also returned 403, and the startup log explicitly said the CORS allowlist was empty. The reverse proxy was not on this path, and neither was the key. The problem was the application layer&#x27;s allowlist configuration itself.</p>\n<p>One easily overlooked point: the preflight is sent automatically by the browser; the frontend code never explicitly issues that request. So frontend logs usually show only that the call failed, not which stage failed; you have to find that OPTIONS request in the browser&#x27;s network panel, or reproduce the preflight directly from the command line, to pin down &quot;which stage&quot;. A request you cannot see has to be actively hunted down.</p>\n<h2>Definitions: Three Checks, Three Different Questions</h2>\n<p>One cross-origin call contains three checks, each answering a different question. Mixing them up only lets them cover for each other:</p>\n<table><thead><tr><th>Check stage</th><th>Question it asks</th><th>This incident&#x27;s answer</th></tr></thead><tbody><tr><td>Preflight</td><td>Is this origin allowed across origins</td><td>403: empty allowlist, origin not on the allowlist</td></tr><tr><td>Actual request</td><td>Are the credentials right, is there permission</td><td>Never reached; after the fix, a keyless request returned 401 with correct CORS headers, proving it had entered the auth flow</td></tr><tr><td>Health check</td><td>Is the service alive</td><td>Healthy inside and out; the production slot running and healthy</td></tr></tbody></table>\n<p>A healthy health check only proves the service is alive; it proves nothing about CORS allowlisting. A passed preflight only proves the origin is allowed; it proves nothing about authentication. Each piece of evidence answers only its own question and cannot stand in for another. That is the one lesson most worth taking away: <strong>split the stages first, then locate the fault</strong>.</p>\n<h2>Three Misjudgments</h2>\n<ol><li><strong>Treating a preflight 403 as an auth failure</strong>: the preflight carries no business credentials, so its 403 has nothing to do with the key. The real signal for &quot;entered authentication&quot; is a 401 on the actual request: refused for lack of a key, but carrying correct CORS headers, which shows the request had passed the CORS layer and reached the auth layer. A 403 and a 401 look alike; they live on entirely different layers.</li><li><strong>Blaming the reverse proxy when a direct connection also fails</strong>: bypassing the reverse proxy and still getting 403 is precisely what rules the reverse proxy out. In troubleshooting, &quot;bypassing a layer changes nothing&quot; is not wasted work; it is the evidence that makes the elimination valid: the bypassed layer is not where the root cause sits.</li><li><strong>Assuming a new run directory inherits the old one&#x27;s allowlist</strong>: a historical allowlist belongs to the old run directory and says nothing about the new run directory&#x27;s effective state. Configuration travels with the run directory; switching slots does not inherit it automatically. The same applies to blue-green slots: when falling back to the standby slot, its CORS configuration must be verified separately — never assume it shares this change.</li></ol>\n<h2>The Fix: Change One Place, Keep a Way Back</h2>\n<p>The fix touched only the current production slot&#x27;s configuration: the canvas frontend&#x27;s origin was added to the allowlist, credentialed requests were allowed, and the slot was restarted. The image, the code, the reverse proxy, and the database were all untouched. The original configuration was backed up first, so rolling back means restoring the backup and restarting the slot — one step, done.</p>\n<p>But the verification boundary of this fix must be stated plainly: verification reached &quot;the target origin&#x27;s preflight returns 204 with a precise allow-origin, an untrusted origin&#x27;s preflight is still 403, actual requests can enter the auth flow, and health checks are normal.&quot; Real image generation is not yet verified: a passed preflight does not mean generation succeeded, just as a healthy health check does not mean CORS is allowed. Each layer only vouches for its own evidence, and an item marked &quot;pending verification&quot; on the checklist must not be crossed off early.</p>\n<h2>Release Checklist: Two Additions</h2>\n<p>This postmortem adds two mandatory checks to the release checklist:</p>\n<ol><li><strong>Preflight with the real browser origin</strong>: never verify with the same-origin health endpoint alone. The health endpoint is same-origin reachable and never exercises CORS logic, so checking it cannot expose an allowlist gap.</li><li><strong>Check the actual response headers</strong>: the preflight response must carry the precise allow-origin, and actual-request responses must carry correct CORS headers. Status codes alone are not enough; the headers are the evidence that CORS allowlisting is actually in effect.</li></ol>\n<h2>Closing</h2>\n<p>Next time a cross-origin call fails, ask first which stage failed: preflight, auth, or health. Once the stages are separated, an allowlist gap, a key problem, and a service outage stop taking the blame for each other.</p>"}, "prev": {"url": "/writing/50-low-integrity-install-exit", "t": {"zh": "「是管理员」不等于「有管理员权限」", "en": "\"Admin Account\" Doesn't Mean \"Admin Privileges\""}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
