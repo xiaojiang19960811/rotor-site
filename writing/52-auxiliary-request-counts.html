@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一条消息，两条账单：辅助请求也是请求 — rotor</title>
+<meta name="description" content="新会话发一句问候，网关出现两条用量记录：主回复与自动标题各算一条，顺序还不固定。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/52-auxiliary-request-counts">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "一条消息，两条账单：辅助请求也是请求", "description": "新会话发一句问候，网关出现两条用量记录：主回复与自动标题各算一条，顺序还不固定。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-26", "mainEntityOfPage": "https://www.rotor1996.top/writing/52-auxiliary-request-counts"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>一条消息，两条账单：辅助请求也是请求</h1><p>结论先行：新会话里发一句问候，网关用量列表出现两条记录，并不意味着请求被重试了，也不意味着被重复扣费了。第二条是客户端自动发的标题请求：给新会话起个标题。主回复和标题是两个用途不同的请求，各算一条。凡是客户端替用户多发一次请求，用量、成本、对账都要把它算进去；看不见的请求，最容易被当成异常。</p>
+<h2>现象：一句问候，两条记录</h2>
+<p>核验用了两个新会话，每个会话只发一句问候。两个会话都在网关用量列表里留下两条记录：一条是主回复，一条是自动标题。</p>
+<p>关键在顺序。第一个会话是主回复先完成、标题后完成；第二个会话反过来，标题先完成、主回复后完成。标题与主回复是并发的，谁先谁后不固定。</p>
+<p>如果只看网关用量列表，两条记录长得很像：同一时间段、同一账号、同一模型。很容易读成“发一次、记两次”，或者“请求失败、重试了一次”。但本地会话日志里，两条记录对应不同的事件：一条是主回复事件，一条是标题生成事件。用途不同，记录分开是正常现象，不是异常。</p>
+<p>标题请求还有一层隐蔽性：它不是用户点的。界面只呈现问候与回复，以及事后出现的会话标题，不呈现“正在为你生成标题”这一步。用户在界面上找不到这条请求的对应物，账单里多出一条时，自然先怀疑系统记错了。看不见的请求，对账时最难自证清白；所以辅助请求的存在，本身就应该写进产品说明，而不是等用户拿着账单来问。</p>
+<h2>定义：三类记录要分开</h2>
+<p>对账之前，先把三类记录分开。混在一起数条数，永远对不上：</p>
+<table><thead><tr><th>记录</th><th>是什么</th><th>怎么认</th></tr></thead><tbody><tr><td>主请求</td><td>用户发出的那句话的回复</td><td>为用户直接服务的那一次调用</td></tr><tr><td>辅助请求</td><td>客户端自动发起、为用户服务的请求</td><td>自动标题就是一例：用户没发、客户端替用户发了</td></tr><tr><td>重试</td><td>同一个请求因失败再发一次</td><td>同一目的、同一请求发了第二次</td></tr></tbody></table>
+<p>区分的标准不是条数，而是“这是不是同一个请求、为同一个目的”。标题请求的目的和主回复不同：一个是回答用户，一个是给会话起标题。所以标题记录不是主回复的重试。</p>
+<p>同样，两条用量记录也不等于“重复扣费”的结论。用量记录是计费的输入之一，扣费结论要看计费规则，不能只凭条数下判断。但反过来也不能当它免费：辅助请求走了网关、进了用量，成本清单里就必须有它。</p>
+<h2>方法：对账先按用途分</h2>
+<ol><li><strong>先看本地事件，不只看网关列表</strong>：网关列表告诉你“有几条”，本地会话事件告诉你“每条是干什么的”。对账从用途开始，不从条数开始。只看条数的人，一定会把辅助请求当成异常。</li><li><strong>别用顺序当证据</strong>：标题与主回复谁先谁后不固定，并发请求本来就没有固定顺序。先后不能证明谁是原请求、谁是重试；用顺序推因果，是对账里最常见的想当然。</li><li><strong>结论写清范围</strong>：本次只核验了两个新会话，结论只限于此：新会话的标题请求会产生一条独立的用量记录。不能推广为“每轮对话都固定多一条”，也不能推广到其他客户端的标题机制。没核验的，不写进结论。</li><li><strong>辅助请求列进成本清单</strong>：自动标题、自动摘要、自动建议，凡是客户端替用户自动发的请求，都要先列出来，再谈单次对话的成本。只算主回复的成本模型，天然低估；账单出来比模型多一条，用户第一个怀疑的就是“多收了”。</li></ol>
+<h2>收束</h2>
+<p>看到用量里多一条记录，先问“这条是为谁、干什么”，而不是“是不是多收了”。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "一条消息，两条账单：辅助请求也是请求", "en": "One Message, Two Usage Records: Auxiliary Requests Count Too"}, "body": {"zh": "<p>结论先行：新会话里发一句问候，网关用量列表出现两条记录，并不意味着请求被重试了，也不意味着被重复扣费了。第二条是客户端自动发的标题请求：给新会话起个标题。主回复和标题是两个用途不同的请求，各算一条。凡是客户端替用户多发一次请求，用量、成本、对账都要把它算进去；看不见的请求，最容易被当成异常。</p>\n<h2>现象：一句问候，两条记录</h2>\n<p>核验用了两个新会话，每个会话只发一句问候。两个会话都在网关用量列表里留下两条记录：一条是主回复，一条是自动标题。</p>\n<p>关键在顺序。第一个会话是主回复先完成、标题后完成；第二个会话反过来，标题先完成、主回复后完成。标题与主回复是并发的，谁先谁后不固定。</p>\n<p>如果只看网关用量列表，两条记录长得很像：同一时间段、同一账号、同一模型。很容易读成“发一次、记两次”，或者“请求失败、重试了一次”。但本地会话日志里，两条记录对应不同的事件：一条是主回复事件，一条是标题生成事件。用途不同，记录分开是正常现象，不是异常。</p>\n<p>标题请求还有一层隐蔽性：它不是用户点的。界面只呈现问候与回复，以及事后出现的会话标题，不呈现“正在为你生成标题”这一步。用户在界面上找不到这条请求的对应物，账单里多出一条时，自然先怀疑系统记错了。看不见的请求，对账时最难自证清白；所以辅助请求的存在，本身就应该写进产品说明，而不是等用户拿着账单来问。</p>\n<h2>定义：三类记录要分开</h2>\n<p>对账之前，先把三类记录分开。混在一起数条数，永远对不上：</p>\n<table><thead><tr><th>记录</th><th>是什么</th><th>怎么认</th></tr></thead><tbody><tr><td>主请求</td><td>用户发出的那句话的回复</td><td>为用户直接服务的那一次调用</td></tr><tr><td>辅助请求</td><td>客户端自动发起、为用户服务的请求</td><td>自动标题就是一例：用户没发、客户端替用户发了</td></tr><tr><td>重试</td><td>同一个请求因失败再发一次</td><td>同一目的、同一请求发了第二次</td></tr></tbody></table>\n<p>区分的标准不是条数，而是“这是不是同一个请求、为同一个目的”。标题请求的目的和主回复不同：一个是回答用户，一个是给会话起标题。所以标题记录不是主回复的重试。</p>\n<p>同样，两条用量记录也不等于“重复扣费”的结论。用量记录是计费的输入之一，扣费结论要看计费规则，不能只凭条数下判断。但反过来也不能当它免费：辅助请求走了网关、进了用量，成本清单里就必须有它。</p>\n<h2>方法：对账先按用途分</h2>\n<ol><li><strong>先看本地事件，不只看网关列表</strong>：网关列表告诉你“有几条”，本地会话事件告诉你“每条是干什么的”。对账从用途开始，不从条数开始。只看条数的人，一定会把辅助请求当成异常。</li><li><strong>别用顺序当证据</strong>：标题与主回复谁先谁后不固定，并发请求本来就没有固定顺序。先后不能证明谁是原请求、谁是重试；用顺序推因果，是对账里最常见的想当然。</li><li><strong>结论写清范围</strong>：本次只核验了两个新会话，结论只限于此：新会话的标题请求会产生一条独立的用量记录。不能推广为“每轮对话都固定多一条”，也不能推广到其他客户端的标题机制。没核验的，不写进结论。</li><li><strong>辅助请求列进成本清单</strong>：自动标题、自动摘要、自动建议，凡是客户端替用户自动发的请求，都要先列出来，再谈单次对话的成本。只算主回复的成本模型，天然低估；账单出来比模型多一条，用户第一个怀疑的就是“多收了”。</li></ol>\n<h2>收束</h2>\n<p>看到用量里多一条记录，先问“这条是为谁、干什么”，而不是“是不是多收了”。</p>", "en": "<blockquote>Column: Lab Log | Collection: AI Infrastructure | Source: Desktop agent client, 2026-10-22 title auxiliary-request verification (desensitized) | Status: Drafted, pending publication</blockquote>\n<p>Conclusion first: when a greeting in a new session produces two records in the gateway usage list, it does not mean the request was retried, nor does it mean you were double-charged. The second record is a title request the client sent on its own: giving the new session a title. The main reply and the title are two requests with different purposes, and each counts as one. Any request a client sends on the user&#x27;s behalf must be counted in usage, cost, and reconciliation; a request you cannot see is the easiest to mistake for an anomaly.</p>\n<h2>What happened: one greeting, two records</h2>\n<p>The verification used two new sessions, each sending only one greeting. Both sessions left two records in the gateway usage list: one for the main reply, one for the auto-generated title.</p>\n<p>The order is the key detail. In the first session, the main reply finished first and the title finished later; in the second session, it was the other way around. The title and the main reply run concurrently, so their finishing order is not fixed.</p>\n<p>Seen only from the gateway usage list, the two records look very much alike: the same time window, the same account, the same model. It is easy to read them as &quot;sent once, recorded twice&quot; or &quot;the request failed and was retried.&quot; But in the local session log, the two records correspond to different events: one main-reply event, one title-generation event. Different purposes, separate records — that is normal, not an anomaly.</p>\n<p>A title request has another layer of invisibility: the user never clicked it. The interface shows only the greeting and the reply, plus the session title that appears afterwards — it never shows a step saying &quot;generating a title for you.&quot; With no visible counterpart in the interface, an extra record on the bill naturally reads as a system error. A request that cannot be seen is the hardest to account for; that is why the existence of auxiliary requests belongs in the product description, not in an answer given only after the user asks about the bill.</p>\n<h2>Definitions: three kinds of records, kept apart</h2>\n<p>Before reconciling, separate three kinds of records. Count them together and they will never add up:</p>\n<table><thead><tr><th>Record</th><th>What it is</th><th>How to recognize it</th></tr></thead><tbody><tr><td>Main request</td><td>The reply to the message the user sent</td><td>The one call that directly serves the user</td></tr><tr><td>Auxiliary request</td><td>A request the client sends automatically, in the user&#x27;s service</td><td>An auto-generated title is one example: the user did not send it, the client sent it for the user</td></tr><tr><td>Retry</td><td>The same request sent again after a failure</td><td>The same purpose, the same request, sent a second time</td></tr></tbody></table>\n<p>The test is not the count, but whether it is the same request for the same purpose. A title request has a different purpose from the main reply: one answers the user, the other names the session. So the title record is not a retry of the main reply.</p>\n<p>Likewise, two usage records do not by themselves prove a double charge. A usage record is one input to billing; whether something was charged twice depends on the billing rules, and the count alone cannot settle it. But the reverse does not hold either: an auxiliary request that went through the gateway and entered usage must appear in the cost ledger.</p>\n<h2>Method: reconcile by purpose first</h2>\n<ol><li><strong>Look at local events, not only the gateway list</strong>: the gateway list tells you &quot;how many,&quot; the local session events tell you &quot;what each one was for.&quot; Reconciliation starts from purpose, not from count. Anyone who only counts records will treat an auxiliary request as an anomaly.</li><li><strong>Do not use order as evidence</strong>: which finishes first, title or main reply, is not fixed, and concurrent requests have no fixed order. Order cannot prove which was the original and which was a retry; inferring cause from order is the most common leap in reconciliation.</li><li><strong>State the scope of the conclusion</strong>: this verification covered only two new sessions, and the conclusion is limited to that: a new session&#x27;s title request produces an independent usage record. It cannot be generalized to &quot;every round of dialogue always adds one record,&quot; nor to other clients&#x27; title mechanisms. What was not verified does not go into the conclusion.</li><li><strong>Put auxiliary requests in the cost ledger</strong>: auto titles, auto summaries, auto suggestions — every request a client sends automatically on the user&#x27;s behalf should be listed first, before talking about the cost of a single conversation. A cost model that counts only the main reply underestimates by construction; when the bill shows one record more than the model, the user&#x27;s first suspicion is &quot;overcharged.&quot;</li></ol>\n<h2>Closing</h2>\n<p>When the usage list shows one record more than expected, first ask &quot;who is it for, and what is it for&quot; — not &quot;was I overcharged?&quot;</p>"}, "prev": {"url": "/writing/51-cors-preflight-403", "t": {"zh": "预检 403：跨域放行要分三段查", "en": "A 403 on Preflight: Check CORS in Three Separate Stages"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
