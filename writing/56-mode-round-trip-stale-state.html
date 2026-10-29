@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>模式切了回来，界面还停在上一站 — rotor</title>
+<meta name="description" content="底部入口只在首次渲染读一次侧栏模式，切回列表后文案与点击闭包仍停留在团队模式；共享模式要订阅，不要快照。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/56-mode-round-trip-stale-state">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "模式切了回来，界面还停在上一站", "description": "底部入口只在首次渲染读一次侧栏模式，切回列表后文案与点击闭包仍停留在团队模式；共享模式要订阅，不要快照。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-30", "mainEntityOfPage": "https://www.rotor1996.top/writing/56-mode-round-trip-stale-state"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>模式切了回来，界面还停在上一站</h1><p>结论先说：共享状态要订阅，不要在首次渲染时快照一份私藏。快照在单向流程里够用，一旦用户能来回切换，旧快照立刻变成错乱的来源。模式切换的验收标准，应该是往返用例，而不是单程用例。</p>
+<h2>切回来了，按钮还以为在团队模式</h2>
+<p>一款桌面 Agent 客户端有两种模式：团队模式和列表模式。底部有一个入口按钮，它的文案和点击行为要跟着当前模式走。</p>
+<p>一次改动后出现了这样的现象：用户从团队模式切回列表模式，底部按钮的文案没有变，点击之后的行为也没有变，仍然是团队模式那一套。设置页里还有一份独立的旧状态，同样没有跟上。</p>
+<p>根因不在切换逻辑本身，而在读取方式：底部入口只在首次渲染时读取了一次侧栏模式，读到的值被点击闭包捕获，之后就再也不更新了。模式变了，按钮不知道；按钮的文案和行为，都停留在它第一次看到的那个世界里。</p>
+<h2>快照只在单向流程里够用</h2>
+<p>首次渲染读一次，在很多场景下看起来是合理的：组件挂载时模式是确定的，之后模式不常变，省一次订阅也省一点复杂度。但这个合理性建立在一个隐含前提上：流程是单向的，状态读过一次就不会再变。</p>
+<p>往返切换打破了这个前提。用户从团队切到列表，再从列表切回团队，每一次切换都要求界面重新回答&quot;我现在是什么模式&quot;。而快照只能回答&quot;我第一次看到时是什么模式&quot;。两个答案在第一次切换后就分叉了，之后越走越远。</p>
+<p>更隐蔽的是第二份状态：设置页自己也存了一份模式。当同一份共享状态在界面上有两个副本，副本之间没有同步机制，漂移只是时间问题。修掉其中一处，另一处迟早还会以别的形式冒出来。</p>
+<h2>修复：让界面订阅模式，而不是各自存一份</h2>
+<p>修复的方向是把模式收敛到一个共享来源，让所有需要它的界面都订阅这个来源，而不是各自在首次渲染时抄一份：</p>
+<ol><li><strong>一个共享模式快照</strong>：团队模式与列表模式的当前值，只存在一个地方。</li><li><strong>订阅而不是读取</strong>：底部按钮和设置页都订阅这份快照，模式变化时两者一起更新，不存在&quot;一方更新、另一方不知道&quot;的中间态。</li><li><strong>只改前端，不动业务状态</strong>：模式是界面状态，修复它的读取方式，不应该顺带改动会话和账号。改动面越小，越容易确认没有引入新的错乱。</li></ol>
+<p>验证也要跟着改：单程用例（团队模式下按钮正确）已经不够了，必须跑往返用例。这次回归覆盖了连续三次团队→列表→团队往返，逐次核对按钮文案、原生新建入口的显隐，并且确认切换过程没有创建额外会话。往返三次都正确，订阅关系才算真的接上了。</p>
+<h2>一条可以带走的检查清单</h2>
+<p>凡是用户能来回走的状态，都可以按这张清单自查：</p>
+<ol><li><strong>这个值是被订阅的，还是被快照的？</strong> 首次渲染读一次、之后靠闭包携带的，都是快照。</li><li><strong>它在界面上有几个副本？</strong> 超过一个，就要问副本之间靠什么同步；答不上来，就是漂移的候选。</li><li><strong>验收里有没有往返用例？</strong> 只测单程，等于只测了快照还新鲜的那一刻。</li><li><strong>切换有没有副作用？</strong> 模式切换本身不应该创建额外会话、不应该改动账号；界面状态的修复，业务状态不应该跟着动。</li></ol>
+<p>很多界面错乱看起来是&quot;切换逻辑写错了&quot;，实际上是&quot;读取方式选错了&quot;。切换逻辑可能完全正确，只是它操作的那份状态，界面早就不再看了。</p>
+<h2>一句话收束</h2>
+<p>共享状态只能有一个来源，界面各处是它的订阅者；凡是用户能来回走的状态，验收都必须跑往返，而不是单程。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "模式切了回来，界面还停在上一站", "en": "The Mode Switched Back, but the UI Stayed Behind"}, "body": {"zh": "<p>结论先说：共享状态要订阅，不要在首次渲染时快照一份私藏。快照在单向流程里够用，一旦用户能来回切换，旧快照立刻变成错乱的来源。模式切换的验收标准，应该是往返用例，而不是单程用例。</p>\n<h2>切回来了，按钮还以为在团队模式</h2>\n<p>一款桌面 Agent 客户端有两种模式：团队模式和列表模式。底部有一个入口按钮，它的文案和点击行为要跟着当前模式走。</p>\n<p>一次改动后出现了这样的现象：用户从团队模式切回列表模式，底部按钮的文案没有变，点击之后的行为也没有变，仍然是团队模式那一套。设置页里还有一份独立的旧状态，同样没有跟上。</p>\n<p>根因不在切换逻辑本身，而在读取方式：底部入口只在首次渲染时读取了一次侧栏模式，读到的值被点击闭包捕获，之后就再也不更新了。模式变了，按钮不知道；按钮的文案和行为，都停留在它第一次看到的那个世界里。</p>\n<h2>快照只在单向流程里够用</h2>\n<p>首次渲染读一次，在很多场景下看起来是合理的：组件挂载时模式是确定的，之后模式不常变，省一次订阅也省一点复杂度。但这个合理性建立在一个隐含前提上：流程是单向的，状态读过一次就不会再变。</p>\n<p>往返切换打破了这个前提。用户从团队切到列表，再从列表切回团队，每一次切换都要求界面重新回答&quot;我现在是什么模式&quot;。而快照只能回答&quot;我第一次看到时是什么模式&quot;。两个答案在第一次切换后就分叉了，之后越走越远。</p>\n<p>更隐蔽的是第二份状态：设置页自己也存了一份模式。当同一份共享状态在界面上有两个副本，副本之间没有同步机制，漂移只是时间问题。修掉其中一处，另一处迟早还会以别的形式冒出来。</p>\n<h2>修复：让界面订阅模式，而不是各自存一份</h2>\n<p>修复的方向是把模式收敛到一个共享来源，让所有需要它的界面都订阅这个来源，而不是各自在首次渲染时抄一份：</p>\n<ol><li><strong>一个共享模式快照</strong>：团队模式与列表模式的当前值，只存在一个地方。</li><li><strong>订阅而不是读取</strong>：底部按钮和设置页都订阅这份快照，模式变化时两者一起更新，不存在&quot;一方更新、另一方不知道&quot;的中间态。</li><li><strong>只改前端，不动业务状态</strong>：模式是界面状态，修复它的读取方式，不应该顺带改动会话和账号。改动面越小，越容易确认没有引入新的错乱。</li></ol>\n<p>验证也要跟着改：单程用例（团队模式下按钮正确）已经不够了，必须跑往返用例。这次回归覆盖了连续三次团队→列表→团队往返，逐次核对按钮文案、原生新建入口的显隐，并且确认切换过程没有创建额外会话。往返三次都正确，订阅关系才算真的接上了。</p>\n<h2>一条可以带走的检查清单</h2>\n<p>凡是用户能来回走的状态，都可以按这张清单自查：</p>\n<ol><li><strong>这个值是被订阅的，还是被快照的？</strong> 首次渲染读一次、之后靠闭包携带的，都是快照。</li><li><strong>它在界面上有几个副本？</strong> 超过一个，就要问副本之间靠什么同步；答不上来，就是漂移的候选。</li><li><strong>验收里有没有往返用例？</strong> 只测单程，等于只测了快照还新鲜的那一刻。</li><li><strong>切换有没有副作用？</strong> 模式切换本身不应该创建额外会话、不应该改动账号；界面状态的修复，业务状态不应该跟着动。</li></ol>\n<p>很多界面错乱看起来是&quot;切换逻辑写错了&quot;，实际上是&quot;读取方式选错了&quot;。切换逻辑可能完全正确，只是它操作的那份状态，界面早就不再看了。</p>\n<h2>一句话收束</h2>\n<p>共享状态只能有一个来源，界面各处是它的订阅者；凡是用户能来回走的状态，验收都必须跑往返，而不是单程。</p>", "en": "<blockquote>Column: Lab Log | Collection: Agent | Source: Desktop Agent client mode round-trip switching review | Status: Drafted, upcoming</blockquote>\n<p>The conclusion first: shared state should be subscribed to, not snapshotted once at first render and kept privately. A snapshot is good enough for a one-way flow; the moment users can switch back and forth, the stale snapshot becomes a source of confusion. The acceptance bar for mode switching should be a round-trip case, not a one-way case.</p>\n<h2>Switched Back, but the Button Still Thought It Was in Team Mode</h2>\n<p>A desktop Agent client has two modes: team mode and list mode. A bottom entry button changes its label and click behavior with the current mode.</p>\n<p>After one change, this happened: the user switched from team mode back to list mode, but the bottom button&#x27;s label did not change, and neither did what its click did — it still behaved as team mode. The settings page held its own separate stale state, which had not caught up either.</p>\n<p>The root cause was not in the switching logic but in how the mode was read: the bottom entry read the sidebar mode only on first render, and the value it read was captured by the click closure and never refreshed. The mode changed; the button did not know. Its label and behavior stayed in the world it first saw.</p>\n<h2>A Snapshot Is Only Good Enough for a One-Way Flow</h2>\n<p>Reading once at first render looks reasonable in many cases: the mode is settled when the component mounts, it rarely changes afterwards, and skipping a subscription saves a little complexity. But that reasoning rests on a hidden premise: the flow is one-way, and the state will not change after being read once.</p>\n<p>Round-trip switching breaks that premise. The user goes from team to list and back to team, and every switch requires the UI to answer again, &quot;what mode am I in now?&quot; A snapshot can only answer, &quot;what mode did I see the first time?&quot; The two answers diverge after the first switch and drift further apart from there.</p>\n<p>More insidious is the second copy of the state: the settings page kept its own mode. When one piece of shared state has two copies in the UI with no sync mechanism between them, drift is only a matter of time. Fix one copy, and the other will surface the same problem in a different form sooner or later.</p>\n<h2>The Fix: Let the UI Subscribe to the Mode, Not Keep a Copy Each</h2>\n<p>The fix converges the mode onto one shared source, and every surface that needs it subscribes to that source instead of copying it at first render:</p>\n<ol><li><strong>One shared mode snapshot</strong>: the current value of team mode versus list mode lives in exactly one place.</li><li><strong>Subscribe, don&#x27;t read</strong>: the bottom button and the settings page both subscribe to that snapshot, so when the mode changes, both update together — there is no intermediate state where one updated and the other did not know.</li><li><strong>Frontend only, no business state touched</strong>: mode is UI state, so fixing how it is read should not touch sessions or accounts along the way. The smaller the change surface, the easier it is to confirm no new confusion was introduced.</li></ol>\n<p>Verification has to change with it: a one-way case (the button is correct in team mode) is no longer enough; round-trip cases are required. This regression covered three consecutive team → list → team round trips, checking the button label and the visibility of the native create entry each time, and confirming that switching created no extra sessions. Three clean round trips mean the subscription is genuinely wired up.</p>\n<h2>A Checklist to Take With You</h2>\n<p>For any state users can walk back and forth across, run through this list:</p>\n<ol><li><strong>Is this value subscribed to, or snapshotted?</strong> Anything read once at first render and carried along by a closure is a snapshot.</li><li><strong>How many copies of it exist in the UI?</strong> More than one means asking what keeps the copies in sync; no answer means a drift candidate.</li><li><strong>Does acceptance include a round-trip case?</strong> Testing only one way tests nothing but the moment the snapshot was still fresh.</li><li><strong>Does switching have side effects?</strong> Switching modes on its own should create no extra sessions and change no accounts; fixing UI state should leave business state untouched.</li></ol>\n<p>Much UI confusion looks like &quot;the switching logic is wrong&quot; when it is actually &quot;the reading approach is wrong.&quot; The switching logic may be entirely correct — it is just operating on a state the UI stopped looking at long ago.</p>\n<h2>One Line to Close</h2>\n<p>Shared state has exactly one source, and every UI surface is its subscriber; for any state users can walk back and forth across, acceptance must run round trips, not one-way trips.</p>"}, "prev": {"url": "/writing/55-restore-whole-session-state", "t": {"zh": "恢复一个会话，要恢复它的全部状态", "en": "Restoring a Session Means Restoring Its Whole State"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
