@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一份发布说明，两个平台：顶层字段必然串台 — rotor</title>
+<meta name="description" content="Windows 与 macOS 各自发版，却共用清单顶层一条发布说明，下载页必然把一方的说明贴到另一方；说明必须下沉到平台条目，缺说明就让发布失败。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/57-per-platform-release-notes">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "一份发布说明，两个平台：顶层字段必然串台", "description": "Windows 与 macOS 各自发版，却共用清单顶层一条发布说明，下载页必然把一方的说明贴到另一方；说明必须下沉到平台条目，缺说明就让发布失败。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-10-31", "mainEntityOfPage": "https://www.rotor1996.top/writing/57-per-platform-release-notes"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>一份发布说明，两个平台：顶层字段必然串台</h1><p>结论先说：发布说明不是“这次发布”的属性，而是“某个平台某个版本”的属性。两个平台各自独立发版，却共用清单顶层的一条说明，串台不是偶然，是数据模型写错了粒度。说明必须下沉到平台条目里，缺说明就让发布失败，而不是拿一句模板顶上。</p>
+<h2>新版旁边，贴着另一平台的说明</h2>
+<p>一款双平台桌面客户端，Windows 与 macOS 各自独立发版。一次 Windows 发版时没有单独带上本平台的说明，发布工具只把一句模板写进了其中一份清单的顶层说明；而下载页读的是另一份清单，那里的顶层说明还留着上一位 macOS 发布者的文字。</p>
+<p>结果用户在下载页看到的是：Windows 的新版旁边，贴着 macOS 的说明。版本号是对的，说明是错的。没有人改错页面，没有人贴错链接，页面只是老实地把顶层那条说明读了出来。</p>
+<p>这不是页面 bug。页面没有判断“这条说明属于哪个平台”，因为数据里根本没有这个信息：顶层只有一个写位，两个平台只能轮流往同一个格子里写。</p>
+<h2>为什么顶层字段必然串台</h2>
+<p>两个平台独立发版，意味着三件事各自不同：发版时间不同，版本号不同，说明内容不同。顶层字段却只有一个：它一次只能代表一个平台。</p>
+<p>于是错配有两种写法，都会发生：</p>
+<ol><li><strong>后写覆盖先写</strong>：一处更新了，另一处没更新，旧说明继续挂在新版本旁边。</li><li><strong>两份清单各写各的</strong>：发布清单与下载清单的顶层说明不是同一份数据，一处写了模板，另一处还留着旧文字，读的那一处恰好是旧的。</li></ol>
+<p>无论哪一种，用户看到的现象都一样：版本与说明分属两个平台。排查时如果只查页面、只查链接，永远查不到根因，因为页面和链接都没有错。根因在数据模型：说明的归属粒度，比发版的粒度粗了一级。</p>
+<h2>修复：说明下沉到平台条目</h2>
+<p>修复不是“下次记得带说明”，而是把“记得”变成“不带就发不出去”：</p>
+<ol><li><strong>说明跟着平台走</strong>：每份清单里，说明写在各自平台的条目里，历史版本的说明也写在该版本对应平台的条目里；顶层只留一句摘要，不再承担“本版说明”的角色。</li><li><strong>缺说明直接失败</strong>：发布时缺任一平台的说明，发布流程直接失败，不写模板句兜底。模板句的问题不是写得不好，而是它把“没写”伪装成了“写了”，让一次缺失在清单里看起来像一次完成。</li><li><strong>切换时校验另一平台不变</strong>：切换清单时，除了本平台的改动，还要逐字段核对另一平台的条目：除说明外全部不变。只验本平台通过，验不出串台。</li><li><strong>补录复用已发布产物</strong>：事后补说明时，复用已经发布出去的产物，不重新打包，不覆盖首次发布的备份。修说明不应该顺带换掉用户正在下载的东西。</li></ol>
+<p>下载页也跟着重排：去掉顶部那条“当前版本”总览，改为两个平台各一张卡片，每张卡片各自显示版本、大小、时间、校验信息与可折叠的本版说明；历史版本按平台展开，各自带各自的说明与下载行。页面结构与数据结构对齐之后，串台就没有地方可藏了。</p>
+<h2>历史说明：宁缺，不编</h2>
+<p>补录历史说明时还有一条纪律：按“这条说明是否点名该平台、且点名该版本”判定归属。命中了就复用原文，没命中的不补写、不推测、不把别平台的说明挪过来。</p>
+<p>对从未单独留下说明的版本，补录时直接写明“该版本未单独保存发布说明”。这句话不好看，但它是真的；一句编出来的说明好看，却会让后来的人把编造当成发布记录。发布记录的第一条纪律，是区分“写过”和“没写过”。</p>
+<h2>一句话收束</h2>
+<p>说明的粒度必须跟发版的粒度对齐：几个平台独立发版，就要有几份说明字段；共用一个顶层字段，串台只是时间问题。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "一份发布说明，两个平台：顶层字段必然串台", "en": "One Release Note Field, Two Platforms: The Top Level Will Mix Them Up"}, "body": {"zh": "<p>结论先说：发布说明不是“这次发布”的属性，而是“某个平台某个版本”的属性。两个平台各自独立发版，却共用清单顶层的一条说明，串台不是偶然，是数据模型写错了粒度。说明必须下沉到平台条目里，缺说明就让发布失败，而不是拿一句模板顶上。</p>\n<h2>新版旁边，贴着另一平台的说明</h2>\n<p>一款双平台桌面客户端，Windows 与 macOS 各自独立发版。一次 Windows 发版时没有单独带上本平台的说明，发布工具只把一句模板写进了其中一份清单的顶层说明；而下载页读的是另一份清单，那里的顶层说明还留着上一位 macOS 发布者的文字。</p>\n<p>结果用户在下载页看到的是：Windows 的新版旁边，贴着 macOS 的说明。版本号是对的，说明是错的。没有人改错页面，没有人贴错链接，页面只是老实地把顶层那条说明读了出来。</p>\n<p>这不是页面 bug。页面没有判断“这条说明属于哪个平台”，因为数据里根本没有这个信息：顶层只有一个写位，两个平台只能轮流往同一个格子里写。</p>\n<h2>为什么顶层字段必然串台</h2>\n<p>两个平台独立发版，意味着三件事各自不同：发版时间不同，版本号不同，说明内容不同。顶层字段却只有一个：它一次只能代表一个平台。</p>\n<p>于是错配有两种写法，都会发生：</p>\n<ol><li><strong>后写覆盖先写</strong>：一处更新了，另一处没更新，旧说明继续挂在新版本旁边。</li><li><strong>两份清单各写各的</strong>：发布清单与下载清单的顶层说明不是同一份数据，一处写了模板，另一处还留着旧文字，读的那一处恰好是旧的。</li></ol>\n<p>无论哪一种，用户看到的现象都一样：版本与说明分属两个平台。排查时如果只查页面、只查链接，永远查不到根因，因为页面和链接都没有错。根因在数据模型：说明的归属粒度，比发版的粒度粗了一级。</p>\n<h2>修复：说明下沉到平台条目</h2>\n<p>修复不是“下次记得带说明”，而是把“记得”变成“不带就发不出去”：</p>\n<ol><li><strong>说明跟着平台走</strong>：每份清单里，说明写在各自平台的条目里，历史版本的说明也写在该版本对应平台的条目里；顶层只留一句摘要，不再承担“本版说明”的角色。</li><li><strong>缺说明直接失败</strong>：发布时缺任一平台的说明，发布流程直接失败，不写模板句兜底。模板句的问题不是写得不好，而是它把“没写”伪装成了“写了”，让一次缺失在清单里看起来像一次完成。</li><li><strong>切换时校验另一平台不变</strong>：切换清单时，除了本平台的改动，还要逐字段核对另一平台的条目：除说明外全部不变。只验本平台通过，验不出串台。</li><li><strong>补录复用已发布产物</strong>：事后补说明时，复用已经发布出去的产物，不重新打包，不覆盖首次发布的备份。修说明不应该顺带换掉用户正在下载的东西。</li></ol>\n<p>下载页也跟着重排：去掉顶部那条“当前版本”总览，改为两个平台各一张卡片，每张卡片各自显示版本、大小、时间、校验信息与可折叠的本版说明；历史版本按平台展开，各自带各自的说明与下载行。页面结构与数据结构对齐之后，串台就没有地方可藏了。</p>\n<h2>历史说明：宁缺，不编</h2>\n<p>补录历史说明时还有一条纪律：按“这条说明是否点名该平台、且点名该版本”判定归属。命中了就复用原文，没命中的不补写、不推测、不把别平台的说明挪过来。</p>\n<p>对从未单独留下说明的版本，补录时直接写明“该版本未单独保存发布说明”。这句话不好看，但它是真的；一句编出来的说明好看，却会让后来的人把编造当成发布记录。发布记录的第一条纪律，是区分“写过”和“没写过”。</p>\n<h2>一句话收束</h2>\n<p>说明的粒度必须跟发版的粒度对齐：几个平台独立发版，就要有几份说明字段；共用一个顶层字段，串台只是时间问题。</p>", "en": "<blockquote>Column: Lab Log | Collection: AI Infrastructure | Source: Dual-platform client release-notes split review (desensitized) | Status: Drafted, upcoming</blockquote>\n<p>The conclusion first: a release note is not an attribute of &quot;this release&quot; but of &quot;this platform, this version.&quot; Two platforms shipping independently but sharing one top-level note in the manifest will mix up their notes — not by accident, but because the data model got the granularity wrong. Notes must live on the platform entry, and a missing note must fail the release, not be papered over with a template sentence.</p>\n<h2>A New Release, Wearing the Other Platform&#x27;s Notes</h2>\n<p>A dual-platform desktop client ships Windows and macOS independently. On one Windows release, no note was supplied for that platform, so the release tool wrote only a template sentence into the top-level note of one manifest. The download page, however, reads a different manifest, whose top-level note still held the previous macOS publisher&#x27;s text.</p>\n<p>What users saw on the download page was this: the new Windows release, beside the macOS notes. The version was right; the notes were wrong. Nobody edited the wrong page, nobody pasted the wrong link — the page simply read out the top-level note, faithfully.</p>\n<p>This is not a page bug. The page cannot judge &quot;which platform does this note belong to,&quot; because the data contains no such information: the top level has only one slot, and two platforms take turns writing into the same cell.</p>\n<h2>Why a Top-Level Field Inevitably Mixes Platforms</h2>\n<p>Two platforms shipping independently means three things differ each time: ship time, version, and note content. The top-level field, however, is only one: it can represent one platform at a time.</p>\n<p>So the mismatch arrives in two forms, and both will happen:</p>\n<ol><li><strong>Later writes overwrite earlier ones</strong>: one place is updated, the other is not, and the old note keeps hanging beside the new release.</li><li><strong>Two manifests, each writing its own</strong>: the top-level notes of the release manifest and the download manifest are not the same data — one got a template, the other still holds old text, and the one being read happens to be the old one.</li></ol>\n<p>Either way, users see the same symptom: a version and a note that belong to two different platforms. If troubleshooting only checks the page and the links, it will never find the root cause, because neither the page nor the links are wrong. The root cause is in the data model: the granularity of note ownership is one level coarser than the granularity of shipping.</p>\n<h2>The Fix: Sink Notes into the Platform Entry</h2>\n<p>The fix is not &quot;remember to bring a note next time&quot; but turning &quot;remember&quot; into &quot;no note, no release&quot;:</p>\n<ol><li><strong>Notes follow the platform</strong>: in every manifest, the note sits on that platform&#x27;s own entry, and a historical version&#x27;s note sits on that version&#x27;s entry for that platform; the top level keeps only a summary and no longer plays the role of &quot;this release&#x27;s notes.&quot;</li><li><strong>A missing note fails outright</strong>: if a release lacks any platform&#x27;s note, the release process fails directly, with no template sentence as a fallback. The problem with a template sentence is not that it is badly written — it disguises &quot;not written&quot; as &quot;written,&quot; making a gap in the manifest look like a completed release.</li><li><strong>Switching must verify the other platform is unchanged</strong>: when switching manifests, besides the current platform&#x27;s change, the other platform&#x27;s entry must be checked field by field: everything except notes stays identical. Verifying only the current platform cannot catch a mix-up.</li><li><strong>Backfilling reuses the published artifact</strong>: when adding notes after the fact, reuse the artifact that was already published — do not rebuild, do not overwrite the first release&#x27;s backup. Fixing notes should not quietly replace what users are downloading.</li></ol>\n<p>The download page was rearranged to match: the top &quot;current version&quot; summary went away, replaced by one card per platform, each showing its own version, size, time, checksum, and a collapsible note for that release; historical versions expand per platform, each with its own notes and download rows. Once the page structure matches the data structure, a mix-up has nowhere to hide.</p>\n<h2>Historical Notes: Better Missing Than Invented</h2>\n<p>Backfilling historical notes follows one more rule: ownership is judged by whether a note names that platform and that version. If it matches, reuse the original text; if it does not, do not write one up, do not guess, do not move another platform&#x27;s note over.</p>\n<p>For a version that never had its own note saved, the backfill states plainly that no separate note was saved for that version. That sentence is not pretty, but it is true; an invented note would look pretty and would turn fabrication into release history. The first rule of release records is telling &quot;written&quot; apart from &quot;never written.&quot;</p>\n<h2>One Line to Close</h2>\n<p>The granularity of notes must match the granularity of shipping: as many platforms ship independently, that many note fields are needed; sharing one top-level field makes a mix-up only a matter of time.</p>"}, "prev": {"url": "/writing/54-internal-signing-trust", "t": {"zh": "内部签名不是绕过：先把信任管起来", "en": "Internal Signing Is Not a Bypass: Manage Trust First"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
