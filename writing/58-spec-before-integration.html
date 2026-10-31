@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>规范先行，组合后定：插件规范完成不等于整合完成 — rotor</title>
+<meta name="description" content="十个插件包的地图、指南、验收表齐了，只是第一阶段；主包组合、既有迁移、保护例外评审通过并真正发布，才算完成。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/58-spec-before-integration">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "规范先行，组合后定：插件规范完成不等于整合完成", "description": "十个插件包的地图、指南、验收表齐了，只是第一阶段；主包组合、既有迁移、保护例外评审通过并真正发布，才算完成。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-01", "mainEntityOfPage": "https://www.rotor1996.top/writing/58-spec-before-integration"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>规范先行，组合后定：插件规范完成不等于整合完成</h1><p>结论先说：一个插件体系的规范写完了，不等于插件已经整合好了，更不等于已经发布了。规范、组合、实施是三个阶段，上一阶段成立，不能自动推定下一阶段生效。把阶段说清楚，是为了防止一句话把三件事混成一件：文档齐了，就当作产品成了。</p>
+<h2>一个规范阶段，到底确认了什么</h2>
+<p>这次规范阶段确认的范围很具体：只梳理当前发行的十个插件包，九个功能包加一个公共库。产出是三样东西：插件地图、开发接入指南、验收表，外加中英文页面与配对记录，以及客户端说明文档里的导航入口。</p>
+<p>这个范围本身就是结论的一部分。规范阶段没有改任何一个包的发行行为，没有改任何一项限制配置，没有打包发布任何东西。它只回答了一个问题：现有的十个包分别是什么、怎么接入、按什么验收。回答了这个问题，不等于回答了下一个问题：这十个包以什么组合发给用户。</p>
+<p>所以规范完成之后，真正待定的事要单独列出来，而不是默认已经解决：</p>
+<ol><li><strong>主包组合</strong>：哪些包随主包一起发，哪些不随主包发。</li><li><strong>既有迁移</strong>：已经装好的用户配置如何走到新组合。</li><li><strong>核心保护例外</strong>：哪些核心能力不允许被插件覆盖或绕过。</li></ol>
+<p>这三项仍需按阶段评审。规范成立，不自动实施它们。</p>
+<h2>先规范、再冻结组合、后实施</h2>
+<p>这个顺序值得单独拿出来说，因为它反直觉：最省事的顺序是边写规范边定组合边改代码，一次性把事做完。但那样做的代价是，每一次规范上的修改都会牵动组合与实施，评审时分不清“这条规则对不对”和“这个组合行不行”是两个问题。</p>
+<p>分开走，三个阶段各有自己的验收物：</p>
+<ol><li><strong>规范阶段</strong>：地图、接入指南、验收表齐全，包的数量与边界说清。</li><li><strong>冻结组合阶段</strong>：主包组合定下来，迁移方案与保护例外评审通过。</li><li><strong>实施阶段</strong>：按冻结的组合改配置、改发行行为、打包发布。</li></ol>
+<p>上一阶段的产出是下一阶段的输入，不是下一阶段的替代品。跳过冻结组合直接实施，等于让实施现场临时决定组合；跳过规范直接冻结组合，等于在没说清包的边界时就定下发什么。顺序本身就是一种防错：它让每个决策只在它该出现的地方出现。</p>
+<h2>样例只证明了它能证明的事</h2>
+<p>规范阶段的验证证据同样要按边界来读。这次的证据包括：一个功能包的二十项包级测试通过，一个新增的隔离加载样例有一项测试通过，四对官方文档配对通过，八篇文档的本地链接与格式检查通过，业务仓库的差异检查通过，样例的独立只读评审没有必修项。</p>
+<p>这些证据很有分量，但它们的覆盖面是明确的：样例证据只覆盖源码层面的真实加载与卸载。它证明了隔离加载器在源码层面能把一个包加载起来、再卸载下去。它没有证明发布产物的隔离，没有证明正式配置下的安装，也没有证明整个规范阶段的收口。</p>
+<p>把证据说小一点，不是贬低它，而是保护它：只有先说清样例没证明什么，后面有人拿它去论证发布隔离时，才不会被误读成已经验证过的结论。证据的边界写进记录，和证据本身一样重要。整体完成与否，以最终交付为准，不以某一项测试通过为准。</p>
+<h2>软锁：机制保留与绑定取消是两件事</h2>
+<p>这次还有一个容易混淆的决定：后续取消当前发行对个别能力的软锁绑定，但保留软锁机制本身作为可选的限制能力，尚未修改相关配置。</p>
+<p>这两句话要分开读。取消绑定，是说某个能力不再被软锁绑住；保留机制，是说软锁这种限制手段本身还留在工具箱里，以后需要时还能用。前者是针对具体能力的决定，后者是针对机制存废的决定。只说“取消软锁”，会让人误以为机制也被废掉了；只说“保留软锁”，又会让人误以为绑定还没取消。</p>
+<p>软锁本身的语义也要说准：它是关闭插件后退出登录、登录时尝试恢复，不是停用前硬拒绝。也就是说，它不是一道前置的禁令，而是一种事后的状态处理。把语义说成硬拒绝，会让用户对它的行为产生错误预期；把语义说准，评审时才能判断它到底限制了什么、没限制什么。</p>
+<h2>什么不算完成</h2>
+<p>收束成一张检查表。下次听到“插件规范做完了”，先问这四个问题，答不上来就不算完成：</p>
+<ol><li><strong>规范</strong>：包的地图、接入指南、验收表是否齐全。</li><li><strong>组合</strong>：主包组合、既有迁移、核心保护例外是否评审通过。</li><li><strong>实施</strong>：发行行为与限制配置是否真的改了、发布了。</li><li><strong>证据</strong>：每项证据覆盖的是源码层面、发布产物层面，还是正式安装层面。</li></ol>
+<p>规范阶段的价值，恰恰在于它让“没做完”可以被准确地说出来。能说清哪一阶段还没开始，比含糊地说一句“快做完了”更接近完成。</p>
+<h2>一句话收束</h2>
+<p>规范先行不是拖延，而是让组合与实施各有自己的评审点：文档齐了只是第一阶段，组合冻结了才是第二阶段，真正改了发行行为并发布了，才是完成。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "规范先行，组合后定：插件规范完成不等于整合完成", "en": "Spec First, Combination Later: A Finished Plugin Spec Is Not a Finished Integration"}, "body": {"zh": "<p>结论先说：一个插件体系的规范写完了，不等于插件已经整合好了，更不等于已经发布了。规范、组合、实施是三个阶段，上一阶段成立，不能自动推定下一阶段生效。把阶段说清楚，是为了防止一句话把三件事混成一件：文档齐了，就当作产品成了。</p>\n<h2>一个规范阶段，到底确认了什么</h2>\n<p>这次规范阶段确认的范围很具体：只梳理当前发行的十个插件包，九个功能包加一个公共库。产出是三样东西：插件地图、开发接入指南、验收表，外加中英文页面与配对记录，以及客户端说明文档里的导航入口。</p>\n<p>这个范围本身就是结论的一部分。规范阶段没有改任何一个包的发行行为，没有改任何一项限制配置，没有打包发布任何东西。它只回答了一个问题：现有的十个包分别是什么、怎么接入、按什么验收。回答了这个问题，不等于回答了下一个问题：这十个包以什么组合发给用户。</p>\n<p>所以规范完成之后，真正待定的事要单独列出来，而不是默认已经解决：</p>\n<ol><li><strong>主包组合</strong>：哪些包随主包一起发，哪些不随主包发。</li><li><strong>既有迁移</strong>：已经装好的用户配置如何走到新组合。</li><li><strong>核心保护例外</strong>：哪些核心能力不允许被插件覆盖或绕过。</li></ol>\n<p>这三项仍需按阶段评审。规范成立，不自动实施它们。</p>\n<h2>先规范、再冻结组合、后实施</h2>\n<p>这个顺序值得单独拿出来说，因为它反直觉：最省事的顺序是边写规范边定组合边改代码，一次性把事做完。但那样做的代价是，每一次规范上的修改都会牵动组合与实施，评审时分不清“这条规则对不对”和“这个组合行不行”是两个问题。</p>\n<p>分开走，三个阶段各有自己的验收物：</p>\n<ol><li><strong>规范阶段</strong>：地图、接入指南、验收表齐全，包的数量与边界说清。</li><li><strong>冻结组合阶段</strong>：主包组合定下来，迁移方案与保护例外评审通过。</li><li><strong>实施阶段</strong>：按冻结的组合改配置、改发行行为、打包发布。</li></ol>\n<p>上一阶段的产出是下一阶段的输入，不是下一阶段的替代品。跳过冻结组合直接实施，等于让实施现场临时决定组合；跳过规范直接冻结组合，等于在没说清包的边界时就定下发什么。顺序本身就是一种防错：它让每个决策只在它该出现的地方出现。</p>\n<h2>样例只证明了它能证明的事</h2>\n<p>规范阶段的验证证据同样要按边界来读。这次的证据包括：一个功能包的二十项包级测试通过，一个新增的隔离加载样例有一项测试通过，四对官方文档配对通过，八篇文档的本地链接与格式检查通过，业务仓库的差异检查通过，样例的独立只读评审没有必修项。</p>\n<p>这些证据很有分量，但它们的覆盖面是明确的：样例证据只覆盖源码层面的真实加载与卸载。它证明了隔离加载器在源码层面能把一个包加载起来、再卸载下去。它没有证明发布产物的隔离，没有证明正式配置下的安装，也没有证明整个规范阶段的收口。</p>\n<p>把证据说小一点，不是贬低它，而是保护它：只有先说清样例没证明什么，后面有人拿它去论证发布隔离时，才不会被误读成已经验证过的结论。证据的边界写进记录，和证据本身一样重要。整体完成与否，以最终交付为准，不以某一项测试通过为准。</p>\n<h2>软锁：机制保留与绑定取消是两件事</h2>\n<p>这次还有一个容易混淆的决定：后续取消当前发行对个别能力的软锁绑定，但保留软锁机制本身作为可选的限制能力，尚未修改相关配置。</p>\n<p>这两句话要分开读。取消绑定，是说某个能力不再被软锁绑住；保留机制，是说软锁这种限制手段本身还留在工具箱里，以后需要时还能用。前者是针对具体能力的决定，后者是针对机制存废的决定。只说“取消软锁”，会让人误以为机制也被废掉了；只说“保留软锁”，又会让人误以为绑定还没取消。</p>\n<p>软锁本身的语义也要说准：它是关闭插件后退出登录、登录时尝试恢复，不是停用前硬拒绝。也就是说，它不是一道前置的禁令，而是一种事后的状态处理。把语义说成硬拒绝，会让用户对它的行为产生错误预期；把语义说准，评审时才能判断它到底限制了什么、没限制什么。</p>\n<h2>什么不算完成</h2>\n<p>收束成一张检查表。下次听到“插件规范做完了”，先问这四个问题，答不上来就不算完成：</p>\n<ol><li><strong>规范</strong>：包的地图、接入指南、验收表是否齐全。</li><li><strong>组合</strong>：主包组合、既有迁移、核心保护例外是否评审通过。</li><li><strong>实施</strong>：发行行为与限制配置是否真的改了、发布了。</li><li><strong>证据</strong>：每项证据覆盖的是源码层面、发布产物层面，还是正式安装层面。</li></ol>\n<p>规范阶段的价值，恰恰在于它让“没做完”可以被准确地说出来。能说清哪一阶段还没开始，比含糊地说一句“快做完了”更接近完成。</p>\n<h2>一句话收束</h2>\n<p>规范先行不是拖延，而是让组合与实施各有自己的评审点：文档齐了只是第一阶段，组合冻结了才是第二阶段，真正改了发行行为并发布了，才是完成。</p>", "en": "<p>The conclusion first: when a plugin system&#x27;s spec is written, that does not mean the plugins are integrated, and it certainly does not mean they are shipped. Spec, combination, and implementation are three stages, and one stage being settled does not automatically settle the next. Naming the stages keeps one sentence from blurring three jobs into one: the docs are done, so the product must be done.</p>\n<h2>What a spec stage actually settles</h2>\n<p>The scope confirmed in this spec stage is specific: only the ten plugin packages currently shipped, nine feature packages plus one shared library. The output is three things: a plugin map, a development onboarding guide, and an acceptance checklist, plus bilingual pages with pairing records and navigation entries in the client documentation.</p>\n<p>That scope is itself part of the conclusion. The spec stage changed no package&#x27;s shipping behavior, changed no restriction configuration, and packaged and shipped nothing. It answered one question: what the ten existing packages are, how to onboard them, and what acceptance looks like. Answering that question is not answering the next one: in what combination are these ten packages shipped to users.</p>\n<p>So the genuinely pending items after the spec must be listed separately, not assumed resolved:</p>\n<ol><li><strong>Main package combination</strong>: which packages ship with the main package, and which do not.</li><li><strong>Existing migration</strong>: how already-installed user configurations move to the new combination.</li><li><strong>Core protection exceptions</strong>: which core capabilities plugins may not override or bypass.</li></ol>\n<p>These three still need stage-by-stage review. A settled spec does not automatically implement them.</p>\n<h2>Spec first, freeze the combination second, implement third</h2>\n<p>This order is worth stating on its own, because it runs against instinct: the easiest order is to write the spec, settle the combination, and change the code all at once. But then every change to the spec pulls the combination and the implementation along with it, and a review cannot tell &quot;is this rule right&quot; apart from &quot;does this combination work&quot; as two separate questions.</p>\n<p>Kept apart, each stage has its own acceptance artifact:</p>\n<ol><li><strong>Spec stage</strong>: map, onboarding guide, and acceptance checklist complete, with package count and boundaries stated.</li><li><strong>Freeze-combination stage</strong>: the main package combination is settled, and the migration plan and protection exceptions pass review.</li><li><strong>Implementation stage</strong>: configuration, shipping behavior, packaging, and release change according to the frozen combination.</li></ol>\n<p>The previous stage&#x27;s output is the next stage&#x27;s input, not its substitute. Skipping the frozen combination and going straight to implementation lets the implementation site decide the combination on the spot; skipping the spec and freezing the combination directly settles what ships before the packages&#x27; boundaries are stated. The order itself is a form of error prevention: it lets each decision appear only where it belongs.</p>\n<h2>A sample proves only what it can prove</h2>\n<p>The spec stage&#x27;s verification evidence must also be read by its boundaries. This time the evidence includes: twenty package-level tests passing for one feature package, one test passing for a new isolated-loader sample, four pairs of official documentation pairing passing, local link and format checks passing for eight documents, a diff check passing in the business repository, and an independent read-only review of the sample with no mandatory items.</p>\n<p>That evidence carries weight, but its coverage is explicit: the sample evidence covers only real loading and unloading at the source level. It proves that the isolated loader can load a package and unload it again at the source level. It does not prove isolation of the shipped artifact, installation under a formal profile, or closure of the spec stage as a whole.</p>\n<p>Stating the evidence more narrowly is not diminishing it, it is protecting it: only by first stating what the sample did not prove can a later attempt to use it to argue for release isolation be prevented from being misread as an already-verified conclusion. Writing the boundary of the evidence into the record matters as much as the evidence itself. Whether the whole is complete is judged by the final delivery, not by any single test passing.</p>\n<h2>Soft lock: keeping the mechanism and removing a binding are two things</h2>\n<p>There is one more easily confused decision this time: a future removal of the current release&#x27;s soft-lock binding on individual capabilities, while the soft-lock mechanism itself is kept as an optional restriction capability, with no configuration changed yet.</p>\n<p>These two sentences must be read separately. Removing a binding says a specific capability is no longer bound by the soft lock; keeping the mechanism says the restriction tool itself stays in the toolbox for future use. Saying only &quot;the soft lock is removed&quot; makes people think the mechanism is gone too; saying only &quot;the soft lock is kept&quot; makes people think the binding is still in place.</p>\n<p>The soft lock&#x27;s own semantics must also be stated precisely: it signs the user out when a plugin is closed and attempts to restore on sign-in, not a hard refusal before deactivation. In other words, it is not a front-loaded ban, but a post-hoc state handling. Describing it as a hard refusal gives users the wrong expectation of its behavior; stating its semantics precisely is what lets a review judge what it actually restricts and what it does not.</p>\n<h2>What does not count as done</h2>\n<p>Closing with a checklist. The next time someone says &quot;the plugin spec is done,&quot; ask these four questions first; if they cannot be answered, it is not done:</p>\n<ol><li><strong>Spec</strong>: are the package map, onboarding guide, and acceptance checklist complete.</li><li><strong>Combination</strong>: have the main package combination, existing migration, and core protection exceptions passed review.</li><li><strong>Implementation</strong>: have shipping behavior and restriction configuration actually changed and shipped.</li><li><strong>Evidence</strong>: does each piece of evidence cover the source level, the shipped-artifact level, or the formal-installation level.</li></ol>\n<p>The value of the spec stage is precisely that it lets &quot;not yet done&quot; be stated accurately. Being able to say clearly which stage has not started is closer to done than vaguely saying &quot;almost done.&quot;</p>\n<h2>One-sentence close</h2>\n<p>Spec first is not delay: it gives combination and implementation each their own review point. Complete docs are only stage one, a frozen combination is stage two, and only a real change to shipping behavior, released, counts as done.</p>"}, "prev": {"url": "/writing/49-prove-old-build-lacks-feature", "t": {"zh": "发布前，先证明旧包没有新功能", "en": "Before Release, Prove the Old Build Lacks the Feature"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
