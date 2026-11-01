@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>删除报“被占用”，内容其实已经没了 — rotor</title>
+<meta name="description" content="删除前先备份，删后先查占用者；报“被占用”时内容往往已经没了，别再重试删除。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/59-delete-in-use-empty-folder">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "删除报“被占用”，内容其实已经没了", "description": "删除前先备份，删后先查占用者；报“被占用”时内容往往已经没了，别再重试删除。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-02", "mainEntityOfPage": "https://www.rotor1996.top/writing/59-delete-in-use-empty-folder"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>删除报“被占用”，内容其实已经没了</h1><p>结论先说：删除一个目录时如果报错“被占用”，不要把它读成“没删成”。一次真实的删除里，报错出现时内容已经全部清空，只剩一个删不掉的空壳。把“报错”当成“原样还在”，是这次事故里最贵的一个误读。</p>
+<h2>现象：删了一半的空壳</h2>
+<p>按要求删除一个已经迁移的旧插件仓库。删除命令删掉了全部内容，但目录本身删除失败，报错说文件正被另一进程使用。结果是一个空目录：看起来像删干净了，实际是半完成状态。</p>
+<p>这个状态最容易骗人。报错的措辞暗示操作被挡住了，人的第一反应往往是：既然没删成，那就再试一次，或者先放着不管。但事实正好相反：内容已经没了，目录还在只是因为还有句柄没松开。报错描述的是“收尾失败”，不是“删除未开始”。</p>
+<p>判断半完成状态，不能看目录在不在，而要看内容还在不在。目录存在只证明收尾没走完，内容计数、版本库状态、关键文件是否可读，才证明删除进行到了哪一步。把目录的存在当成内容尚存的证据，等于用最不说明问题的信号去做最关键的判断。</p>
+<h2>占用者：包装进程死了，子进程还活着</h2>
+<p>占用者有两类，指向两个不同的检查盲区。</p>
+<p>第一类是会话早期用后台任务启动的测试网关。结束任务只结束了外层包装进程，子进程还活着，它的脚本路径与该目录绑定，持续持有句柄。只看外层退没退出，就以为任务已经干净地结束了，这是假结束。</p>
+<p>第二类是正在运行的桌面客户端。它也出现在按路径匹配的进程列表里，说明运行中的应用同样可能持有该目录的句柄。删除前只查“目录有没有被打开”，查不到这种持有。</p>
+<p>所以删除前的占用检查要问准问题：有没有进程的工作目录或脚本路径落在这个目录里。结束任务之后，还要复查子进程是否存活。外层退出不等于整条进程链退出。</p>
+<h2>真正的损失：唯一一份本地工作</h2>
+<p>空壳本身不值钱，值钱的是被一并清掉的东西。该仓库里还有一个正在开发的包，含当天新写的几个模块及其测试，都只存在于这里。迁移时默认“新仓库已经有了同名包”，但实际新仓库里只有另外几个包，这个包并不在其中。</p>
+<p>这是删除前最该单独确认的一类东西：未提交的工作、只在本地存在的包、还没合入新位置的文件。确认的方式不是问“旧仓库还用不用”，而是逐项点名：这个包在新位置吗，在哪个目录，文件在不在。不能靠“已经迁移了”一句话带过，同名不等于已迁移。</p>
+<h2>还原怎么算成立</h2>
+<p>幸好删除之前做过一次整份备份，排除了可重建的依赖目录。还原之后，三项核对都通过，还原结论才成立：</p>
+<ol><li><strong>文件数</strong>：备份与还原后的文件数完全一致。</li><li><strong>版本库</strong>：版本库完整，状态检查正常。</li><li><strong>抽查</strong>：关键源码、测试与已构建产物的哈希与备份逐字节一致。</li></ol>
+<p>依赖目录没进备份，属于可重建产物，要用时重新安装，不影响还原成立的结论。但顺序是关键：备份在删除之前，不是删除之后想起来补。删除之后再谈备份，谈的已经不是备份，是抢救。</p>
+<h2>删除前检查表</h2>
+<p>把这次复盘收成一张删除前检查表：</p>
+<ol><li><strong>先备份</strong>：整份备份，排除可重建产物，备份本身要能单独核对。</li><li><strong>再查占用</strong>：确认没有进程的工作目录或脚本路径在该目录内，结束任务后复查子进程是否存活。</li><li><strong>再点名未迁移物</strong>：逐项确认待删目录里的本地唯一内容已经落到新位置，不要假设同名等于已迁移。</li><li><strong>报错后先还原</strong>：目录删除报被占用时，立即从备份还原，不要继续重试删除。重试删的是一个已经空了的壳，还可能把“还没发现丢了什么”的窗口拖过去。</li></ol>
+<h2>一句话收束</h2>
+<p>删除命令的报错只告诉你收尾失败，没告诉你内容还在：删之前先备份，删之后先还原，别用重试去验证一个已经空了的目录。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "删除报“被占用”，内容其实已经没了", "en": "A Delete That Reported \"In Use\" Had Already Emptied the Folder"}, "body": {"zh": "<p>结论先说：删除一个目录时如果报错“被占用”，不要把它读成“没删成”。一次真实的删除里，报错出现时内容已经全部清空，只剩一个删不掉的空壳。把“报错”当成“原样还在”，是这次事故里最贵的一个误读。</p>\n<h2>现象：删了一半的空壳</h2>\n<p>按要求删除一个已经迁移的旧插件仓库。删除命令删掉了全部内容，但目录本身删除失败，报错说文件正被另一进程使用。结果是一个空目录：看起来像删干净了，实际是半完成状态。</p>\n<p>这个状态最容易骗人。报错的措辞暗示操作被挡住了，人的第一反应往往是：既然没删成，那就再试一次，或者先放着不管。但事实正好相反：内容已经没了，目录还在只是因为还有句柄没松开。报错描述的是“收尾失败”，不是“删除未开始”。</p>\n<p>判断半完成状态，不能看目录在不在，而要看内容还在不在。目录存在只证明收尾没走完，内容计数、版本库状态、关键文件是否可读，才证明删除进行到了哪一步。把目录的存在当成内容尚存的证据，等于用最不说明问题的信号去做最关键的判断。</p>\n<h2>占用者：包装进程死了，子进程还活着</h2>\n<p>占用者有两类，指向两个不同的检查盲区。</p>\n<p>第一类是会话早期用后台任务启动的测试网关。结束任务只结束了外层包装进程，子进程还活着，它的脚本路径与该目录绑定，持续持有句柄。只看外层退没退出，就以为任务已经干净地结束了，这是假结束。</p>\n<p>第二类是正在运行的桌面客户端。它也出现在按路径匹配的进程列表里，说明运行中的应用同样可能持有该目录的句柄。删除前只查“目录有没有被打开”，查不到这种持有。</p>\n<p>所以删除前的占用检查要问准问题：有没有进程的工作目录或脚本路径落在这个目录里。结束任务之后，还要复查子进程是否存活。外层退出不等于整条进程链退出。</p>\n<h2>真正的损失：唯一一份本地工作</h2>\n<p>空壳本身不值钱，值钱的是被一并清掉的东西。该仓库里还有一个正在开发的包，含当天新写的几个模块及其测试，都只存在于这里。迁移时默认“新仓库已经有了同名包”，但实际新仓库里只有另外几个包，这个包并不在其中。</p>\n<p>这是删除前最该单独确认的一类东西：未提交的工作、只在本地存在的包、还没合入新位置的文件。确认的方式不是问“旧仓库还用不用”，而是逐项点名：这个包在新位置吗，在哪个目录，文件在不在。不能靠“已经迁移了”一句话带过，同名不等于已迁移。</p>\n<h2>还原怎么算成立</h2>\n<p>幸好删除之前做过一次整份备份，排除了可重建的依赖目录。还原之后，三项核对都通过，还原结论才成立：</p>\n<ol><li><strong>文件数</strong>：备份与还原后的文件数完全一致。</li><li><strong>版本库</strong>：版本库完整，状态检查正常。</li><li><strong>抽查</strong>：关键源码、测试与已构建产物的哈希与备份逐字节一致。</li></ol>\n<p>依赖目录没进备份，属于可重建产物，要用时重新安装，不影响还原成立的结论。但顺序是关键：备份在删除之前，不是删除之后想起来补。删除之后再谈备份，谈的已经不是备份，是抢救。</p>\n<h2>删除前检查表</h2>\n<p>把这次复盘收成一张删除前检查表：</p>\n<ol><li><strong>先备份</strong>：整份备份，排除可重建产物，备份本身要能单独核对。</li><li><strong>再查占用</strong>：确认没有进程的工作目录或脚本路径在该目录内，结束任务后复查子进程是否存活。</li><li><strong>再点名未迁移物</strong>：逐项确认待删目录里的本地唯一内容已经落到新位置，不要假设同名等于已迁移。</li><li><strong>报错后先还原</strong>：目录删除报被占用时，立即从备份还原，不要继续重试删除。重试删的是一个已经空了的壳，还可能把“还没发现丢了什么”的窗口拖过去。</li></ol>\n<h2>一句话收束</h2>\n<p>删除命令的报错只告诉你收尾失败，没告诉你内容还在：删之前先备份，删之后先还原，别用重试去验证一个已经空了的目录。</p>", "en": "<p>Conclusion first: when deleting a directory reports &quot;in use&quot;, do not read it as &quot;nothing was deleted&quot;. In one real deletion, by the time the error appeared, all contents were already gone and only an undeletable empty shell remained. Reading the error as &quot;everything is still intact&quot; was the most expensive misreading in the incident.</p>\n<h2>The symptom: a half-finished empty shell</h2>\n<p>An old plugin repository that had already been migrated was to be deleted. The delete command removed all contents, but the directory itself failed to delete, reporting that a file was being used by another process. The result was an empty directory: it looked cleanly deleted, but it was a half-finished state.</p>\n<p>This state is easy to misread. The wording of the error suggests the operation was blocked, and the first instinct is often: since it did not delete, try again, or leave it alone for now. The truth was the opposite: the contents were gone, and the directory remained only because a handle had not been released. The error described a failed finish, not a deletion that never started.</p>\n<p>Telling a half-finished state apart requires looking at the contents, not at the directory. That the directory exists proves only that the finish did not complete. Content counts, repository status, and whether key files are readable prove how far the deletion actually went. Taking the existence of the directory as evidence that the contents survive means judging the most critical question by the least informative signal.</p>\n<h2>The holders: the wrapper died, the child lived on</h2>\n<p>The holders fell into two groups, pointing at two different blind spots in checking.</p>\n<p>The first was a test gateway started earlier in the session by a background task. Ending the task ended only the outer wrapper process; the child process was still alive, its script path bound to that directory, holding a handle. Judging by whether the outer layer had exited made the ending look clean when it was not.</p>\n<p>The second was a running desktop client. It also appeared in the process list matched by path, which shows that a running application can hold a handle on the directory too. Checking only whether the directory was open would not have found this kind of hold.</p>\n<p>So the pre-deletion holder check has to ask the precise question: does any process have its working directory or script path inside this directory. After ending a task, check again whether any child process survived. An outer exit does not mean the whole process chain exited.</p>\n<h2>The real loss: the only local copy of work in progress</h2>\n<p>The empty shell itself was worthless. What mattered was what had been cleared along with it. The repository still held a package under active development, including several modules and their tests written that same day, which existed only there. The migration had assumed that the new repository already held a package of the same name, but in fact the new repository held only a few other packages, and this one was not among them.</p>\n<p>This is the class of items that must be confirmed individually before deletion: uncommitted work, packages that exist only locally, and files not yet merged into their new location. The way to confirm is not to ask whether the old repository is still in use, but to name each item: is this package in the new location, in which directory, are the files there. A general claim of &quot;already migrated&quot; cannot carry that check, and a matching name does not mean a completed migration.</p>\n<h2>What counts as a successful restore</h2>\n<p>Fortunately, a full backup had been made before deletion, excluding rebuildable dependency directories. After restoring, the restore counted as established only when three checks all passed:</p>\n<ol><li><strong>File count</strong>: the file count after restore matched the backup exactly.</li><li><strong>Repository</strong>: the repository was intact and its status check was normal.</li><li><strong>Spot checks</strong>: the hashes of key sources, tests, and built outputs matched the backup byte for byte.</li></ol>\n<p>The dependency directories were not in the backup, since they are rebuildable products that can be reinstalled when needed, and that does not weaken the restore conclusion. But the order is the point: the backup came before the deletion, not after it was remembered. A backup discussed after deletion is no longer a backup; it is a rescue.</p>\n<h2>A pre-deletion checklist</h2>\n<p>The postmortem condenses into a pre-deletion checklist:</p>\n<ol><li><strong>Back up first</strong>: a full backup, excluding rebuildable products, that can itself be verified on its own.</li><li><strong>Check holders next</strong>: confirm that no process has its working directory or script path inside the directory, and recheck for surviving child processes after ending a task.</li><li><strong>Name the unmigrated items next</strong>: confirm item by item that locally unique contents in the directory to be deleted have landed in their new location, and never assume that a matching name means a completed migration.</li><li><strong>Restore first on error</strong>: when a directory deletion reports &quot;in use&quot;, restore from backup immediately instead of retrying the deletion. Retrying deletes an already empty shell, and it can drag out the window before anyone notices what is missing.</li></ol>\n<h2>One sentence to close</h2>\n<p>A delete error tells you only that the finish failed, not that the contents are still there: back up before deleting, restore before retrying, and never use a retry to verify a directory that is already empty.</p>"}, "prev": {"url": "/writing/58-spec-before-integration", "t": {"zh": "规范先行，组合后定：插件规范完成不等于整合完成", "en": "Spec First, Combination Later: A Finished Plugin Spec Is Not a Finished Integration"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
