@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>线上跑的是构建产物，不是源码：一次静默回退 26 个提交 — rotor</title>
+<meta name="description" content="服务器残留源码比线上产物落后 26 个提交，用它重建等于静默回退；启动正常、路由却少了 7 条，验线上要看产物特征不看源码。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/61-stale-src-overwrote-dist">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "线上跑的是构建产物，不是源码：一次静默回退 26 个提交", "description": "服务器残留源码比线上产物落后 26 个提交，用它重建等于静默回退；启动正常、路由却少了 7 条，验线上要看产物特征不看源码。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-04", "mainEntityOfPage": "https://www.rotor1996.top/writing/61-stale-src-overwrote-dist"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>线上跑的是构建产物，不是源码：一次静默回退 26 个提交</h1><p>结论先说：一次线上发布里，服务启动正常、没有任何报错，但注册路由从 282 条掉到了 275 条，7 个新近上线的接口凭空消失。原因不是代码写错了，而是构建用的源码比线上产物落后 26 个提交：用旧源码重新构建，等于把生产环境静默回退到了一个多月前的版本。线上跑的从来不是源码，是构建产物；拿错源码重建，就是一次没有报错的回退。</p>
+<h2>现象：启动正常，路由少了 7 条</h2>
+<p>当天下午，为一个登录相关的改动做发布：构建成功，重启后日志干净，没有任何报错。直到核对注册路由数时才发现不对：原来 282 条，重启后只剩 275 条。消失的 7 条里有新近上线的授权接口和令牌刷新接口，都是真实业务正在用的能力。</p>
+<p>服务“启动正常”在这里不是好消息，而是遮羞布：路由缺失不会让进程崩溃、不会写错误日志、不会在启动时自检告警，只会在真实请求打到那几个接口时以 404 还给用户。发布验证如果只看“服务起来了没有”，这类回退可以悄悄在线上待很久。事后影响窗口约 24 分钟，期间是否有真实请求命中缺失路由，因默认没有访问日志，已无法核实。</p>
+<h2>根因：服务器上的源码不是线上代码</h2>
+<p>这套服务跑的是编译后的构建产物，源码目录只是构建输入。问题就出在这个“只是”上：服务器上留着一份历史残留的源码目录，比线上构建产物落后 26 个提交。当天有人直接编辑这份源码并重新构建，覆盖了线上的构建产物。构建完全成功，产物也完全合法，只不过它对应的是落后 26 个提交的旧代码。</p>
+<p>于是出现了一个教科书式的错位：构建、部署、重启各自成功，合起来却是一次回退。事后有一个非常直观的判据：线上某鉴权模块构建文件约 37KB 且含刷新令牌关键字，旧源码编出的只有约 25KB、关键字计数为零。两个产物摆在一起，版本差异一目了然，但构建流程本身从不做这种对比。</p>
+<p>更值得警惕的是“顺手改服务器源码”这个动作。它看起来最省事：改完直接构建重启，几分钟就上线。但它绕过了版本控制这道唯一的防线。一旦服务器上的源码与仓库主线漂移，之后每一次“顺手”都是在用未知版本的代码覆盖已知版本的产物。这次是落后 26 个提交，下次可能是混入了某次未提交的调试改动，而构建成功、启动正常会一路为它放行。</p>
+<h2>处置：从仓库重建，整目录替换</h2>
+<p>发现路由缺失后，处置分三步。</p>
+<ol><li><strong>先备份降级产物</strong>：把被覆盖的构建产物整份打包备份，再动手替换。备份是为了保留回滚路径：万一新构建也有问题，至少能回到“缺 7 条路由但能跑”的状态。</li><li><strong>从仓库主线重建</strong>：从仓库最新提交导出源码重新编译，不再碰服务器上那份旧源码：构建输入必须来自版本控制，而不是某台机器上的残留目录。</li><li><strong>整目录替换后重启验证</strong>：整目录替换构建产物，重启后逐项核对：路由数回到 282 条，缺失接口回到注册表，启动日志无报错。验证锚点是路由数这个硬指标，不是“服务起来了”这个软感觉。</li></ol>
+<p>处置本身不复杂：整个过程没有引入新技术，没有修任何业务 bug，只是把构建输入换回了正确的版本。事故的成本不在修复，而在发现：从发布到发现路由缺失之间，线上一直处在一个“看起来正常、实际缺功能”的状态。</p>
+<h2>防复发：三条规则</h2>
+<p>这次复盘收成三条规则：</p>
+<ol><li><strong>发布只认仓库导出的产物</strong>：构建输入一律从版本控制的指定提交导出，禁止用服务器残留源码重建。措辞要绝对：不是“尽量从仓库导”，而是“只认仓库导”——留一个“紧急时可直接改服务器”的口子，紧急时它一定会被用。</li><li><strong>判断线上版本看产物特征，不看源码</strong>：要确认线上跑的是哪个版本，看构建产物的文件特征：文件大小、新特性关键字、路由注册数。源码目录存在于服务器，不代表它就是线上代码的来源；用源码“新旧”推断线上版本，是这次事故的直接诱因。</li><li><strong>残留源码要么删掉，要么改成不可构建</strong>：那份落后的源码目录如果继续留在服务器上，下次还会有人把它当成源码。删不掉的，至少要让它无法直接用于构建：改名、移走、设为只读占位，任何一种都比“原样留着、靠人记得别用”可靠。</li></ol>
+<h2>一句话收束</h2>
+<p>构建成功只证明产物编出来了，不证明编的是最新代码：发布认仓库不认残留目录，验线上看产物特征不看源码新旧，否则一次顺手的重建就能把生产静默推回过去。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "线上跑的是构建产物，不是源码：一次静默回退 26 个提交", "en": "What Runs in Production Is the Build Artifact, Not the Source"}, "body": {"zh": "<p>结论先说：一次线上发布里，服务启动正常、没有任何报错，但注册路由从 282 条掉到了 275 条，7 个新近上线的接口凭空消失。原因不是代码写错了，而是构建用的源码比线上产物落后 26 个提交：用旧源码重新构建，等于把生产环境静默回退到了一个多月前的版本。线上跑的从来不是源码，是构建产物；拿错源码重建，就是一次没有报错的回退。</p>\n<h2>现象：启动正常，路由少了 7 条</h2>\n<p>当天下午，为一个登录相关的改动做发布：构建成功，重启后日志干净，没有任何报错。直到核对注册路由数时才发现不对：原来 282 条，重启后只剩 275 条。消失的 7 条里有新近上线的授权接口和令牌刷新接口，都是真实业务正在用的能力。</p>\n<p>服务“启动正常”在这里不是好消息，而是遮羞布：路由缺失不会让进程崩溃、不会写错误日志、不会在启动时自检告警，只会在真实请求打到那几个接口时以 404 还给用户。发布验证如果只看“服务起来了没有”，这类回退可以悄悄在线上待很久。事后影响窗口约 24 分钟，期间是否有真实请求命中缺失路由，因默认没有访问日志，已无法核实。</p>\n<h2>根因：服务器上的源码不是线上代码</h2>\n<p>这套服务跑的是编译后的构建产物，源码目录只是构建输入。问题就出在这个“只是”上：服务器上留着一份历史残留的源码目录，比线上构建产物落后 26 个提交。当天有人直接编辑这份源码并重新构建，覆盖了线上的构建产物。构建完全成功，产物也完全合法，只不过它对应的是落后 26 个提交的旧代码。</p>\n<p>于是出现了一个教科书式的错位：构建、部署、重启各自成功，合起来却是一次回退。事后有一个非常直观的判据：线上某鉴权模块构建文件约 37KB 且含刷新令牌关键字，旧源码编出的只有约 25KB、关键字计数为零。两个产物摆在一起，版本差异一目了然，但构建流程本身从不做这种对比。</p>\n<p>更值得警惕的是“顺手改服务器源码”这个动作。它看起来最省事：改完直接构建重启，几分钟就上线。但它绕过了版本控制这道唯一的防线。一旦服务器上的源码与仓库主线漂移，之后每一次“顺手”都是在用未知版本的代码覆盖已知版本的产物。这次是落后 26 个提交，下次可能是混入了某次未提交的调试改动，而构建成功、启动正常会一路为它放行。</p>\n<h2>处置：从仓库重建，整目录替换</h2>\n<p>发现路由缺失后，处置分三步。</p>\n<ol><li><strong>先备份降级产物</strong>：把被覆盖的构建产物整份打包备份，再动手替换。备份是为了保留回滚路径：万一新构建也有问题，至少能回到“缺 7 条路由但能跑”的状态。</li><li><strong>从仓库主线重建</strong>：从仓库最新提交导出源码重新编译，不再碰服务器上那份旧源码：构建输入必须来自版本控制，而不是某台机器上的残留目录。</li><li><strong>整目录替换后重启验证</strong>：整目录替换构建产物，重启后逐项核对：路由数回到 282 条，缺失接口回到注册表，启动日志无报错。验证锚点是路由数这个硬指标，不是“服务起来了”这个软感觉。</li></ol>\n<p>处置本身不复杂：整个过程没有引入新技术，没有修任何业务 bug，只是把构建输入换回了正确的版本。事故的成本不在修复，而在发现：从发布到发现路由缺失之间，线上一直处在一个“看起来正常、实际缺功能”的状态。</p>\n<h2>防复发：三条规则</h2>\n<p>这次复盘收成三条规则：</p>\n<ol><li><strong>发布只认仓库导出的产物</strong>：构建输入一律从版本控制的指定提交导出，禁止用服务器残留源码重建。措辞要绝对：不是“尽量从仓库导”，而是“只认仓库导”——留一个“紧急时可直接改服务器”的口子，紧急时它一定会被用。</li><li><strong>判断线上版本看产物特征，不看源码</strong>：要确认线上跑的是哪个版本，看构建产物的文件特征：文件大小、新特性关键字、路由注册数。源码目录存在于服务器，不代表它就是线上代码的来源；用源码“新旧”推断线上版本，是这次事故的直接诱因。</li><li><strong>残留源码要么删掉，要么改成不可构建</strong>：那份落后的源码目录如果继续留在服务器上，下次还会有人把它当成源码。删不掉的，至少要让它无法直接用于构建：改名、移走、设为只读占位，任何一种都比“原样留着、靠人记得别用”可靠。</li></ol>\n<h2>一句话收束</h2>\n<p>构建成功只证明产物编出来了，不证明编的是最新代码：发布认仓库不认残留目录，验线上看产物特征不看源码新旧，否则一次顺手的重建就能把生产静默推回过去。</p>", "en": "<p>Conclusion first: in one production release, the service started cleanly with no errors at all, yet registered routes fell from 282 to 275, and 7 recently shipped endpoints vanished. The code was not wrong. The build input was: the source used for the build lagged the production artifact by 26 commits, so rebuilding from stale source silently rolled production back to a version more than a month old. What runs in production was never the source. It is the build artifact, and rebuilding from the wrong source is a rollback with no error message.</p>\n<h2>Symptom: Started Fine, 7 Routes Short</h2>\n<p>One afternoon, a release went out for a login-related change: the build succeeded, the restart left clean logs, and there were no errors. Then a route-count check showed something wrong: 282 routes before the restart, 275 after. The 7 missing routes included recently shipped authorization endpoints and a token-refresh endpoint, all capabilities real traffic actually uses.</p>\n<p>A clean start here is not good news; it is cover. Missing routes do not crash the process, write no error logs, and trigger no startup self-check alarm. They only come back as 404s when real requests hit those endpoints. If release verification only asks &quot;is the service up,&quot; a rollback like this can sit in production unnoticed for a long time. The post-incident impact window was about 24 minutes, and whether any real request hit a missing route during it can no longer be verified, because access logging was off by default.</p>\n<h2>Root Cause: The Source on the Server Was Not the Production Code</h2>\n<p>This service runs a compiled build artifact; the source directory is only a build input. The problem hides in that word &quot;only&quot;: a leftover source directory on the server lagged the production artifact by 26 commits. Someone edited that copy directly and rebuilt from it, overwriting the production artifact. The build fully succeeded and the artifact was fully valid; it just corresponded to code 26 commits behind.</p>\n<p>The result is a textbook misalignment: build, deploy, and restart each succeeded, and together they produced a rollback. One later check makes the version gap obvious: a build file for an auth module was about 37KB in production and contained the refresh-token keyword, while the stale-source build came out at about 25KB with a keyword count of zero. Laid side by side, the two artifacts show the gap at a glance, but the build pipeline itself never makes that comparison.</p>\n<p>More alarming is the act itself: &quot;just edit the source on the server.&quot; It looks like the fastest path: edit, rebuild, restart, live in minutes. But it bypasses version control, the only guardrail. Once the server copy drifts from the repository mainline, every later &quot;shortcut&quot; overwrites a known-version artifact with unknown-version code. This time it was 26 commits behind; next time it could carry an uncommitted debugging change, and a successful build plus a clean start will wave it all through.</p>\n<h2>Response: Rebuild From the Repository, Replace the Whole Directory</h2>\n<p>After the missing routes were found, the response came in three steps.</p>\n<ol><li><strong>Back up the downgraded artifact first</strong>: package the overwritten build artifact in full before touching anything. The backup preserves a rollback path: if the new build has problems too, at least the state &quot;7 routes short but running&quot; is recoverable.</li><li><strong>Rebuild from the repository mainline</strong>: export source from the latest repository commit and recompile, without touching the stale server copy. Build input must come from version control, not from a leftover directory on some machine.</li><li><strong>Replace the whole directory, restart, verify</strong>: replace the build artifact as a whole directory, then verify item by item after restart: route count back to 282, missing endpoints back in the registry, startup logs clean. The verification anchor is the route count, a hard metric, not the soft feeling that &quot;the service is up.&quot;</li></ol>\n<p>The response itself was not complicated: no new technology was introduced, no business bug was fixed, only the build input was swapped back to the correct version. The cost of the incident was not in the fix but in the detection: between the release and the discovery of the missing routes, production sat in a state that looked normal and was functionally short.</p>\n<h2>Prevention: Three Rules</h2>\n<p>This review produced three rules:</p>\n<ol><li><strong>Releases only accept repository-exported artifacts</strong>: build input is always exported from a specified commit in version control; rebuilding from leftover server source is prohibited. The wording must be absolute: not &quot;prefer the repository,&quot; but &quot;only the repository.&quot; Leave an &quot;edit the server directly in an emergency&quot; opening, and it will be used in an emergency.</li><li><strong>Judge the production version by artifact fingerprints, not by source</strong>: to confirm which version is running, look at build-artifact characteristics: file size, new-feature keywords, registered route count. A source directory existing on the server does not mean it is the source of the production code; inferring the production version from how &quot;new&quot; the source looks was the direct cause of this incident.</li><li><strong>Delete leftover source, or make it unbuildable</strong>: if that lagging source directory stays on the server, someone will treat it as source again. If it cannot be deleted, at least make it unusable for building directly: rename it, move it away, or mark it a read-only placeholder. Any of these beats leaving it as-is and relying on people remembering not to use it.</li></ol>\n<h2>One-Line Close</h2>\n<p>A successful build only proves an artifact was produced, not that it was built from the latest code: releases must trust the repository, not leftover directories, and production must be verified by artifact fingerprints, not by how new the source looks. Otherwise one casual rebuild can quietly push production back into the past.</p>"}, "prev": {"url": "/writing/60-preflight-before-build", "t": {"zh": "一次发布 100 分钟，真正构建只占 12 分钟", "en": "A 100-Minute Release, Only 12 Minutes of Building"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+</body>
+</html>
