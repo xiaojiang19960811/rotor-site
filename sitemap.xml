@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<url><loc>https://www.rotor1996.top/</loc><lastmod>2026-11-05</lastmod></url>
-<url><loc>https://www.rotor1996.top/writing/</loc><lastmod>2026-11-05</lastmod></url>
+<url><loc>https://www.rotor1996.top/</loc><lastmod>2026-11-06</lastmod></url>
+<url><loc>https://www.rotor1996.top/writing/</loc><lastmod>2026-11-06</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/01-newsletter-newsroom</loc><lastmod>2026-10-02</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/02-persona-from-briefs</loc><lastmod>2026-10-02</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/03-fork-selective-upgrade</loc><lastmod>2026-10-02</lastmod></url>
@@ -64,4 +64,5 @@
 <url><loc>https://www.rotor1996.top/writing/60-preflight-before-build</loc><lastmod>2026-11-03</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/61-stale-src-overwrote-dist</loc><lastmod>2026-11-04</lastmod></url>
 <url><loc>https://www.rotor1996.top/writing/62-macos-helper-name-mismatch</loc><lastmod>2026-11-05</lastmod></url>
+<url><loc>https://www.rotor1996.top/writing/63-committed-not-released</loc><lastmod>2026-11-06</lastmod></url>
 </urlset>
