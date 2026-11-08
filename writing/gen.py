@@ -6,6 +6,8 @@
 - 站点 CSS 直接复用 index.html 的 <style>，视觉自动同步
 """
 import re, json, html, os
+from datetime import datetime, timezone
+from email.utils import formatdate
 
 ROOT = "/home/hatch/workspace/rotor-site"
 DRAFTS = f"{ROOT}/writing/drafts"
@@ -85,6 +87,9 @@ ARTS = [
 LIVE = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65"}
 # 发布日期（首页"最新"排序用）
 DATES = {"01": "2026-10-02", "02": "2026-10-02", "03": "2026-10-02", "04": "2026-10-02", "05": "2026-10-02", "06": "2026-10-02", "07": "2026-10-02", "08": "2026-10-02", "09": "2026-10-02", "10": "2026-10-02", "11": "2026-10-02", "12": "2026-10-02", "13": "2026-10-02", "14": "2026-10-02", "15": "2026-10-02", "16": "2026-10-02", "17": "2026-10-02", "18": "2026-10-02", "19": "2026-10-02", "20": "2026-10-02", "21": "2026-10-02", "22": "2026-10-02", "23": "2026-10-02", "24": "2026-10-02", "25": "2026-10-02", "26": "2026-10-02", "27": "2026-10-02", "28": "2026-10-02", "29": "2026-10-03", "30": "2026-10-04", "31": "2026-10-05", "32": "2026-10-06", "33": "2026-10-07", "34": "2026-10-08", "35": "2026-10-09", "36": "2026-10-10", "37": "2026-10-11", "38": "2026-10-12", "39": "2026-10-13", "40": "2026-10-14", "41": "2026-10-15", "42": "2026-10-16", "43": "2026-10-17", "44": "2026-10-18", "45": "2026-10-19", "46": "2026-10-20", "47": "2026-10-21", "48": "2026-10-22", "49": "2026-10-23", "50": "2026-10-24", "51": "2026-10-25", "52": "2026-10-26", "53": "2026-10-27", "54": "2026-10-28", "55": "2026-10-29", "56": "2026-10-30", "57": "2026-10-31", "58": "2026-11-01", "59": "2026-11-02", "60": "2026-11-03", "61": "2026-11-04", "62": "2026-11-05", "63": "2026-11-06", "64": "2026-11-07", "65": "2026-11-08"}
+
+# 首页精选（2026-11-08 用户拍板 10 篇；顺序即展示顺序；换精选只改这里）
+FEATURED = ["01", "26", "47", "63", "11", "15", "61", "65", "25", "46"]
 
 COLLECTIONS = {
  "infra": ("AI 基础设施", "AI Infrastructure"),
@@ -419,6 +424,24 @@ def main():
         "const ARTICLES = " + json.dumps(slim, ensure_ascii=False) + ";")
     print("articles.js:", len(slim), "articles")
 
+    # 1b) articles-home.js（只给首页用：最新 3 篇 + 待发布 + 精选 + 计数；首页不再内联全量 65 篇）
+    live_sorted = sorted([a for a in slim if a["live"]],
+                         key=lambda x: x.get("date", ""), reverse=True)
+    home_arts = live_sorted[:3] + [a for a in slim if not a["live"]]
+    home_featured = [a for aid in FEATURED for a in slim
+                     if a["id"] == aid and a["live"]]
+    assert len(home_featured) == len(FEATURED), "FEATURED 有未发布或不存在的 id"
+    col_counts = {}
+    for a in slim:
+        col_counts[a["col"]] = col_counts.get(a["col"], 0) + 1
+    home_js = ("const ARTICLES = " + json.dumps(home_arts, ensure_ascii=False) + ";\n"
+               "const COL_COUNTS = " + json.dumps(col_counts, ensure_ascii=False) + ";\n"
+               "const ARTICLES_TOTAL = " + str(len(slim)) + ";\n"
+               "const FEATURED = " + json.dumps(home_featured, ensure_ascii=False) + ";")
+    open("/tmp/articles-home.js", "w", encoding="utf-8").write(home_js)
+    print("articles-home.js:", len(home_arts), "articles +",
+          len(home_featured), "featured")
+
     # 2) 文章二级页面（已发布 + 已写稿未发布的都生成）
     site_css()  # 校验 assets/site.css 可读（样式已外链，不再内联）
     for a in arts:
@@ -483,6 +506,32 @@ def main():
     sm.append("</urlset>")
     open(f"{ROOT}/sitemap.xml", "w", encoding="utf-8").write("\n".join(sm))
     print("sitemap:", f"{ROOT}/sitemap.xml", len(sm_urls), "urls")
+
+    # 5) rss.xml（订阅入口；只收已发布，按日期倒序）
+    rss_items = []
+    for a in sorted([x for x in arts if x["live"]],
+                    key=lambda x: DATES.get(x["id"], ""), reverse=True):
+        dt = datetime.strptime(DATES.get(a["id"], "2026-10-02"), "%Y-%m-%d")
+        pub = formatdate(dt.replace(tzinfo=timezone.utc).timestamp(), usegmt=True)
+        link = f"{base}/writing/{a['id']}-{a['slug']}"
+        rss_items.append(
+            "  <item>\n"
+            f"    <title>{html.escape(a['t']['zh'])}</title>\n"
+            f"    <link>{link}</link>\n"
+            f"    <guid>{link}</guid>\n"
+            f"    <pubDate>{pub}</pubDate>\n"
+            f"    <description>{html.escape(a['d']['zh'])}</description>\n"
+            "  </item>")
+    rss = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<rss version="2.0">',
+           '<channel>',
+           '  <title>rotor</title>',
+           f'  <link>{base}/</link>',
+           '  <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>',
+           '  <language>zh-CN</language>'] + rss_items + [
+           '</channel>', '</rss>']
+    open(f"{ROOT}/rss.xml", "w", encoding="utf-8").write("\n".join(rss))
+    print("rss:", f"{ROOT}/rss.xml", len(rss_items), "items")
 
 if __name__ == "__main__":
     main()

@@ -32,7 +32,7 @@ It was never published to any registry — publishing needs the user's account a
 
 ## Monetization: two reversals on domain and AdSense
 
-AdSense doesn't accept subdomains, so the `tinykit.rotor1996.top` application path was dead. Decision: register the apex domain `gettinykit.top`, keep the old one as backup. The AdSense application is submitted and pending; no ads display before approval — showing ad slots before approval is gambling with the account.
+AdSense doesn't accept subdomains, so the `tinykit.rotor1996.top` application path was dead. Decision: register the apex domain `gettinykit.top`, keep the old one as backup. The AdSense application was rejected on 2026-10-27 (the email listed no reason; the official issue list in the account needs checking before reapplying); no ads display before approval — showing ad slots before approval is gambling with the account.
 
 ## In short
 

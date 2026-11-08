@@ -1,0 +1,464 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>rotor</title>
+  <link>https://www.rotor1996.top/</link>
+  <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
+  <language>zh-CN</language>
+  <item>
+    <title>备份前，先确认你在备哪个库</title>
+    <link>https://www.rotor1996.top/writing/65-backup-the-right-database</link>
+    <guid>https://www.rotor1996.top/writing/65-backup-the-right-database</guid>
+    <pubDate>Sun, 08 Nov 2026 00:00:00 GMT</pubDate>
+    <description>一次上游大版本升级里，备份脚本用了容器的默认库名，只备出 522KB 的空库；升级能不能发，要看一本验收台账，而不是看构建绿没绿。</description>
+  </item>
+  <item>
+    <title>流断了能不能重试，取决于错误怎么写</title>
+    <link>https://www.rotor1996.top/writing/64-stream-interrupted-retry</link>
+    <guid>https://www.rotor1996.top/writing/64-stream-interrupted-retry</guid>
+    <pubDate>Sat, 07 Nov 2026 00:00:00 GMT</pubDate>
+    <description>网关的报错文案没进客户端的重试白名单，同一类流中断换个文案命运完全不同；错误分类是跨层契约。</description>
+  </item>
+  <item>
+    <title>已提交、已发布、已验证，是三件事</title>
+    <link>https://www.rotor1996.top/writing/63-committed-not-released</link>
+    <guid>https://www.rotor1996.top/writing/63-committed-not-released</guid>
+    <pubDate>Fri, 06 Nov 2026 00:00:00 GMT</pubDate>
+    <description>源码进了仓库，不等于进了安装包；安装包上了线，不等于真实路径跑通过</description>
+  </item>
+  <item>
+    <title>改了一个空格，应用打不开了：macOS 助手名必须与包名逐字一致</title>
+    <link>https://www.rotor1996.top/writing/62-macos-helper-name-mismatch</link>
+    <guid>https://www.rotor1996.top/writing/62-macos-helper-name-mismatch</guid>
+    <pubDate>Thu, 05 Nov 2026 00:00:00 GMT</pubDate>
+    <description>显示名去掉一个空格，助手包名对不上，应用启动即崩溃；改名必须同源，冒烟必须走真实启动。</description>
+  </item>
+  <item>
+    <title>线上跑的是构建产物，不是源码：一次静默回退 26 个提交</title>
+    <link>https://www.rotor1996.top/writing/61-stale-src-overwrote-dist</link>
+    <guid>https://www.rotor1996.top/writing/61-stale-src-overwrote-dist</guid>
+    <pubDate>Wed, 04 Nov 2026 00:00:00 GMT</pubDate>
+    <description>服务器残留源码比线上产物落后 26 个提交，用它重建等于静默回退；启动正常、路由却少了 7 条，验线上要看产物特征不看源码。</description>
+  </item>
+  <item>
+    <title>一次发布 100 分钟，真正构建只占 12 分钟</title>
+    <link>https://www.rotor1996.top/writing/60-preflight-before-build</link>
+    <guid>https://www.rotor1996.top/writing/60-preflight-before-build</guid>
+    <pubDate>Tue, 03 Nov 2026 00:00:00 GMT</pubDate>
+    <description>把环境问题和脚本缺陷的发现环节放进构建循环，每修一处就要重建一次；开工前一次性体检、证据清单只维护一处，才能把发布压回约 15 分钟。</description>
+  </item>
+  <item>
+    <title>删除报“被占用”，内容其实已经没了</title>
+    <link>https://www.rotor1996.top/writing/59-delete-in-use-empty-folder</link>
+    <guid>https://www.rotor1996.top/writing/59-delete-in-use-empty-folder</guid>
+    <pubDate>Mon, 02 Nov 2026 00:00:00 GMT</pubDate>
+    <description>删除前先备份，删后先查占用者；报“被占用”时内容往往已经没了，别再重试删除。</description>
+  </item>
+  <item>
+    <title>规范先行，组合后定：插件规范完成不等于整合完成</title>
+    <link>https://www.rotor1996.top/writing/58-spec-before-integration</link>
+    <guid>https://www.rotor1996.top/writing/58-spec-before-integration</guid>
+    <pubDate>Sun, 01 Nov 2026 00:00:00 GMT</pubDate>
+    <description>十个插件包的地图、指南、验收表齐了，只是第一阶段；主包组合、既有迁移、保护例外评审通过并真正发布，才算完成。</description>
+  </item>
+  <item>
+    <title>一份发布说明，两个平台：顶层字段必然串台</title>
+    <link>https://www.rotor1996.top/writing/57-per-platform-release-notes</link>
+    <guid>https://www.rotor1996.top/writing/57-per-platform-release-notes</guid>
+    <pubDate>Sat, 31 Oct 2026 00:00:00 GMT</pubDate>
+    <description>Windows 与 macOS 各自发版，却共用清单顶层一条发布说明，下载页必然把一方的说明贴到另一方；说明必须下沉到平台条目，缺说明就让发布失败。</description>
+  </item>
+  <item>
+    <title>模式切了回来，界面还停在上一站</title>
+    <link>https://www.rotor1996.top/writing/56-mode-round-trip-stale-state</link>
+    <guid>https://www.rotor1996.top/writing/56-mode-round-trip-stale-state</guid>
+    <pubDate>Fri, 30 Oct 2026 00:00:00 GMT</pubDate>
+    <description>底部入口只在首次渲染读一次侧栏模式，切回列表后文案与点击闭包仍停留在团队模式；共享模式要订阅，不要快照。</description>
+  </item>
+  <item>
+    <title>恢复一个会话，要恢复它的全部状态</title>
+    <link>https://www.rotor1996.top/writing/55-restore-whole-session-state</link>
+    <guid>https://www.rotor1996.top/writing/55-restore-whole-session-state</guid>
+    <pubDate>Thu, 29 Oct 2026 00:00:00 GMT</pubDate>
+    <description>主会话归档后只恢复了成员、没取消归档，用户视角等于没恢复；问候判断先分清系统事件与用户发言，恢复触发点收敛到用户明确动作。</description>
+  </item>
+  <item>
+    <title>内部签名不是绕过：先把信任管起来</title>
+    <link>https://www.rotor1996.top/writing/54-internal-signing-trust</link>
+    <guid>https://www.rotor1996.top/writing/54-internal-signing-trust</guid>
+    <pubDate>Wed, 28 Oct 2026 00:00:00 GMT</pubDate>
+    <description>没有官方证书时，自签名能走通更新，但信任、备份与私钥交接必须先立规矩。</description>
+  </item>
+  <item>
+    <title>只留两版：正式与候选清单必须分开</title>
+    <link>https://www.rotor1996.top/writing/53-two-version-retention</link>
+    <guid>https://www.rotor1996.top/writing/53-two-version-retention</guid>
+    <pubDate>Tue, 27 Oct 2026 00:00:00 GMT</pubDate>
+    <description>按平台只保留当前版与上一版；候选包只供验收，不进正式清单、不算上一版。</description>
+  </item>
+  <item>
+    <title>一条消息，两条账单：辅助请求也是请求</title>
+    <link>https://www.rotor1996.top/writing/52-auxiliary-request-counts</link>
+    <guid>https://www.rotor1996.top/writing/52-auxiliary-request-counts</guid>
+    <pubDate>Mon, 26 Oct 2026 00:00:00 GMT</pubDate>
+    <description>新会话发一句问候，网关出现两条用量记录：主回复与自动标题各算一条，顺序还不固定。</description>
+  </item>
+  <item>
+    <title>预检 403：跨域放行要分三段查</title>
+    <link>https://www.rotor1996.top/writing/51-cors-preflight-403</link>
+    <guid>https://www.rotor1996.top/writing/51-cors-preflight-403</guid>
+    <pubDate>Sun, 25 Oct 2026 00:00:00 GMT</pubDate>
+    <description>预检、鉴权、健康检查各查各的；白名单缺口只在预检段现形</description>
+  </item>
+  <item>
+    <title>「是管理员」不等于「有管理员权限」</title>
+    <link>https://www.rotor1996.top/writing/50-low-integrity-install-exit</link>
+    <guid>https://www.rotor1996.top/writing/50-low-integrity-install-exit</guid>
+    <pubDate>Sat, 24 Oct 2026 00:00:00 GMT</pubDate>
+    <description>安装包选&quot;为所有用户安装&quot;后向导直接消失、无 UAC 提示：文件继承了父目录的低完整性标签，Windows 取用户与文件完整性较低者启动进程；排障先看 icacls 的 Mandatory Label，不看账号名</description>
+  </item>
+  <item>
+    <title>发布前，先证明旧包没有新功能</title>
+    <link>https://www.rotor1996.top/writing/49-prove-old-build-lacks-feature</link>
+    <guid>https://www.rotor1996.top/writing/49-prove-old-build-lacks-feature</guid>
+    <pubDate>Fri, 23 Oct 2026 00:00:00 GMT</pubDate>
+    <description>三条独立证据证明旧包没有新功能；蓝绿候选验证完才切流；没验的写进边界清单</description>
+  </item>
+  <item>
+    <title>「有两个渠道」不等于真有两个</title>
+    <link>https://www.rotor1996.top/writing/48-empty-pool-503</link>
+    <guid>https://www.rotor1996.top/writing/48-empty-pool-503</guid>
+    <pubDate>Thu, 22 Oct 2026 00:00:00 GMT</pubDate>
+    <description>用户以为分组里有两个上游渠道，实际只绑定了一个，还被手动暂停了四天；候选集为空（pool=0）与&quot;全被排除&quot;是两回事，日志里 excluded=0 是关键诊断位</description>
+  </item>
+  <item>
+    <title>靠分支名分辨的两条线，早晚会混</title>
+    <link>https://www.rotor1996.top/writing/47-two-lines-shared-repo-split</link>
+    <guid>https://www.rotor1996.top/writing/47-two-lines-shared-repo-split</guid>
+    <pubDate>Wed, 21 Oct 2026 00:00:00 GMT</pubDate>
+    <description>两条线共用一个仓库、靠分支名人工分辨，分叉后误用风险只增不减；分仓的标准是目录结构本身能看出来是两条线</description>
+  </item>
+  <item>
+    <title>「有新版」亮着，下载却是 404</title>
+    <link>https://www.rotor1996.top/writing/46-update-fake-green-light</link>
+    <guid>https://www.rotor1996.top/writing/46-update-fake-green-light</guid>
+    <pubDate>Tue, 20 Oct 2026 00:00:00 GMT</pubDate>
+    <description>三层掩盖：SPA 兜底吞了清单、联调 mock 顶替生产地址、备份文件进了配置生效目录；发布后只从公网验证</description>
+  </item>
+  <item>
+    <title>首字慢，未必是模型慢</title>
+    <link>https://www.rotor1996.top/writing/45-tcp-cwnd-first-token-slow</link>
+    <guid>https://www.rotor1996.top/writing/45-tcp-cwnd-first-token-slow</guid>
+    <pubDate>Mon, 19 Oct 2026 00:00:00 GMT</pubDate>
+    <description>26 万 token 上下文切换模型后首字 47–81 秒：Docker netns 里 TCP CUBIC 拥塞窗口被压到 3 个 MSS；开 BBR、踢掉旧长连接后 55 秒→10 秒</description>
+  </item>
+  <item>
+    <title>报错说协议错，未必是协议错</title>
+    <link>https://www.rotor1996.top/writing/44-timeout-misreported-as-protocol</link>
+    <guid>https://www.rotor1996.top/writing/44-timeout-misreported-as-protocol</guid>
+    <pubDate>Sun, 18 Oct 2026 00:00:00 GMT</pubDate>
+    <description>超时被 catch-all 归成协议错，界面让人原地重试；定位先问错误在哪一层被归类</description>
+  </item>
+  <item>
+    <title>上游不收的补丁，自己养：一个思考标签解析补丁的生命周期</title>
+    <link>https://www.rotor1996.top/writing/43-upstream-wont-merge-patch</link>
+    <guid>https://www.rotor1996.top/writing/43-upstream-wont-merge-patch</guid>
+    <pubDate>Sat, 17 Oct 2026 00:00:00 GMT</pubDate>
+    <description>上游不收补丁不是终点，而是养护的起点：移植、验证、过期都要自己管</description>
+  </item>
+  <item>
+    <title>一个客户端，两种身份：隔离在发行时做，不在运行时判</title>
+    <link>https://www.rotor1996.top/writing/42-client-distribution-isolation</link>
+    <guid>https://www.rotor1996.top/writing/42-client-distribution-isolation</guid>
+    <pubDate>Fri, 16 Oct 2026 00:00:00 GMT</pubDate>
+    <description>同一套代码发两个版本：身份、数据、更新各归各，运行时不做版本分支</description>
+  </item>
+  <item>
+    <title>换框架之前，先回答五个问题</title>
+    <link>https://www.rotor1996.top/writing/41-framework-migration-review</link>
+    <guid>https://www.rotor1996.top/writing/41-framework-migration-review</guid>
+    <pubDate>Thu, 15 Oct 2026 00:00:00 GMT</pubDate>
+    <description>换框架解不了的三类问题；评审先看能不能退役旧职责</description>
+  </item>
+  <item>
+    <title>模型给完了，本地再说不行</title>
+    <link>https://www.rotor1996.top/writing/40-model-done-local-no</link>
+    <guid>https://www.rotor1996.top/writing/40-model-done-local-no</guid>
+    <pubDate>Wed, 14 Oct 2026 00:00:00 GMT</pubDate>
+    <description>完整返回、校验通过、归属有效、计费对账是四件事；本地拒绝另记原因，不借模型背锅</description>
+  </item>
+  <item>
+    <title>「结构检查全绿，证据缺口还在」</title>
+    <link>https://www.rotor1996.top/writing/39-evidence-gap-audit</link>
+    <guid>https://www.rotor1996.top/writing/39-evidence-gap-audit</guid>
+    <pubDate>Tue, 13 Oct 2026 00:00:00 GMT</pubDate>
+    <description>结构检查全绿是内部一致，证据齐备才是外部真实；缺口要列成清单逐项闭环</description>
+  </item>
+  <item>
+    <title>「可用」是市场状态，不是通行证</title>
+    <link>https://www.rotor1996.top/writing/38-available-not-a-pass</link>
+    <guid>https://www.rotor1996.top/writing/38-available-not-a-pass</guid>
+    <pubDate>Mon, 12 Oct 2026 00:00:00 GMT</pubDate>
+    <description>目录升级≠你的安装副本更新；“可用”不等于“你能用”</description>
+  </item>
+  <item>
+    <title>pip install 成功了，不等于能推理</title>
+    <link>https://www.rotor1996.top/writing/37-ocr-deps-incident</link>
+    <guid>https://www.rotor1996.top/writing/37-ocr-deps-incident</guid>
+    <pubDate>Sun, 11 Oct 2026 00:00:00 GMT</pubDate>
+    <description>安装、导入、pip check、真实推理是四个证据；没写出来的版本，不是你的配置</description>
+  </item>
+  <item>
+    <title>模型只管提计划：Agent 副作用的三道门</title>
+    <link>https://www.rotor1996.top/writing/36-agent-side-effect-gates</link>
+    <guid>https://www.rotor1996.top/writing/36-agent-side-effect-gates</guid>
+    <pubDate>Sat, 10 Oct 2026 00:00:00 GMT</pubDate>
+    <description>计划、补路、执行、副作用是四个阶段；副作用必须声明、授权、可恢复</description>
+  </item>
+  <item>
+    <title>用户说&quot;数据都没了&quot;：一次把缓存当替罪羊的复盘</title>
+    <link>https://www.rotor1996.top/writing/35-user-said-data-gone</link>
+    <guid>https://www.rotor1996.top/writing/35-user-said-data-gone</guid>
+    <pubDate>Fri, 09 Oct 2026 00:00:00 GMT</pubDate>
+    <description>两次&quot;数据都没了&quot;：一次真缓存，一次脚本中途抛错；node --check 查不出运行时顺序错</description>
+  </item>
+  <item>
+    <title>Git 对象库坏了：别修仓库，从远端重建</title>
+    <link>https://www.rotor1996.top/writing/34-git-object-store-rebuild</link>
+    <guid>https://www.rotor1996.top/writing/34-git-object-store-rebuild</guid>
+    <pubDate>Thu, 08 Oct 2026 00:00:00 GMT</pubDate>
+    <description>本地对象缺失先护住工作区，再从远端补回 pack</description>
+  </item>
+  <item>
+    <title>多空间权限：交集，不是并集</title>
+    <link>https://www.rotor1996.top/writing/33-permission-intersection</link>
+    <guid>https://www.rotor1996.top/writing/33-permission-intersection</guid>
+    <pubDate>Wed, 07 Oct 2026 00:00:00 GMT</pubDate>
+    <description>空间、组织、项目三层求交集；按钮状态只是体验，服务端门禁才是边界</description>
+  </item>
+  <item>
+    <title>一键&quot;在线更新&quot;，点掉了一台线上服务</title>
+    <link>https://www.rotor1996.top/writing/32-online-update-502</link>
+    <guid>https://www.rotor1996.top/writing/32-online-update-502</guid>
+    <pubDate>Tue, 06 Oct 2026 00:00:00 GMT</pubDate>
+    <description>迁移编号语义冲突：fork 的本地重编号，上游二进制看不懂</description>
+  </item>
+  <item>
+    <title>没确认的接口契约，前端别先固化</title>
+    <link>https://www.rotor1996.top/writing/31-api-contract-discipline</link>
+    <guid>https://www.rotor1996.top/writing/31-api-contract-discipline</guid>
+    <pubDate>Mon, 05 Oct 2026 00:00:00 GMT</pubDate>
+    <description>契约三来源；定义缺失先确认再实现</description>
+  </item>
+  <item>
+    <title>“探测通过”的端点，未必是线上走的端点</title>
+    <link>https://www.rotor1996.top/writing/30-probe-vs-path</link>
+    <guid>https://www.rotor1996.top/writing/30-probe-vs-path</guid>
+    <pubDate>Sun, 04 Oct 2026 00:00:00 GMT</pubDate>
+    <description>本地门禁比上游更严；探测端点与线上链路同构</description>
+  </item>
+  <item>
+    <title>Agent 的两条连线：MCP 接工具，A2A 连 Agent</title>
+    <link>https://www.rotor1996.top/writing/29-mcp-a2a</link>
+    <guid>https://www.rotor1996.top/writing/29-mcp-a2a</guid>
+    <pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
+    <description>Skill、MCP、A2A 各管一层；按连接形态选协议</description>
+  </item>
+  <item>
+    <title>做资讯简报：机器干活，人把关</title>
+    <link>https://www.rotor1996.top/writing/01-newsletter-newsroom</link>
+    <guid>https://www.rotor1996.top/writing/01-newsletter-newsroom</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>发现初筛归机器，核验发布归人；六道质量门禁</description>
+  </item>
+  <item>
+    <title>从 39 份日报，反推一个数字人的人格</title>
+    <link>https://www.rotor1996.top/writing/02-persona-from-briefs</link>
+    <guid>https://www.rotor1996.top/writing/02-persona-from-briefs</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>不从 prompt 空想性格，从 161 条简报行为提炼人格</description>
+  </item>
+  <item>
+    <title>Fork 开源项目：选择性升级</title>
+    <link>https://www.rotor1996.top/writing/03-fork-selective-upgrade</link>
+    <guid>https://www.rotor1996.top/writing/03-fork-selective-upgrade</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>按主题手工吸收上游，高风险项不得无确认删除</description>
+  </item>
+  <item>
+    <title>接第三方媒体 API：代理、缓存和排障纪律</title>
+    <link>https://www.rotor1996.top/writing/04-proxy-media-api</link>
+    <guid>https://www.rotor1996.top/writing/04-proxy-media-api</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>同源代理流式转发不落盘；没做 A/B 前不定根因</description>
+  </item>
+  <item>
+    <title>单仓不拆，但按“未来可拆”组织</title>
+    <link>https://www.rotor1996.top/writing/05-monorepo-future-split</link>
+    <guid>https://www.rotor1996.top/writing/05-monorepo-future-split</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>拒绝拆微仓政治正确，也拒绝意大利面单仓</description>
+  </item>
+  <item>
+    <title>AI 漫画是连续生产，不是单图生成</title>
+    <link>https://www.rotor1996.top/writing/06-ai-comics-pipeline</link>
+    <guid>https://www.rotor1996.top/writing/06-ai-comics-pipeline</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>角色场景道具镜头受控；生成成功≠成品</description>
+  </item>
+  <item>
+    <title>一个业务四个端，怎么组织代码</title>
+    <link>https://www.rotor1996.top/writing/07-one-biz-four-clients</link>
+    <guid>https://www.rotor1996.top/writing/07-one-biz-four-clients</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>目录第一层按端语义命名；清洗下沉 adapter 层</description>
+  </item>
+  <item>
+    <title>部署开源视频模型前，先看三条边界</title>
+    <link>https://www.rotor1996.top/writing/08-selfhost-video-models</link>
+    <guid>https://www.rotor1996.top/writing/08-selfhost-video-models</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>开放权重≠开放完整链路；许可证有地域排除</description>
+  </item>
+  <item>
+    <title>“已完成”不等于“已验证”</title>
+    <link>https://www.rotor1996.top/writing/09-done-vs-verified</link>
+    <guid>https://www.rotor1996.top/writing/09-done-vs-verified</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>六个结论不能互相替代；失败证据也是证据</description>
+  </item>
+  <item>
+    <title>给知识库立规矩：什么算数，什么不算</title>
+    <link>https://www.rotor1996.top/writing/10-knowledge-base-rules</link>
+    <guid>https://www.rotor1996.top/writing/10-knowledge-base-rules</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>正式规则三来源；AI 推断一律进候选区</description>
+  </item>
+  <item>
+    <title>AI 写代码越快，人越要负责判断</title>
+    <link>https://www.rotor1996.top/writing/11-ai-codes-humans-judge</link>
+    <guid>https://www.rotor1996.top/writing/11-ai-codes-humans-judge</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>开发人员真正参与的七件事；SDD 不保证 Token 更少</description>
+  </item>
+  <item>
+    <title>Agent 的记忆怎么做分层</title>
+    <link>https://www.rotor1996.top/writing/12-agent-memory-layers</link>
+    <guid>https://www.rotor1996.top/writing/12-agent-memory-layers</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>六层分别管理；遗忘是淡出不是删除</description>
+  </item>
+  <item>
+    <title>调 AI 接口，不能只看“通没通”</title>
+    <link>https://www.rotor1996.top/writing/13-calling-ai-apis</link>
+    <guid>https://www.rotor1996.top/writing/13-calling-ai-apis</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>8 个语义阶段；传输存活≠语义进展</description>
+  </item>
+  <item>
+    <title>公开能看，不等于能爬</title>
+    <link>https://www.rotor1996.top/writing/14-public-not-crawlable</link>
+    <guid>https://www.rotor1996.top/writing/14-public-not-crawlable</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>红黄绿三级准入；反爬绕过永久禁止</description>
+  </item>
+  <item>
+    <title>界面只讲能证明的话</title>
+    <link>https://www.rotor1996.top/writing/15-ui-claims-proof</link>
+    <guid>https://www.rotor1996.top/writing/15-ui-claims-proof</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>“任务完成≠资产确认”；不虚构统一接口</description>
+  </item>
+  <item>
+    <title>AI 应用的安全审计：内容过滤只是最后一环</title>
+    <link>https://www.rotor1996.top/writing/16-ai-app-security</link>
+    <guid>https://www.rotor1996.top/writing/16-ai-app-security</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>提示词快照是高敏证据；fail-open/fail-closed 取舍</description>
+  </item>
+  <item>
+    <title>AI 做事：发现、执行、确认是三件事</title>
+    <link>https://www.rotor1996.top/writing/17-discover-execute-confirm</link>
+    <guid>https://www.rotor1996.top/writing/17-discover-execute-confirm</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>前一阶段完成不默认授权后一阶段</description>
+  </item>
+  <item>
+    <title>模型说“成功了”，不等于真成功了</title>
+    <link>https://www.rotor1996.top/writing/18-model-said-success</link>
+    <guid>https://www.rotor1996.top/writing/18-model-said-success</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>决策与执行拆开；成功结论绑定外部证据</description>
+  </item>
+  <item>
+    <title>H5 底座：比脚手架多一层，比业务少一层</title>
+    <link>https://www.rotor1996.top/writing/19-h5-base</link>
+    <guid>https://www.rotor1996.top/writing/19-h5-base</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>带轻业务骨架的底座；路由 meta 承载语义</description>
+  </item>
+  <item>
+    <title>Skill 怎么写才有人用</title>
+    <link>https://www.rotor1996.top/writing/20-writing-skills</link>
+    <guid>https://www.rotor1996.top/writing/20-writing-skills</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>一 Skill 一任务；高频复用才沉淀</description>
+  </item>
+  <item>
+    <title>AI 记得太多：一次记忆误记复盘</title>
+    <link>https://www.rotor1996.top/writing/21-ai-remembers-too-much</link>
+    <guid>https://www.rotor1996.top/writing/21-ai-remembers-too-much</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>14 条候选 11 条误记，模型却给 0.99 置信度</description>
+  </item>
+  <item>
+    <title>首字等了 9 分钟：一次网关超时复盘</title>
+    <link>https://www.rotor1996.top/writing/22-nine-minutes-first-token</link>
+    <guid>https://www.rotor1996.top/writing/22-nine-minutes-first-token</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>95% 耗时在首有效输出前；预算 90s/180s/换号 1 次</description>
+  </item>
+  <item>
+    <title>缓存计费的坑：三笔账必须互斥</title>
+    <link>https://www.rotor1996.top/writing/23-cache-billing-trap</link>
+    <guid>https://www.rotor1996.top/writing/23-cache-billing-trap</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>修复前按 2.25x 收费；纵向闭环测试缺失</description>
+  </item>
+  <item>
+    <title>WebRTC 白屏：先别急着上 TURN</title>
+    <link>https://www.rotor1996.top/writing/24-webrtc-white-screen</link>
+    <guid>https://www.rotor1996.top/writing/24-webrtc-white-screen</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>根因是 NAT 后公网地址发布，不是必须上 TURN</description>
+  </item>
+  <item>
+    <title>团队空间看到了别人的项目：一次越权复盘</title>
+    <link>https://www.rotor1996.top/writing/25-team-space-leak</link>
+    <guid>https://www.rotor1996.top/writing/25-team-space-leak</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>空 organizationId 历史数据回退；多租户隔离教训</description>
+  </item>
+  <item>
+    <title>TinyKit：一个工具站的决策链</title>
+    <link>https://www.rotor1996.top/writing/26-tinykit-decisions</link>
+    <guid>https://www.rotor1996.top/writing/26-tinykit-decisions</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>痛点调研→31 工具→API→MCP</description>
+  </item>
+  <item>
+    <title>AI 视频管线：v2 到 v4 的迭代</title>
+    <link>https://www.rotor1996.top/writing/27-video-pipeline-v2-v4</link>
+    <guid>https://www.rotor1996.top/writing/27-video-pipeline-v2-v4</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>三次评审返工；字幕/边距/缓存的生产坑</description>
+  </item>
+  <item>
+    <title>Gumroad 上架记：三个数字产品</title>
+    <link>https://www.rotor1996.top/writing/28-gumroad-launch</link>
+    <guid>https://www.rotor1996.top/writing/28-gumroad-launch</guid>
+    <pubDate>Fri, 02 Oct 2026 00:00:00 GMT</pubDate>
+    <description>$9/$29/$39 定价；PayPal 收款；中国卖家坑</description>
+  </item>
+</channel>
+</rss>

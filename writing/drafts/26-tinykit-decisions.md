@@ -32,7 +32,7 @@ MCP server 没有重写逻辑：Node + MCP SDK，stdio 传输，直接 import AP
 
 ## 变现线：域名与 AdSense 的两次折返
 
-AdSense 不接受子域名，`tinykit.rotor1996.top` 的申请路走不通。决策：注册顶级域 `gettinykit.top`，原域名保留做备用。AdSense 已提交审核，审核通过前不展示广告——没通过就挂广告位，是拿账号开玩笑。
+AdSense 不接受子域名，`tinykit.rotor1996.top` 的申请路走不通。决策：注册顶级域 `gettinykit.top`，原域名保留做备用。AdSense 已于 2026-10-27 审核未通过（邮件未列原因，需登录账号看官方问题清单再整改），审核通过前不展示广告——没通过就挂广告位，是拿账号开玩笑。
 
 ## 小结
 
