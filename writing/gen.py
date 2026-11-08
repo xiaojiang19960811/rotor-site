@@ -81,6 +81,7 @@ ARTS = [
  ("63","committed-not-released","eng","garden","已提交、已发布、已验证，是三件事","Committed, Released, Verified: Three Different Things","源码进了仓库，不等于进了安装包；安装包上了线，不等于真实路径跑通过","Code in the repo is not code in the install; a release online is not a path verified in production."),
  ("64","stream-interrupted-retry","infra","log","流断了能不能重试，取决于错误怎么写","Whether a Broken Stream Retries Depends on How the Error Is Worded","网关的报错文案没进客户端的重试白名单，同一类流中断换个文案命运完全不同；错误分类是跨层契约。","The gateway's error wording missed the client's retry allowlist, so the same stream break met a different fate under a different wording; error classification is a cross-layer contract."),
  ("65","backup-the-right-database","infra","log","备份前，先确认你在备哪个库","Before Backing Up, Confirm Which Database You're Backing Up","一次上游大版本升级里，备份脚本用了容器的默认库名，只备出 522KB 的空库；升级能不能发，要看一本验收台账，而不是看构建绿没绿。","During one upstream major-version upgrade, the backup script used the container's default database name and produced a 522 KB empty backup; whether an upgrade can ship depends on an acceptance ledger, not on a green build."),
+ ("66","package-present-not-loaded","infra","log","「包在」不等于「已加载」：一次升级后插件静默缺席","\"Package Present\" Is Not \"Loaded\": A Plugin That Silently Vanished After an Upgrade","升级同步了新包，却保留了旧的加载声明，子组件静默缺席；资格检查只验包存在不验运行状态，包、声明、运行状态要分开验。","The upgrade synced the new package but kept the old loading declarations, so the sub-component silently vanished; checks that only verify package presence cannot catch it — package, declaration, and runtime state need separate checks."),
 ]
 
 # 只有这里列出的 id 才会生成页面（发布门控）
@@ -89,7 +90,7 @@ LIVE = {"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", 
 DATES = {"01": "2026-10-02", "02": "2026-10-02", "03": "2026-10-02", "04": "2026-10-02", "05": "2026-10-02", "06": "2026-10-02", "07": "2026-10-02", "08": "2026-10-02", "09": "2026-10-02", "10": "2026-10-02", "11": "2026-10-02", "12": "2026-10-02", "13": "2026-10-02", "14": "2026-10-02", "15": "2026-10-02", "16": "2026-10-02", "17": "2026-10-02", "18": "2026-10-02", "19": "2026-10-02", "20": "2026-10-02", "21": "2026-10-02", "22": "2026-10-02", "23": "2026-10-02", "24": "2026-10-02", "25": "2026-10-02", "26": "2026-10-02", "27": "2026-10-02", "28": "2026-10-02", "29": "2026-10-03", "30": "2026-10-04", "31": "2026-10-05", "32": "2026-10-06", "33": "2026-10-07", "34": "2026-10-08", "35": "2026-10-09", "36": "2026-10-10", "37": "2026-10-11", "38": "2026-10-12", "39": "2026-10-13", "40": "2026-10-14", "41": "2026-10-15", "42": "2026-10-16", "43": "2026-10-17", "44": "2026-10-18", "45": "2026-10-19", "46": "2026-10-20", "47": "2026-10-21", "48": "2026-10-22", "49": "2026-10-23", "50": "2026-10-24", "51": "2026-10-25", "52": "2026-10-26", "53": "2026-10-27", "54": "2026-10-28", "55": "2026-10-29", "56": "2026-10-30", "57": "2026-10-31", "58": "2026-11-01", "59": "2026-11-02", "60": "2026-11-03", "61": "2026-11-04", "62": "2026-11-05", "63": "2026-11-06", "64": "2026-11-07", "65": "2026-11-08"}
 
 # 首页精选（2026-11-08 用户拍板 10 篇；顺序即展示顺序；换精选只改这里）
-FEATURED = ["01", "26", "47", "63", "11", "15", "61", "65", "25", "46"]
+FEATURED = ["01", "64", "47", "63", "11", "15", "61", "65", "25", "46"]
 
 COLLECTIONS = {
  "infra": ("AI 基础设施", "AI Infrastructure"),
