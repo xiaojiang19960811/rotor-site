@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>「包在」不等于「已加载」：一次升级后插件静默缺席</title>
+    <link>https://www.rotor1996.top/writing/66-package-present-not-loaded</link>
+    <guid>https://www.rotor1996.top/writing/66-package-present-not-loaded</guid>
+    <pubDate>Mon, 09 Nov 2026 00:00:00 GMT</pubDate>
+    <description>升级同步了新包，却保留了旧的加载声明，子组件静默缺席；资格检查只验包存在不验运行状态，包、声明、运行状态要分开验。</description>
+  </item>
+  <item>
     <title>备份前，先确认你在备哪个库</title>
     <link>https://www.rotor1996.top/writing/65-backup-the-right-database</link>
     <guid>https://www.rotor1996.top/writing/65-backup-the-right-database</guid>

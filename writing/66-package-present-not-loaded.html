@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「包在」不等于「已加载」：一次升级后插件静默缺席 — rotor</title>
+<meta name="description" content="升级同步了新包，却保留了旧的加载声明，子组件静默缺席；资格检查只验包存在不验运行状态，包、声明、运行状态要分开验。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/66-package-present-not-loaded">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "「包在」不等于「已加载」：一次升级后插件静默缺席", "description": "升级同步了新包，却保留了旧的加载声明，子组件静默缺席；资格检查只验包存在不验运行状态，包、声明、运行状态要分开验。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-09", "mainEntityOfPage": "https://www.rotor1996.top/writing/66-package-present-not-loaded"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>「包在」不等于「已加载」：一次升级后插件静默缺席</h1><p>结论先说：桌面客户端一次例行升级后，工作小结功能静默消失了：安装包里有它，插件页上没它，运行时也没加载它。根因不在包，在声明：升级同步了新包，却保留了旧的加载声明，而这个子组件的加载恰恰依赖声明。资格检查只验&quot;包在不在&quot;，不验&quot;跑没跑&quot;，所以旧版验收全绿，也证明不了这类升级成功。存在、加载、可见，是三件不同的事，要分开验。</p>
+<h2>包在，声明不在</h2>
+<p>升级后，工作小结对应的包明明在安装目录里，依赖也指向了它，但加载声明的数量是 0。这个子组件的加载方式决定了结局：它以不打包进主包的子组件形态存在，加载依赖新种子里的目标分组插入声明。升级流程复制了新版种子里的包，也补齐了依赖名单，却没有创建这条声明。包复制和名单补齐，都不会自动长出声明。</p>
+<p>这是升级类故障里最安静的一种：没有报错，没有崩溃，没有日志告警，功能只是不在了。静默缺席比报错更贵：报错当天就能修，缺席要等到有人发现。</p>
+<h2>验收通过，不能证明这类升级成功</h2>
+<p>更值得复盘的是第二层：为什么验收没拦住。原先的资格检查主要验证包存在，没有要求新增条目的宿主运行状态。包在、检查绿，升级就放行了。</p>
+<p>夹具本身也帮了倒忙。原升级夹具复制新版种子后模拟旧包，但种子里仍含新增声明：夹具自带了本该由迁移产生的结果。拿这样的夹具跑旧版全新安装与升级，注定通过；通过的结果，证明不了真实旧配置升级后声明能补齐。测试的价值不在&quot;跑过了&quot;，在&quot;它能不能失败&quot;：一个永远不会红的测试，等于没有测试。</p>
+<p>修复的方向也由此定下来：升级迁移按种子依赖与显式插入确定所有权，补齐缺少的根级与分组声明和默认配置，再保留原有覆盖的优先级；已有声明不重复插入，身份冲突或无法安全迁移的锚点停下来，不强行处理。包装校验按公开的补丁标识检查模块、启用与激活状态；上传校验要求首次启动与升级都要有&quot;种子插入条目已激活&quot;的回执。规则覆盖发行种子显式插入的自有组件，不靠硬编码某一个包名：否则下次换个包名，同样的坑再踩一遍。</p>
+<h2>已加载，也不等于列表可见</h2>
+<p>修复之后又冒出第二个现象，值得单独记一笔：工作小结通过发行配置插入工具与集成组后可以运行，但在插件管理页上仍然看不见。这不是同一个问题，是另一层：运行与列表归属要分别验证。</p>
+<p>插件页读取的是主包自己的补丁文件；只有配置里的插入声明，不会列为主插件的子组件。解决办法是把声明放进管理包，配置里只保留配置项，复用现有的子组件列表，不用改核心。隔离测试验证了同一标识插入声明仍只产生一个运行实例，旧的地址与闲置配置保留。</p>
+<p>教训是反直觉的：功能跑起来了，不等于用户找得到它；装了却找不到，和没装没有区别。运行状态、列表归属、用户可见，是三条验收线。</p>
+<h2>验收的边界：预演不是验收</h2>
+<p>本轮还有一处边界值得写进台账。本机旧配置只做了内存预演：声明从 0 补到 1，旧配置值保留，重复运行幂等，实际配置没有写入。预演只证明迁移逻辑是对的，不证明用户机器上的配置已经对了。用户实际更新后的配置与功能，仍需本人验收。隔离资格检查通过，不能当作个人数据验收。</p>
+<p>这也是第 9 篇的老结论换了个场景：&quot;已完成&quot;不等于&quot;已验证&quot;。迁移回归、完整客户端测试、包装与发布守卫测试、文档同步检查全过，只能证明修复本身没写坏；用户那台机器上的真实升级，仍是一次独立的验证。</p>
+<h2>做法：升级验收，分开验三件事</h2>
+<ol><li><strong>包、声明、运行状态分开查</strong>：包在安装目录里，是第一件；加载声明存在，是第二件；宿主启动后条目处于激活状态，是第三件。三件各有各的检查，互相不能替代。</li><li><strong>资格检查要验运行状态，不只验包存在</strong>：新增条目必须有宿主运行状态的要求。只验包存在的检查，拦不住&quot;包在但没加载&quot;的升级。</li><li><strong>夹具先自证能失败</strong>：升级夹具要真正移除新增声明、默认值与名单项，再跑迁移。夹具里残留了待验证的结果，测试就失去了否决权。写夹具之前，先问一句：这个测试有没有红过？</li><li><strong>运行与列表归属分别验证</strong>：功能能跑，不等于列表里看得见。管理页读的是另一份来源，声明放错地方，功能照样隐身。</li><li><strong>预演与用户验收分开记</strong>：内存预演、隔离测试通过，记一栏；用户真实升级后的配置与功能验收，记另一栏。前者不能替代后者。</li></ol>
+<h2>一句话收束</h2>
+<p>升级之后别只问&quot;包在不在&quot;，要问三句：声明在不在，跑起来没有，用户找得到没有，三句都答得上，升级才算完成。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "「包在」不等于「已加载」：一次升级后插件静默缺席", "en": "\"Package Present\" Is Not \"Loaded\": A Plugin That Silently Vanished After an Upgrade"}, "body": {"zh": "<p>结论先说：桌面客户端一次例行升级后，工作小结功能静默消失了：安装包里有它，插件页上没它，运行时也没加载它。根因不在包，在声明：升级同步了新包，却保留了旧的加载声明，而这个子组件的加载恰恰依赖声明。资格检查只验&quot;包在不在&quot;，不验&quot;跑没跑&quot;，所以旧版验收全绿，也证明不了这类升级成功。存在、加载、可见，是三件不同的事，要分开验。</p>\n<h2>包在，声明不在</h2>\n<p>升级后，工作小结对应的包明明在安装目录里，依赖也指向了它，但加载声明的数量是 0。这个子组件的加载方式决定了结局：它以不打包进主包的子组件形态存在，加载依赖新种子里的目标分组插入声明。升级流程复制了新版种子里的包，也补齐了依赖名单，却没有创建这条声明。包复制和名单补齐，都不会自动长出声明。</p>\n<p>这是升级类故障里最安静的一种：没有报错，没有崩溃，没有日志告警，功能只是不在了。静默缺席比报错更贵：报错当天就能修，缺席要等到有人发现。</p>\n<h2>验收通过，不能证明这类升级成功</h2>\n<p>更值得复盘的是第二层：为什么验收没拦住。原先的资格检查主要验证包存在，没有要求新增条目的宿主运行状态。包在、检查绿，升级就放行了。</p>\n<p>夹具本身也帮了倒忙。原升级夹具复制新版种子后模拟旧包，但种子里仍含新增声明：夹具自带了本该由迁移产生的结果。拿这样的夹具跑旧版全新安装与升级，注定通过；通过的结果，证明不了真实旧配置升级后声明能补齐。测试的价值不在&quot;跑过了&quot;，在&quot;它能不能失败&quot;：一个永远不会红的测试，等于没有测试。</p>\n<p>修复的方向也由此定下来：升级迁移按种子依赖与显式插入确定所有权，补齐缺少的根级与分组声明和默认配置，再保留原有覆盖的优先级；已有声明不重复插入，身份冲突或无法安全迁移的锚点停下来，不强行处理。包装校验按公开的补丁标识检查模块、启用与激活状态；上传校验要求首次启动与升级都要有&quot;种子插入条目已激活&quot;的回执。规则覆盖发行种子显式插入的自有组件，不靠硬编码某一个包名：否则下次换个包名，同样的坑再踩一遍。</p>\n<h2>已加载，也不等于列表可见</h2>\n<p>修复之后又冒出第二个现象，值得单独记一笔：工作小结通过发行配置插入工具与集成组后可以运行，但在插件管理页上仍然看不见。这不是同一个问题，是另一层：运行与列表归属要分别验证。</p>\n<p>插件页读取的是主包自己的补丁文件；只有配置里的插入声明，不会列为主插件的子组件。解决办法是把声明放进管理包，配置里只保留配置项，复用现有的子组件列表，不用改核心。隔离测试验证了同一标识插入声明仍只产生一个运行实例，旧的地址与闲置配置保留。</p>\n<p>教训是反直觉的：功能跑起来了，不等于用户找得到它；装了却找不到，和没装没有区别。运行状态、列表归属、用户可见，是三条验收线。</p>\n<h2>验收的边界：预演不是验收</h2>\n<p>本轮还有一处边界值得写进台账。本机旧配置只做了内存预演：声明从 0 补到 1，旧配置值保留，重复运行幂等，实际配置没有写入。预演只证明迁移逻辑是对的，不证明用户机器上的配置已经对了。用户实际更新后的配置与功能，仍需本人验收。隔离资格检查通过，不能当作个人数据验收。</p>\n<p>这也是第 9 篇的老结论换了个场景：&quot;已完成&quot;不等于&quot;已验证&quot;。迁移回归、完整客户端测试、包装与发布守卫测试、文档同步检查全过，只能证明修复本身没写坏；用户那台机器上的真实升级，仍是一次独立的验证。</p>\n<h2>做法：升级验收，分开验三件事</h2>\n<ol><li><strong>包、声明、运行状态分开查</strong>：包在安装目录里，是第一件；加载声明存在，是第二件；宿主启动后条目处于激活状态，是第三件。三件各有各的检查，互相不能替代。</li><li><strong>资格检查要验运行状态，不只验包存在</strong>：新增条目必须有宿主运行状态的要求。只验包存在的检查，拦不住&quot;包在但没加载&quot;的升级。</li><li><strong>夹具先自证能失败</strong>：升级夹具要真正移除新增声明、默认值与名单项，再跑迁移。夹具里残留了待验证的结果，测试就失去了否决权。写夹具之前，先问一句：这个测试有没有红过？</li><li><strong>运行与列表归属分别验证</strong>：功能能跑，不等于列表里看得见。管理页读的是另一份来源，声明放错地方，功能照样隐身。</li><li><strong>预演与用户验收分开记</strong>：内存预演、隔离测试通过，记一栏；用户真实升级后的配置与功能验收，记另一栏。前者不能替代后者。</li></ol>\n<h2>一句话收束</h2>\n<p>升级之后别只问&quot;包在不在&quot;，要问三句：声明在不在，跑起来没有，用户找得到没有，三句都答得上，升级才算完成。</p>", "en": "<p>The conclusion first: after a routine upgrade of a desktop client, the session-summary feature silently disappeared. The package was in the install directory, it was absent from the plugin page, and it was never loaded at runtime. The root cause was not the package but the declaration: the upgrade synced the new package yet kept the old loading declarations, and this sub-component&#x27;s loading depends on exactly those declarations. The qualification check only verified &quot;is the package there&quot;, never &quot;is it running&quot;, so a fully green acceptance on the old version proved nothing about this kind of upgrade. Present, loaded, and visible are three different things, and each needs its own check.</p>\n<h2>The Package Was There; the Declaration Was Not</h2>\n<p>After the upgrade, the session-summary package was clearly in the install directory, and the dependency pointed at it, yet the count of loading declarations was zero. The way this sub-component loads decided the outcome: it exists as a sub-component that is not bundled into the main package, and its loading depends on an insert declaration for the target group in the new seed. The upgrade flow copied the package from the new seed and completed the dependency list, but it never created that declaration. Copying packages and completing lists do not grow declarations on their own.</p>\n<p>This is the quietest kind of upgrade failure: no error, no crash, no log alert. The feature was simply gone. A silent absence costs more than an error: an error gets fixed the same day, while an absence waits until someone notices it.</p>\n<h2>Passing Acceptance Proved Nothing About This Upgrade</h2>\n<p>The second layer is more worth a postmortem: why didn&#x27;t acceptance stop it? The original qualification check mainly verified that the package existed; it never required the host runtime state of the newly added entry. Package present, check green, upgrade shipped.</p>\n<p>The fixture made things worse. The original upgrade fixture copied the new seed and then simulated the old package, but the seed still contained the new declaration: the fixture carried the very result the migration was supposed to produce. Running old-version fresh installs and upgrades against such a fixture was bound to pass, and passing proved nothing about whether a real old configuration would gain its declaration after upgrading. The value of a test is not that it &quot;passed&quot; but whether it can fail: a test that can never go red is the same as no test.</p>\n<p>That also set the direction of the fix: upgrade migration determines ownership from seed dependencies and explicit inserts, completes the missing root-level and group declarations and default configuration, and then preserves the priority of existing overrides; declarations that already exist are not inserted twice, and anchors with identity conflicts or that cannot be migrated safely stop the process instead of being forced through. Packaging checks verify module, enabled, and active state against the public patch identifier; upload checks require a &quot;seed-inserted entries active&quot; receipt for both first launch and upgrade. The rule covers the project&#x27;s own components explicitly inserted by the distribution seed and does not rely on hard-coding one package name: otherwise the same pit gets stepped in again under a different package name next time.</p>\n<h2>Loaded Is Not the Same as Visible in the List</h2>\n<p>A second phenomenon surfaced after the fix, worth its own note: the session summary could run after being inserted through the distribution configuration and integration group, yet it still did not show up on the plugin management page. This is not the same problem; it is another layer: runtime and list membership must be verified separately.</p>\n<p>The plugin page reads the main bundle&#x27;s own patch file; an insert declaration that lives only in the profile is never listed as a sub-component of the main plugin. The fix is to put the declaration in the management package and keep only configuration items in the profile, reusing the existing sub-component list without changing the core. An isolation test verified that inserting a declaration under the same identifier still produces only one running instance, with the old address and idle configuration preserved.</p>\n<p>The lesson here is counterintuitive: a feature that runs is not a feature the user can find. Installed but invisible is no different from not installed. Runtime state, list membership, and user visibility are three separate acceptance lines.</p>\n<h2>The Boundary of Acceptance: A Dry Run Is Not Acceptance</h2>\n<p>One more boundary from this round belongs in the ledger. The old local configuration only went through an in-memory dry run: the declaration went from 0 to 1, old configuration values were kept, repeated runs were idempotent, and the actual configuration was never written. A dry run only proves the migration logic is right; it does not prove the configuration on the user&#x27;s machine is already right. The configuration and features after the user&#x27;s real update still need the user&#x27;s own acceptance. Passing an isolated qualification check cannot stand in for acceptance of personal data.</p>\n<p>This is the old conclusion from article 9 in a new setting: &quot;done&quot; is not &quot;verified&quot;. Migration regression, full client tests, packaging and release-guard tests, and documentation-sync checks all passing only prove the fix itself was not written badly; the real upgrade on the user&#x27;s machine remains a separate verification.</p>\n<h2>Practice: Verify Three Separate Things When Accepting an Upgrade</h2>\n<ol><li><strong>Check the package, the declaration, and the runtime state separately</strong>: the package being in the install directory is the first thing; the loading declaration existing is the second; the entry being active after the host starts is the third. Each has its own check, and none substitutes for another.</li><li><strong>Qualification checks must verify runtime state, not just package presence</strong>: newly added entries need a host runtime-state requirement. A check that only verifies package presence cannot stop an upgrade where the package is there but never loads.</li><li><strong>A fixture must first prove it can fail</strong>: an upgrade fixture must genuinely remove the new declaration, default values, and list items before running the migration. If the fixture still holds the result under verification, the test has lost its power of veto. Before writing a fixture, ask one question: has this test ever gone red?</li><li><strong>Verify runtime and list membership separately</strong>: a feature that runs is not necessarily visible in the list. The management page reads a different source; a declaration in the wrong place leaves the feature invisible all the same.</li><li><strong>Record dry runs and user acceptance separately</strong>: an in-memory dry run and isolation tests passing go in one column; the configuration and feature acceptance after the user&#x27;s real upgrade go in another. The former cannot substitute for the latter.</li></ol>\n<h2>One Line to Close</h2>\n<p>After an upgrade, don&#x27;t just ask &quot;is the package there&quot;. Ask three questions: is the declaration there, is it running, can the user find it — only when all three have answers is the upgrade done.</p>"}, "prev": {"url": "/writing/65-backup-the-right-database", "t": {"zh": "备份前，先确认你在备哪个库", "en": "Before Backing Up, Confirm Which Database You're Backing Up"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
