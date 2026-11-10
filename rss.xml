@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>分组按语义，不按方便：一次插件分域修掉的静默失效</title>
+    <link>https://www.rotor1996.top/writing/68-plugin-domain-by-semantics</link>
+    <guid>https://www.rotor1996.top/writing/68-plugin-domain-by-semantics</guid>
+    <pubDate>Wed, 11 Nov 2026 00:00:00 GMT</pubDate>
+    <description>插件放进哪个域，要看它是干什么的；放错一个，升级时整域跟着消失。</description>
+  </item>
+  <item>
     <title>接管一个槽位，就是接管它的全部代价</title>
     <link>https://www.rotor1996.top/writing/67-slot-takeover-inherits-the-cost</link>
     <guid>https://www.rotor1996.top/writing/67-slot-takeover-inherits-the-cost</guid>
