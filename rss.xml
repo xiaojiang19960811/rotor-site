@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>接管一个槽位，就是接管它的全部代价</title>
+    <link>https://www.rotor1996.top/writing/67-slot-takeover-inherits-the-cost</link>
+    <guid>https://www.rotor1996.top/writing/67-slot-takeover-inherits-the-cost</guid>
+    <pubDate>Tue, 10 Nov 2026 00:00:00 GMT</pubDate>
+    <description>遮蔽内置组件时，它带来的能力也一起消失：分组、归档、新建入口都得由接管方自己补齐。</description>
+  </item>
+  <item>
     <title>「包在」不等于「已加载」：一次升级后插件静默缺席</title>
     <link>https://www.rotor1996.top/writing/66-package-present-not-loaded</link>
     <guid>https://www.rotor1996.top/writing/66-package-present-not-loaded</guid>

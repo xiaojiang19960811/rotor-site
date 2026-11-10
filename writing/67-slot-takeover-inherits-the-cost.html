@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>接管一个槽位，就是接管它的全部代价 — rotor</title>
+<meta name="description" content="遮蔽内置组件时，它带来的能力也一起消失：分组、归档、新建入口都得由接管方自己补齐。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/67-slot-takeover-inherits-the-cost">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "接管一个槽位，就是接管它的全部代价", "description": "遮蔽内置组件时，它带来的能力也一起消失：分组、归档、新建入口都得由接管方自己补齐。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-10", "mainEntityOfPage": "https://www.rotor1996.top/writing/67-slot-takeover-inherits-the-cost"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>接管一个槽位，就是接管它的全部代价</h1><p>结论先说：插件系统里，接管一个界面槽位不是&quot;换张皮&quot;，而是&quot;接手一个岗位&quot;。被遮蔽的内置组件不再渲染，它带来的能力也一起消失：分组、归档、改名、新建入口全都不见了。接管方如果只画了自己的新界面、没补上这些旧能力，用户丢的不是一个组件，而是一整条操作路径。接管之前，先列出被接管者原来提供的全部能力，再决定哪些自己补、哪些明确放弃。</p>
+<h2>槽位有三种，接管只发生在单格槽</h2>
+<p>客户端用槽位组装页面，插件只能往已经声明的槽里注册。注册必须等声明出现，声明折叠时移除，重声明后重新注册，直接往未声明的槽里注册会在加载时报错。</p>
+<p>三种槽的语义不同：</p>
+<ol><li><strong>单格槽</strong>：一个位置只渲染一个组件，按优先级排序，排在最前面的胜出。想遮蔽内置组件，就用一个更靠前的优先级压过它的默认优先级。</li><li><strong>列表槽</strong>：按顺序叠加多个组件，各自占一块位置。</li><li><strong>键控槽</strong>：同样是叠加，但按键名区分，适合一组可独立开关的条目。</li></ol>
+<p>声明别人的槽同样报错，组件拿到的属性由框架派生，业务组件不直接接触框架上下文。规则很严，但严是对的：槽位是插件与宿主之间的契约，契约越明确，接管的边界越清晰。</p>
+<h2>被遮蔽的能力，不会自己回来</h2>
+<p>一次真实的接管发生在侧栏工作区：数字人 Agent 用自己的工作区视图遮蔽了内置的工作区浏览器。内置组件一消失，它带来的能力也一起消失了：工作区分组、归档、固定、改名、新建工作区入口都不再出现。接管方若要有序退场，得自己列出&quot;其他会话&quot;这类兜底入口，否则用户一旦离开接管视图，就无路可回。</p>
+<p>接管还要遵守两条边界：</p>
+<ol><li><strong>打开会话要走服务，不要走属性</strong>：标准钩子能读到会话列表和运行状态，但打开会话要走界面服务。服务缺失时应当降级为&quot;只列不可跳&quot;，而不是点了没反应。</li><li><strong>窄栏要自己画</strong>：折叠成窄栏时，外壳只告诉你&quot;现在是窄的&quot;，画成什么样是接管方的事；展开侧栏的能力由外壳提供，不能自己改布局。</li></ol>
+<p>判断一次接管合不合格，只看一点：接管前后，用户能完成的事是多了还是少了。少了，就是接管方欠账。</p>
+<h2>安装时机比安装本身重要</h2>
+<p>接管方踩过的两个坑，都和&quot;什么时候装&quot;有关。</p>
+<p>共享样式表必须在依赖它的视图注册和挂载之前安装，通常在插件激活时准备好。只放在面板组件里装，样式就晚了：先渲染的侧栏会拿到一排没有样式的裸按钮，因为组件渲染早于面板首次挂载。模式选择后才启用的可选视图，也要先装样式再注册。</p>
+<p>多个组件共读的调色板，不要各自去读持久化存储：持久化写入发生在副作用里，晚于同一轮渲染，先读会拿到旧值。正确做法是用一个模块级的当前主题变量，让所有组件读同一份。</p>
+<p>这两条说的是同一件事：插件的安装顺序本身就是功能的一部分，装得晚，等于没装对。</p>
+<h2>生效方式不同，验证方式也要不同</h2>
+<p>客户端包的地址带内容哈希，重新打包并安装客户端脚本后，刷新页面即加载新版本，不需要重启应用；宿主插件的改动则必须完全退出并重开。两种生效方式混在一起时，&quot;刷新一下就行&quot;和&quot;必须重启&quot;要分清楚，否则会在&quot;为什么没生效&quot;上反复折腾。</p>
+<p>还有两个配套做法值得学：</p>
+<ol><li><strong>开关重开可以重读数据</strong>：想让宿主重新读入插件自己的数据文件而不重启应用，可以在插件页把该插件关掉再打开。重新激活会重跑插件的激活逻辑，从而重新读数据。一次真实排障里，这个办法把主管会话从空会话指回了有历史的旧会话，旧记录随之恢复。</li><li><strong>回执要区分&quot;没加载&quot;和&quot;加载后报错&quot;</strong>：插件可以经自己的 HTTP 路由写回执，带上构建标识，用它在宿主侧确认&quot;页面到底跑哪一版&quot;。这比浏览器控制台可靠，也便于区分&quot;代码没生效&quot;和&quot;代码报错&quot;。回执要留在加载器之外：加载器抛错时页面仍能写回执，否则最需要证据的时候恰恰没有证据。</li></ol>
+<h2>单文件入口，拆分要靠构建</h2>
+<p>宿主只服务一个文件入口，页面靠模块加载器注册；想拆源码就必须有构建步骤，不能指望浏览器原生加载多个模块文件。参考做法是源码按关注点分目录，用打包工具打成一个自执行包，共享库设为外部依赖，不要打进第二份。</p>
+<p>构建顺序也有讲究：构建必须排在打包与发行准备之前，包的白名单必须包含入口指向的单文件产物及运行资源，源码目录不进包。忘记构建，可能发出旧产物或缺少入口。</p>
+<p>测试同样要跟着产物走：不要按源码文本锚点截取产物，拆模块后锚点与缩进都会失效。正确做法是加载产物加显式测试入口，纯函数直接导入源模块验证。</p>
+<p>接管一个槽位，就是接管它原来的全部责任、安装顺序与验证方式。只接管渲染、不接管责任的插件，迟早会把账单寄给用户。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "接管一个槽位，就是接管它的全部代价", "en": "Taking Over a Slot Means Taking Over Its Full Cost"}, "body": {"zh": "<p>结论先说：插件系统里，接管一个界面槽位不是&quot;换张皮&quot;，而是&quot;接手一个岗位&quot;。被遮蔽的内置组件不再渲染，它带来的能力也一起消失：分组、归档、改名、新建入口全都不见了。接管方如果只画了自己的新界面、没补上这些旧能力，用户丢的不是一个组件，而是一整条操作路径。接管之前，先列出被接管者原来提供的全部能力，再决定哪些自己补、哪些明确放弃。</p>\n<h2>槽位有三种，接管只发生在单格槽</h2>\n<p>客户端用槽位组装页面，插件只能往已经声明的槽里注册。注册必须等声明出现，声明折叠时移除，重声明后重新注册，直接往未声明的槽里注册会在加载时报错。</p>\n<p>三种槽的语义不同：</p>\n<ol><li><strong>单格槽</strong>：一个位置只渲染一个组件，按优先级排序，排在最前面的胜出。想遮蔽内置组件，就用一个更靠前的优先级压过它的默认优先级。</li><li><strong>列表槽</strong>：按顺序叠加多个组件，各自占一块位置。</li><li><strong>键控槽</strong>：同样是叠加，但按键名区分，适合一组可独立开关的条目。</li></ol>\n<p>声明别人的槽同样报错，组件拿到的属性由框架派生，业务组件不直接接触框架上下文。规则很严，但严是对的：槽位是插件与宿主之间的契约，契约越明确，接管的边界越清晰。</p>\n<h2>被遮蔽的能力，不会自己回来</h2>\n<p>一次真实的接管发生在侧栏工作区：数字人 Agent 用自己的工作区视图遮蔽了内置的工作区浏览器。内置组件一消失，它带来的能力也一起消失了：工作区分组、归档、固定、改名、新建工作区入口都不再出现。接管方若要有序退场，得自己列出&quot;其他会话&quot;这类兜底入口，否则用户一旦离开接管视图，就无路可回。</p>\n<p>接管还要遵守两条边界：</p>\n<ol><li><strong>打开会话要走服务，不要走属性</strong>：标准钩子能读到会话列表和运行状态，但打开会话要走界面服务。服务缺失时应当降级为&quot;只列不可跳&quot;，而不是点了没反应。</li><li><strong>窄栏要自己画</strong>：折叠成窄栏时，外壳只告诉你&quot;现在是窄的&quot;，画成什么样是接管方的事；展开侧栏的能力由外壳提供，不能自己改布局。</li></ol>\n<p>判断一次接管合不合格，只看一点：接管前后，用户能完成的事是多了还是少了。少了，就是接管方欠账。</p>\n<h2>安装时机比安装本身重要</h2>\n<p>接管方踩过的两个坑，都和&quot;什么时候装&quot;有关。</p>\n<p>共享样式表必须在依赖它的视图注册和挂载之前安装，通常在插件激活时准备好。只放在面板组件里装，样式就晚了：先渲染的侧栏会拿到一排没有样式的裸按钮，因为组件渲染早于面板首次挂载。模式选择后才启用的可选视图，也要先装样式再注册。</p>\n<p>多个组件共读的调色板，不要各自去读持久化存储：持久化写入发生在副作用里，晚于同一轮渲染，先读会拿到旧值。正确做法是用一个模块级的当前主题变量，让所有组件读同一份。</p>\n<p>这两条说的是同一件事：插件的安装顺序本身就是功能的一部分，装得晚，等于没装对。</p>\n<h2>生效方式不同，验证方式也要不同</h2>\n<p>客户端包的地址带内容哈希，重新打包并安装客户端脚本后，刷新页面即加载新版本，不需要重启应用；宿主插件的改动则必须完全退出并重开。两种生效方式混在一起时，&quot;刷新一下就行&quot;和&quot;必须重启&quot;要分清楚，否则会在&quot;为什么没生效&quot;上反复折腾。</p>\n<p>还有两个配套做法值得学：</p>\n<ol><li><strong>开关重开可以重读数据</strong>：想让宿主重新读入插件自己的数据文件而不重启应用，可以在插件页把该插件关掉再打开。重新激活会重跑插件的激活逻辑，从而重新读数据。一次真实排障里，这个办法把主管会话从空会话指回了有历史的旧会话，旧记录随之恢复。</li><li><strong>回执要区分&quot;没加载&quot;和&quot;加载后报错&quot;</strong>：插件可以经自己的 HTTP 路由写回执，带上构建标识，用它在宿主侧确认&quot;页面到底跑哪一版&quot;。这比浏览器控制台可靠，也便于区分&quot;代码没生效&quot;和&quot;代码报错&quot;。回执要留在加载器之外：加载器抛错时页面仍能写回执，否则最需要证据的时候恰恰没有证据。</li></ol>\n<h2>单文件入口，拆分要靠构建</h2>\n<p>宿主只服务一个文件入口，页面靠模块加载器注册；想拆源码就必须有构建步骤，不能指望浏览器原生加载多个模块文件。参考做法是源码按关注点分目录，用打包工具打成一个自执行包，共享库设为外部依赖，不要打进第二份。</p>\n<p>构建顺序也有讲究：构建必须排在打包与发行准备之前，包的白名单必须包含入口指向的单文件产物及运行资源，源码目录不进包。忘记构建，可能发出旧产物或缺少入口。</p>\n<p>测试同样要跟着产物走：不要按源码文本锚点截取产物，拆模块后锚点与缩进都会失效。正确做法是加载产物加显式测试入口，纯函数直接导入源模块验证。</p>\n<p>接管一个槽位，就是接管它原来的全部责任、安装顺序与验证方式。只接管渲染、不接管责任的插件，迟早会把账单寄给用户。</p>", "en": "<p>The conclusion first: in a plugin system, taking over a UI slot is not &quot;changing the skin&quot; — it is &quot;taking over a post&quot;. When the built-in component is shadowed, it stops rendering, and everything it brought disappears with it: grouping, archiving, renaming, and the entry for creating a new workspace are all gone. If the takeover only draws its own new interface without restoring those old capabilities, the user loses not one component but a whole path of operations. Before taking over, list everything the shadowed component used to provide, then decide what you will rebuild yourself and what you will explicitly give up.</p>\n<h2>There Are Three Kinds of Slots; Takeover Only Happens in Single Slots</h2>\n<p>The client assembles pages from slots, and a plugin can only register into a slot that has already been declared. Registration must wait for the declaration to appear, be removed when the declaration folds away, and re-register when it is declared again; registering directly into an undeclared slot errors at load time.</p>\n<p>The three kinds of slots have different semantics:</p>\n<ol><li><strong>Single slots</strong>: one position renders one component, ordered by priority, and the one ranked first wins. To shadow a built-in component, use a priority that ranks ahead of its default.</li><li><strong>List slots</strong>: multiple components stack in order, each occupying its own space.</li><li><strong>Keyed slots</strong>: also stacking, but distinguished by key, suited to a set of independently switchable entries.</li></ol>\n<p>Declaring someone else&#x27;s slot errors the same way, and the props a component receives are derived by the framework; business components never touch the framework context directly. The rules are strict, and rightly so: a slot is the contract between plugin and host, and the clearer the contract, the clearer the boundary of a takeover.</p>\n<h2>The Shadowed Capabilities Do Not Come Back on Their Own</h2>\n<p>One real takeover happened in the sidebar workspace: a digital-human agent replaced the built-in workspace browser with its own workspace view. The moment the built-in component disappeared, so did everything it brought: workspace grouping, archiving, pinning, renaming, and the entry for creating a new workspace all vanished. If the takeover wants an orderly exit, it must list fallback entries such as &quot;other sessions&quot; itself; otherwise, once users leave the takeover view, there is no way back.</p>\n<p>A takeover must also respect two boundaries:</p>\n<ol><li><strong>Opening a session goes through a service, not through props</strong>: the standard hooks can read the session list and running state, but opening a session must go through the UI service. When the service is missing, the view should degrade to &quot;list only, no jumping&quot; rather than clicking with no response.</li><li><strong>The narrow column must be drawn by the takeover</strong>: when the sidebar folds into a narrow column, the shell only tells you &quot;it is narrow now&quot;; what it looks like is the takeover&#x27;s job. The ability to expand the sidebar is provided by the shell and must not be reimplemented by changing the layout.</li></ol>\n<p>There is one test for whether a takeover is good enough: after the takeover, can users do more or less than before? Less means the takeover owes a debt.</p>\n<h2>Installation Timing Matters More Than Installation Itself</h2>\n<p>Two pitfalls the takeover ran into both came down to &quot;when things get installed&quot;.</p>\n<p>A shared stylesheet must be installed before the views that depend on it are registered and mounted, usually while the plugin activates. Installing it only inside a panel component is too late: the sidebar renders first and gets a row of unstyled bare buttons, because component rendering happens before the panel first mounts. Optional views that only activate after a mode is chosen must also have their styles installed before they register.</p>\n<p>A palette shared by multiple components should not be read from persistent storage by each component separately: persistent writes happen inside effects, later than the same render round, so an early read gets the old value. The right approach is a module-level current-theme variable that all components read from.</p>\n<p>Both rules say the same thing: the installation order of a plugin is itself part of the feature. Installed late is installed wrong.</p>\n<h2>Different Activation Paths Need Different Verification</h2>\n<p>The client bundle&#x27;s URL carries a content hash, so after repackaging and installing the client script, refreshing the page loads the new version with no app restart; changes to a host plugin require a full quit and relaunch. When the two activation paths mix, &quot;just refresh&quot; and &quot;must restart&quot; have to be kept apart, or you will keep going in circles over &quot;why didn&#x27;t it take effect&quot;.</p>\n<p>Two companion practices are worth adopting:</p>\n<ol><li><strong>Toggling a plugin off and on can reload its data</strong>: to make the host re-read a plugin&#x27;s own data file without restarting the app, turn the plugin off and on again in the plugin page. Reactivation re-runs the plugin&#x27;s activation logic and re-reads the data. In one real troubleshooting session, this pointed the supervisor session from an empty session back to the older session with history, and the old records came back with it.</li><li><strong>Receipts must distinguish &quot;not loaded&quot; from &quot;errored after loading&quot;</strong>: a plugin can write a receipt through its own HTTP route, carrying a build identifier, so the host side can confirm &quot;which version is actually running on the page&quot;. That is more reliable than the browser console, and it separates &quot;the code didn&#x27;t take effect&quot; from &quot;the code errored&quot;. The receipt must stay outside the loader: if the loader throws, the page must still be able to write the receipt, or there will be no evidence exactly when it is needed most.</li></ol>\n<h2>One File Entry Means Splitting Needs a Build Step</h2>\n<p>The host serves only one file entry, and the page registers through a module loader; to split source code, a build step is required — the browser cannot be expected to load multiple module files natively. The reference approach keeps source files in directories by concern and bundles them into one self-executing package with a bundler, marking the shared library as external instead of bundling a second copy.</p>\n<p>The build order matters too: building must come before packaging and release preparation, and the package allowlist must include the single-file artifact the entry points to plus its runtime resources, while the source directory stays out of the package. Forgetting to build can ship a stale artifact or one missing its entry.</p>\n<p>Tests must follow the artifact as well: do not slice the artifact by source-text anchors, which break once modules are split and indentation changes. Load the artifact with an explicit test entry instead, and import source modules directly to verify pure functions.</p>\n<p>Taking over a slot means taking over its original responsibilities, installation order, and verification method. A plugin that takes over the rendering but not the responsibility will eventually send the bill to the user.</p>"}, "prev": {"url": "/writing/56-mode-round-trip-stale-state", "t": {"zh": "模式切了回来，界面还停在上一站", "en": "The Mode Switched Back, but the UI Stayed Behind"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
