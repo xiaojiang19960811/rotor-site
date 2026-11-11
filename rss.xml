@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>可选功能别挡主路：一次浏览器冷启动复盘</title>
+    <link>https://www.rotor1996.top/writing/69-browser-cold-start</link>
+    <guid>https://www.rotor1996.top/writing/69-browser-cold-start</guid>
+    <pubDate>Thu, 12 Nov 2026 00:00:00 GMT</pubDate>
+    <description>可选功能初始化失败，只能降级自己，不能拖住主流程；两种浏览器模式各有登录态与边界，故障不自动切换。</description>
+  </item>
+  <item>
     <title>分组按语义，不按方便：一次插件分域修掉的静默失效</title>
     <link>https://www.rotor1996.top/writing/68-plugin-domain-by-semantics</link>
     <guid>https://www.rotor1996.top/writing/68-plugin-domain-by-semantics</guid>

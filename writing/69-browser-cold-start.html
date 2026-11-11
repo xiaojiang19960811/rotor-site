@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>可选功能别挡主路：一次浏览器冷启动复盘 — rotor</title>
+<meta name="description" content="可选功能初始化失败，只能降级自己，不能拖住主流程；两种浏览器模式各有登录态与边界，故障不自动切换。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/69-browser-cold-start">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "可选功能别挡主路：一次浏览器冷启动复盘", "description": "可选功能初始化失败，只能降级自己，不能拖住主流程；两种浏览器模式各有登录态与边界，故障不自动切换。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-12", "mainEntityOfPage": "https://www.rotor1996.top/writing/69-browser-cold-start"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>可选功能别挡主路：一次浏览器冷启动复盘</h1><p>结论先说：桌面客户端的 Agent 浏览器插件在启动时发了一次模式探测请求，卡在异步初始化里，结果整个客户端起不来。一个可选功能，拖住了主流程。修复分三层：启动时只做同步激活，联网初始化挪到后台；两种浏览器模式各有自己的登录态和能力边界，故障不自动切换；验收不再只看后端起来了，要跑真实客户端壳。这次复盘的教训只有一句：可选能力初始化失败，只能降级自己，不能拖住主流程。</p>
+<h2>一个可选功能，拖住了整个启动</h2>
+<p>现场是一条用户日志：客户端启动时有一个条目没有激活，条目就是浏览器插件，状态停在加载中。</p>
+<p>代码把模式探测的网络请求放在了客户端的异步初始化函数里。受控延迟测试确认了旧版的行为：只要这次请求卡住，完整客户端的启动就跟着卡住。日志本身只记录了“没激活”，不足以确认当时的具体网络耗时，也不足以确认并发触发顺序，所以不能把“网络慢”写成唯一现场根因。根因要写准：问题不在网络慢，在“一个可选功能的网络请求被放在了启动的同步路径上”。</p>
+<p>新版把“连接就绪”和“客户端激活”分开：插件同步完成激活，自己持有后台初始化和轮询，卸载时取消并等待；失败写进浏览器错误控制台，工具不自动切换后端。一次返回服务不可用的完整页面回归确认：错误可观察，主界面继续可用。</p>
+<p>原则很简单：启动路径上，同步只做“注册我存在”，联网、探测、等就绪一律走后台。可选功能初始化失败，降级的是它自己，不是整个应用。</p>
+<h2>两种模式不是一回事</h2>
+<p>这个浏览器插件提供两种互补模式，各有自己的页面、登录态和能力边界。</p>
+<p>原生模式直接控制桌面内置的浏览器标签。它的登录态随桌面进程结束而清空：重启就要重新登录。当前它不提供页面截图、上传下载、内部框架控制，浏览器端的界面操作也不保证被要求可信输入的网站接受。</p>
+<p>截屏模式启动一个独立浏览器，并向侧栏转发画面。独立浏览器保留自己的持久登录态。空白名单下它默认允许常规网页地址、域名和 IP，包含内网地址和本机其他服务；但当前监听地址和已知回环别名仍被拒绝。非空白名单保留明确限制，这是用户确认过的权限调整。</p>
+<p>两种模式故障不自动切换，切模式时释放原后端，截屏后端等待浏览器退出和审计完成。已经派发、还没确认结果的操作保持阻塞，取消不等于网页副作用回滚。更重要的是，不能把“侧栏有网页画面”直接等同于“网页原生嵌入”：画面在，不等于控制在。</p>
+<p>用户对此的拍板是“原生默认、截屏可选、明确切换、不自动兜底”，并接受原生模式重启后重新登录。自动兜底看起来体贴，实际是把“用哪种登录态、接受哪种能力边界”这个决定从用户手里拿走了。模式是用户要知道的状态，不是实现细节。</p>
+<h2>后端起来了，不等于客户端起来了</h2>
+<p>这次冷启动问题能溜到用户手里，还有一层验收缺口：原有的启动检查用纯后端模式启动宿主，只证明后端和远程调用通了；独立网页视图测试也不经过完整的插件启动图。两层检查都绿了，真实客户端启动还是能卡住。</p>
+<p>打包流程现在另跑真实桌面壳与包内运行时：核对载体主进程代码与安装归档字节一致，用独立的家目录和用户数据，检查八十多个客户端条目启动、延迟模式请求下界面可用、所选后端返回成功。原生、截屏两种模式的证据写进启动验收文件，上传门禁拒绝缺失结果。</p>
+<p>这条新检查也有自己的边界：它不替代个人账号、真实业务网站或另一平台的界面验收。验收能证明的，只是它实际跑过的那一层。</p>
+<p>但方向是对的：验收要跑在真实运行的那一层。后端起来了只证明后端活着，客户端要等客户端自己说活着。每一层都有自己的启动图，上一层的绿灯不能替下一层作证。</p>
+<h2>做法：可选能力的三条规矩</h2>
+<ol><li><strong>启动路径只做同步注册</strong>：联网、探测、等就绪一律后台化。插件先完成激活，再慢慢初始化；初始化失败只影响自己，主界面继续可用。</li><li><strong>模式是用户要知道的状态</strong>：两种模式登录态、能力边界、失败行为各不相同，故障不自动切换。切换要明确，代价要先说清，不拿自动兜底替用户做决定。</li><li><strong>验收跑在真实运行的那一层</strong>：后端检查证后端，客户端检查证客户端。启动验收要进真实壳、真实运行时、真实启动图，缺失结果直接拦住上传。</li></ol>
+<h2>一句话收束</h2>
+<p>可选功能的第一责任不是多能干，而是绝不挡主路：启动时先让主流程过去，再慢慢初始化自己；模式不同就别假装相同，验收不到的那一层，迟早会用一次真实故障补回来。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "可选功能别挡主路：一次浏览器冷启动复盘", "en": "An Optional Feature Must Not Block the Main Path: A Browser Cold-Start Postmortem"}, "body": {"zh": "<p>结论先说：桌面客户端的 Agent 浏览器插件在启动时发了一次模式探测请求，卡在异步初始化里，结果整个客户端起不来。一个可选功能，拖住了主流程。修复分三层：启动时只做同步激活，联网初始化挪到后台；两种浏览器模式各有自己的登录态和能力边界，故障不自动切换；验收不再只看后端起来了，要跑真实客户端壳。这次复盘的教训只有一句：可选能力初始化失败，只能降级自己，不能拖住主流程。</p>\n<h2>一个可选功能，拖住了整个启动</h2>\n<p>现场是一条用户日志：客户端启动时有一个条目没有激活，条目就是浏览器插件，状态停在加载中。</p>\n<p>代码把模式探测的网络请求放在了客户端的异步初始化函数里。受控延迟测试确认了旧版的行为：只要这次请求卡住，完整客户端的启动就跟着卡住。日志本身只记录了“没激活”，不足以确认当时的具体网络耗时，也不足以确认并发触发顺序，所以不能把“网络慢”写成唯一现场根因。根因要写准：问题不在网络慢，在“一个可选功能的网络请求被放在了启动的同步路径上”。</p>\n<p>新版把“连接就绪”和“客户端激活”分开：插件同步完成激活，自己持有后台初始化和轮询，卸载时取消并等待；失败写进浏览器错误控制台，工具不自动切换后端。一次返回服务不可用的完整页面回归确认：错误可观察，主界面继续可用。</p>\n<p>原则很简单：启动路径上，同步只做“注册我存在”，联网、探测、等就绪一律走后台。可选功能初始化失败，降级的是它自己，不是整个应用。</p>\n<h2>两种模式不是一回事</h2>\n<p>这个浏览器插件提供两种互补模式，各有自己的页面、登录态和能力边界。</p>\n<p>原生模式直接控制桌面内置的浏览器标签。它的登录态随桌面进程结束而清空：重启就要重新登录。当前它不提供页面截图、上传下载、内部框架控制，浏览器端的界面操作也不保证被要求可信输入的网站接受。</p>\n<p>截屏模式启动一个独立浏览器，并向侧栏转发画面。独立浏览器保留自己的持久登录态。空白名单下它默认允许常规网页地址、域名和 IP，包含内网地址和本机其他服务；但当前监听地址和已知回环别名仍被拒绝。非空白名单保留明确限制，这是用户确认过的权限调整。</p>\n<p>两种模式故障不自动切换，切模式时释放原后端，截屏后端等待浏览器退出和审计完成。已经派发、还没确认结果的操作保持阻塞，取消不等于网页副作用回滚。更重要的是，不能把“侧栏有网页画面”直接等同于“网页原生嵌入”：画面在，不等于控制在。</p>\n<p>用户对此的拍板是“原生默认、截屏可选、明确切换、不自动兜底”，并接受原生模式重启后重新登录。自动兜底看起来体贴，实际是把“用哪种登录态、接受哪种能力边界”这个决定从用户手里拿走了。模式是用户要知道的状态，不是实现细节。</p>\n<h2>后端起来了，不等于客户端起来了</h2>\n<p>这次冷启动问题能溜到用户手里，还有一层验收缺口：原有的启动检查用纯后端模式启动宿主，只证明后端和远程调用通了；独立网页视图测试也不经过完整的插件启动图。两层检查都绿了，真实客户端启动还是能卡住。</p>\n<p>打包流程现在另跑真实桌面壳与包内运行时：核对载体主进程代码与安装归档字节一致，用独立的家目录和用户数据，检查八十多个客户端条目启动、延迟模式请求下界面可用、所选后端返回成功。原生、截屏两种模式的证据写进启动验收文件，上传门禁拒绝缺失结果。</p>\n<p>这条新检查也有自己的边界：它不替代个人账号、真实业务网站或另一平台的界面验收。验收能证明的，只是它实际跑过的那一层。</p>\n<p>但方向是对的：验收要跑在真实运行的那一层。后端起来了只证明后端活着，客户端要等客户端自己说活着。每一层都有自己的启动图，上一层的绿灯不能替下一层作证。</p>\n<h2>做法：可选能力的三条规矩</h2>\n<ol><li><strong>启动路径只做同步注册</strong>：联网、探测、等就绪一律后台化。插件先完成激活，再慢慢初始化；初始化失败只影响自己，主界面继续可用。</li><li><strong>模式是用户要知道的状态</strong>：两种模式登录态、能力边界、失败行为各不相同，故障不自动切换。切换要明确，代价要先说清，不拿自动兜底替用户做决定。</li><li><strong>验收跑在真实运行的那一层</strong>：后端检查证后端，客户端检查证客户端。启动验收要进真实壳、真实运行时、真实启动图，缺失结果直接拦住上传。</li></ol>\n<h2>一句话收束</h2>\n<p>可选功能的第一责任不是多能干，而是绝不挡主路：启动时先让主流程过去，再慢慢初始化自己；模式不同就别假装相同，验收不到的那一层，迟早会用一次真实故障补回来。</p>", "en": "<p>Conclusion first: the agent browser plugin of a desktop client made one mode-probing network request during startup, got stuck in asynchronous initialization, and the whole client failed to start. One optional feature held the main flow hostage. The fix came in three layers: activate synchronously at startup and move network initialization to the background; give each of the two browser modes its own login state and capability boundary, with no automatic fallback on failure; and stop accepting backend-only checks, running acceptance in a real client shell instead. The lesson of this postmortem is one sentence: when an optional capability fails to initialize, it may only degrade itself, never the main flow.</p>\n<h2>One Optional Feature Held Up the Whole Startup</h2>\n<p>The scene was a single line in a user log: one entry did not activate during client boot. The entry was the browser plugin, stuck on loading.</p>\n<p>The code had put the mode-probing network request inside the client&#x27;s asynchronous initialization function. A controlled-delay test confirmed the old behavior: whenever that request stalled, the full client startup stalled with it. The log alone only recorded &quot;did not activate&quot;, which is not enough to establish the network latency at the time, nor the order in which concurrent triggers fired — so &quot;the network was slow&quot; cannot be written as the sole on-site root cause. The root cause has to be stated precisely: the problem was not a slow network, it was that an optional feature&#x27;s network request sat on the synchronous startup path.</p>\n<p>The new version separates &quot;connection ready&quot; from &quot;client activated&quot;: the plugin completes activation synchronously, holds its own background initialization and polling, and cancels and waits on unload; failures go to the browser error console, and the tool does not switch backends automatically. A full-page regression returning service-unavailable confirmed the result: the error is observable, and the main interface stays usable.</p>\n<p>The principle is simple: on the startup path, synchronous work only registers &quot;I exist&quot;; networking, probing, and waiting for readiness all go to the background. When an optional feature fails to initialize, it degrades itself, not the whole application.</p>\n<h2>Two Modes Are Not the Same Thing</h2>\n<p>This browser plugin offers two complementary modes, each with its own pages, login state, and capability boundary.</p>\n<p>Native mode controls the desktop&#x27;s built-in browser tabs directly. Its login state clears when the desktop process ends: a restart means logging in again. At present it offers no page screenshots, no uploads or downloads, and no control inside iframes, and browser-side interface operations are not guaranteed to be accepted by sites that demand trusted input.</p>\n<p>Screencast mode launches an independent browser and forwards its picture to the sidebar. The independent browser keeps its own persistent login state. Under an empty allowlist it permits ordinary web addresses, domains, and IPs by default, including intranet addresses and other services on the same machine; but the current listen address and known loopback aliases remain refused. A non-empty allowlist keeps explicit restrictions — a permission adjustment the user confirmed.</p>\n<p>The two modes do not switch automatically on failure. Switching modes releases the old backend, and the screencast backend waits for the browser to exit and for auditing to finish. An operation already dispatched but not yet confirmed stays blocked; cancelling it is not the same as rolling back its web side effects. More importantly, &quot;there is a web page on the sidebar&quot; must not be read as &quot;the page is natively embedded&quot;: a picture being there does not mean control is there.</p>\n<p>The user&#x27;s call on this was &quot;native by default, screencast optional, explicit switching, no automatic fallback&quot;, accepting that native mode requires logging in again after a restart. Automatic fallback looks considerate, but it takes the decision — which login state, which capability boundary — out of the user&#x27;s hands. The mode is a state the user needs to know, not an implementation detail.</p>\n<h2>The Backend Being Up Does Not Mean the Client Is Up</h2>\n<p>There was also an acceptance gap behind this cold-start problem reaching a user: the existing startup check launched the host in a backend-only mode, which only proved the backend and remote calls worked; standalone webview tests never went through the full plugin startup graph either. Both layers were green, yet real client startup could still stall.</p>\n<p>Packaging now runs a real desktop shell with the bundled runtime as a separate check: it verifies the carrier&#x27;s main-process code matches the installation archive byte for byte, uses an independent home directory and user data, and checks that more than eighty client entries start, that the interface stays usable under delayed mode requests, and that the selected backend returns success. Evidence for both native and screencast modes goes into the startup acceptance file, and the upload gate refuses a missing result.</p>\n<p>This new check has its own boundary: it does not replace acceptance with a personal account, a real business website, or the interface on another platform. It can only prove what it actually ran.</p>\n<p>But the direction is right: acceptance has to run on the layer that actually runs. The backend being up only proves the backend is alive; the client has to say for itself that it is alive. Every layer has its own startup graph, and a green light on the layer above cannot testify for the layer below.</p>\n<h2>Practice: Three Rules for Optional Capabilities</h2>\n<ol><li><strong>Only synchronous registration on the startup path</strong>: networking, probing, and waiting for readiness all go to the background. A plugin activates first, then initializes at its own pace; if initialization fails, only it is affected, and the main interface stays usable.</li><li><strong>The mode is a state the user needs to know</strong>: the two modes differ in login state, capability boundary, and failure behavior, and failures do not trigger an automatic switch. Switching must be explicit, its cost stated up front, and automatic fallback must not decide for the user.</li><li><strong>Acceptance runs on the layer that actually runs</strong>: backend checks prove the backend, client checks prove the client. Startup acceptance goes into a real shell, a real runtime, and a real startup graph, and a missing result blocks the upload outright.</li></ol>\n<h2>One-Sentence Close</h2>\n<p>An optional feature&#x27;s first responsibility is not how much it can do, but that it never blocks the main path: let the main flow through at startup first, then initialize itself slowly; modes that differ must not pretend to be the same, and a layer acceptance never reached will sooner or later be repaid with one real failure.</p>"}, "prev": {"url": "/writing/68-plugin-domain-by-semantics", "t": {"zh": "分组按语义，不按方便：一次插件分域修掉的静默失效", "en": "Group by Semantics, Not by Convenience: One Misplaced Plugin Silently Disabled a Whole Domain"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
