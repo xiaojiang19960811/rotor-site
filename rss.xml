@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>上游把销毁改成异步，凭据防护悄悄失效</title>
+    <link>https://www.rotor1996.top/writing/70-dispose-race-credential-guard</link>
+    <guid>https://www.rotor1996.top/writing/70-dispose-race-credential-guard</guid>
+    <pubDate>Fri, 13 Nov 2026 00:00:00 GMT</pubDate>
+    <description>防护依赖的是上游的销毁时序，不是自己的代码；上游把同步改成异步，迟到写入就落了地。</description>
+  </item>
+  <item>
     <title>可选功能别挡主路：一次浏览器冷启动复盘</title>
     <link>https://www.rotor1996.top/writing/69-browser-cold-start</link>
     <guid>https://www.rotor1996.top/writing/69-browser-cold-start</guid>
