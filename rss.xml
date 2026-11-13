@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>全新安装全过，升级全炸：升级路径是另一条测试线</title>
+    <link>https://www.rotor1996.top/writing/71-fresh-passes-upgrade-fails</link>
+    <guid>https://www.rotor1996.top/writing/71-fresh-passes-upgrade-fails</guid>
+    <pubDate>Sat, 14 Nov 2026 00:00:00 GMT</pubDate>
+    <description>四个问题只在升级路径上炸，全新安装一个没测出来；升级后的状态要与全新安装逐项比对、差异为零才算通过。</description>
+  </item>
+  <item>
     <title>上游把销毁改成异步，凭据防护悄悄失效</title>
     <link>https://www.rotor1996.top/writing/70-dispose-race-credential-guard</link>
     <guid>https://www.rotor1996.top/writing/70-dispose-race-credential-guard</guid>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>全新安装全过，升级全炸：升级路径是另一条测试线 — rotor</title>
+<meta name="description" content="四个问题只在升级路径上炸，全新安装一个没测出来；升级后的状态要与全新安装逐项比对、差异为零才算通过。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/71-fresh-passes-upgrade-fails">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "全新安装全过，升级全炸：升级路径是另一条测试线", "description": "四个问题只在升级路径上炸，全新安装一个没测出来；升级后的状态要与全新安装逐项比对、差异为零才算通过。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-14", "mainEntityOfPage": "https://www.rotor1996.top/writing/71-fresh-passes-upgrade-fails"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>全新安装全过，升级全炸：升级路径是另一条测试线</h1><p>结论先说：一次核心升级发布前，四个问题全是在升级路径上炸出来的，全新安装一个都没测出来。依赖声明缺了、锁定文件没同步、插件域归属放错了，全新安装全绿，旧版本升上来全红。发布前修掉四个问题之后，验收加了一条硬规矩：全新安装与升级的激活清单逐项比对，差异必须为零。这次复盘的教训只有一句：全新安装和升级是两条测试线，只测前一条，等于只测了一半的用户。</p>
+<h2>四个问题，全是升级才炸</h2>
+<p>同一周，同一套代码的两个发行版本先后升级核心、重新打包，发布前各修了一批只在升级场景出现的问题。其中一个版本的四个问题最有代表性：</p>
+<ol><li><strong>升级后机器人插件导入失败</strong>：插件同步新增了一批自主执行能力，调用了核心的凭据、压缩与工具执行模块，却没有在自己的依赖声明里写上它们。全新安装时，这些模块恰好被别的路径带进来，导入成功；升级时，旧环境的依赖图谱按另一条路径解析，导入直接失败。</li><li><strong>找不到一个压缩依赖</strong>：一个普通依赖没有声明，开发环境靠传递依赖掩盖了缺失，离线安装包里没有它，升级安装一跑就报找不到包。</li><li><strong>锁定文件过期</strong>：补上缺失的依赖之后，没有同步更新锁定文件，带冻结锁定文件参数的安装直接报过期。同一类问题，持续集成环境同样会踩。</li><li><strong>升级后一个插件的清单归零</strong>：一个负责模型思考展示的插件被错划进了工具域，挂在一个集成锚点下面。升级夹具先移除了锚点，整个工具域随之不加载，这个插件的清单直接归零。全新安装没有“先移除锚点”这一步，问题现不了形。</li></ol>
+<p>四个问题，根因各不相同：依赖声明、锁定文件同步、域归属语义。但它们共享同一个特征：只在“从旧版本升上来”这条路径上出现。四个提交修掉之后，发布才继续。</p>
+<h2>为什么全新安装测不出来</h2>
+<p>全新安装和升级，测的根本不是同一个东西。</p>
+<p>全新安装从一张白纸开始：没有旧配置、没有旧插件版本、没有历史遗留的声明，依赖按当前清单现算一遍，状态按当前结构现建一遍。所有“旧东西与新东西衔接”的环节都不存在，当然也测不到。</p>
+<p>升级是从一个真实存在过的旧状态出发：旧版的插件还在、旧的配置还在、旧的依赖图谱还在。新版本要做的事比全新安装多得多：替换旧插件版本、迁移旧配置、按新规则重新归组、处理已被废弃的旧声明。每一步衔接，都是全新安装里不存在的故障点。依赖缺声明、锁定文件过期、域归属放错，全是衔接环节的问题，不是新功能本身的问题。</p>
+<p>所以“全新安装全过”这个结论，只能证明新版本自己能跑，不能证明旧用户升得上去。而现实里，绝大多数用户走的都是升级路径，不是全新安装。只测全新安装，测的是少数路径，却拿它给多数路径背书。</p>
+<h2>另一个版本：同一条教训，换了个长相</h2>
+<p>另一个发行版本在同一轮升级里，印证了同一条教训，只是问题换了个长相。</p>
+<p>它把同一个插件按语义移回基础域，移回去本身是对的，但这个提交带入了四个测试回归：有的断言还按旧的独立形态查插件，有的期望表缺了两行新归属，还有一处计数差了一个，根因是上游补条目时就漏更新了期望。修复没有为过测试改任何结构，全部以新的域契约为准更新期望：契约是准绳，测试是量尺，量尺错了就校量尺，不改被量的东西。</p>
+<p>同一轮里还暴露了两个共享库陈旧导致的失败：库文件比源码落后了数小时，定向重建之后零改动转绿。教训顺带多了一条：跑测试之前，先重新编译；拿着旧的构建产物跑新测试，失败的可能是构建，不是代码。</p>
+<p>两个版本、两组问题，结论是同一个：升级路径上的故障，与新功能本身的故障不在一个集合里。</p>
+<h2>验收：两条线都要绿，清单差异必须为零</h2>
+<p>修完四个问题之后，这个版本的验收是这样做的：</p>
+<ul><li>启动资格分两条线：全新安装 9 项、升级 15 项，全部通过。</li><li>全新安装与升级的激活清单逐项比对：11 个插件全部激活，差异为零。</li><li>拿真实旧版本的配置做种子，走迁移入口补入新插件并激活，验证升级路径本身。</li><li>官方打包命令在两种场景下都返回成功。</li></ul>
+<p>关键在第二条。逐项比对差异为零，等于把“升级之后的状态”与“全新安装的状态”钉在了一起：升级不是“差不多能用”，而是“与全新安装完全一致”。四个升级才炸的问题，每一个都会在这个比对里现形：导入失败少一个激活项，依赖缺失少一个激活项，域归属放错少一个激活项。比对为零，是升级路径的及格线。</p>
+<h2>做法：升级路径的三条规矩</h2>
+<ol><li><strong>全新安装与升级分开测</strong>：两条线各有自己的资格清单，升级线的条目只多不少。只报全新安装的结果，不算验收通过。</li><li><strong>升级后与全新安装逐项比对</strong>：激活清单、配置状态、插件数量，差异必须为零。比对是升级路径的及格线，不是加分项。</li><li><strong>修衔接，不绕衔接</strong>：依赖缺了就补声明，锁定文件过期就同步，归属错了就按语义移回去。不要加兜底开关把问题藏起来：兜底一加上，问题还在，只是下次升级再炸一次。</li></ol>
+<h2>一句话收束</h2>
+<p>全新安装测的是新版本自己能不能跑，升级测的是旧用户能不能到新版本：两条线各有自己的故障集合，只测前一条，等于把大多数用户走的那条路留给了运气；升级之后的状态与全新安装逐项比对、差异为零，升级才算真正通过。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "全新安装全过，升级全炸：升级路径是另一条测试线", "en": "Fresh Install Passes, Upgrade Explodes: The Upgrade Path Is a Second Test Line"}, "body": {"zh": "<p>结论先说：一次核心升级发布前，四个问题全是在升级路径上炸出来的，全新安装一个都没测出来。依赖声明缺了、锁定文件没同步、插件域归属放错了，全新安装全绿，旧版本升上来全红。发布前修掉四个问题之后，验收加了一条硬规矩：全新安装与升级的激活清单逐项比对，差异必须为零。这次复盘的教训只有一句：全新安装和升级是两条测试线，只测前一条，等于只测了一半的用户。</p>\n<h2>四个问题，全是升级才炸</h2>\n<p>同一周，同一套代码的两个发行版本先后升级核心、重新打包，发布前各修了一批只在升级场景出现的问题。其中一个版本的四个问题最有代表性：</p>\n<ol><li><strong>升级后机器人插件导入失败</strong>：插件同步新增了一批自主执行能力，调用了核心的凭据、压缩与工具执行模块，却没有在自己的依赖声明里写上它们。全新安装时，这些模块恰好被别的路径带进来，导入成功；升级时，旧环境的依赖图谱按另一条路径解析，导入直接失败。</li><li><strong>找不到一个压缩依赖</strong>：一个普通依赖没有声明，开发环境靠传递依赖掩盖了缺失，离线安装包里没有它，升级安装一跑就报找不到包。</li><li><strong>锁定文件过期</strong>：补上缺失的依赖之后，没有同步更新锁定文件，带冻结锁定文件参数的安装直接报过期。同一类问题，持续集成环境同样会踩。</li><li><strong>升级后一个插件的清单归零</strong>：一个负责模型思考展示的插件被错划进了工具域，挂在一个集成锚点下面。升级夹具先移除了锚点，整个工具域随之不加载，这个插件的清单直接归零。全新安装没有“先移除锚点”这一步，问题现不了形。</li></ol>\n<p>四个问题，根因各不相同：依赖声明、锁定文件同步、域归属语义。但它们共享同一个特征：只在“从旧版本升上来”这条路径上出现。四个提交修掉之后，发布才继续。</p>\n<h2>为什么全新安装测不出来</h2>\n<p>全新安装和升级，测的根本不是同一个东西。</p>\n<p>全新安装从一张白纸开始：没有旧配置、没有旧插件版本、没有历史遗留的声明，依赖按当前清单现算一遍，状态按当前结构现建一遍。所有“旧东西与新东西衔接”的环节都不存在，当然也测不到。</p>\n<p>升级是从一个真实存在过的旧状态出发：旧版的插件还在、旧的配置还在、旧的依赖图谱还在。新版本要做的事比全新安装多得多：替换旧插件版本、迁移旧配置、按新规则重新归组、处理已被废弃的旧声明。每一步衔接，都是全新安装里不存在的故障点。依赖缺声明、锁定文件过期、域归属放错，全是衔接环节的问题，不是新功能本身的问题。</p>\n<p>所以“全新安装全过”这个结论，只能证明新版本自己能跑，不能证明旧用户升得上去。而现实里，绝大多数用户走的都是升级路径，不是全新安装。只测全新安装，测的是少数路径，却拿它给多数路径背书。</p>\n<h2>另一个版本：同一条教训，换了个长相</h2>\n<p>另一个发行版本在同一轮升级里，印证了同一条教训，只是问题换了个长相。</p>\n<p>它把同一个插件按语义移回基础域，移回去本身是对的，但这个提交带入了四个测试回归：有的断言还按旧的独立形态查插件，有的期望表缺了两行新归属，还有一处计数差了一个，根因是上游补条目时就漏更新了期望。修复没有为过测试改任何结构，全部以新的域契约为准更新期望：契约是准绳，测试是量尺，量尺错了就校量尺，不改被量的东西。</p>\n<p>同一轮里还暴露了两个共享库陈旧导致的失败：库文件比源码落后了数小时，定向重建之后零改动转绿。教训顺带多了一条：跑测试之前，先重新编译；拿着旧的构建产物跑新测试，失败的可能是构建，不是代码。</p>\n<p>两个版本、两组问题，结论是同一个：升级路径上的故障，与新功能本身的故障不在一个集合里。</p>\n<h2>验收：两条线都要绿，清单差异必须为零</h2>\n<p>修完四个问题之后，这个版本的验收是这样做的：</p>\n<ul><li>启动资格分两条线：全新安装 9 项、升级 15 项，全部通过。</li><li>全新安装与升级的激活清单逐项比对：11 个插件全部激活，差异为零。</li><li>拿真实旧版本的配置做种子，走迁移入口补入新插件并激活，验证升级路径本身。</li><li>官方打包命令在两种场景下都返回成功。</li></ul>\n<p>关键在第二条。逐项比对差异为零，等于把“升级之后的状态”与“全新安装的状态”钉在了一起：升级不是“差不多能用”，而是“与全新安装完全一致”。四个升级才炸的问题，每一个都会在这个比对里现形：导入失败少一个激活项，依赖缺失少一个激活项，域归属放错少一个激活项。比对为零，是升级路径的及格线。</p>\n<h2>做法：升级路径的三条规矩</h2>\n<ol><li><strong>全新安装与升级分开测</strong>：两条线各有自己的资格清单，升级线的条目只多不少。只报全新安装的结果，不算验收通过。</li><li><strong>升级后与全新安装逐项比对</strong>：激活清单、配置状态、插件数量，差异必须为零。比对是升级路径的及格线，不是加分项。</li><li><strong>修衔接，不绕衔接</strong>：依赖缺了就补声明，锁定文件过期就同步，归属错了就按语义移回去。不要加兜底开关把问题藏起来：兜底一加上，问题还在，只是下次升级再炸一次。</li></ol>\n<h2>一句话收束</h2>\n<p>全新安装测的是新版本自己能不能跑，升级测的是旧用户能不能到新版本：两条线各有自己的故障集合，只测前一条，等于把大多数用户走的那条路留给了运气；升级之后的状态与全新安装逐项比对、差异为零，升级才算真正通过。</p>", "en": "<p>The conclusion first: before one core-upgrade release, four problems all exploded on the upgrade path, and a fresh install caught none of them. A missing dependency declaration, an unsynced lockfile, a plugin placed in the wrong domain: fresh install all green, upgrading from the old version all red. After the four fixes, acceptance added one hard rule: the activation checklists of fresh install and upgrade must be compared item by item, and the difference must be zero. The lesson of this postmortem is one sentence: fresh install and upgrade are two test lines, and testing only the first means testing only half your users.</p>\n<h2>Four Problems, All Upgrade-Only</h2>\n<p>In the same week, two distributions of the same codebase upgraded the core and repackaged, each fixing a batch of upgrade-only problems before release. The four problems in one distribution are the most representative:</p>\n<ol><li><strong>The bot plugin failed to import after upgrade</strong>: the plugin had synced a new batch of autonomous execution capability that called the core&#x27;s credential, compaction, and tool-execution modules, but never declared them in its own dependencies. On a fresh install, those modules happened to be pulled in through other paths and the import succeeded; on upgrade, the old environment resolved the dependency graph along a different path and the import failed outright.</li><li><strong>A compression dependency could not be found</strong>: an ordinary dependency was never declared. The development environment masked the gap through a transitive dependency, but the offline installer had no copy of it, and the upgrade install failed with a package-not-found error.</li><li><strong>The lockfile was out of date</strong>: after the missing dependency was added, nobody synced the lockfile, so an install with the frozen-lockfile flag failed with an out-of-date error. The same class of problem would break the continuous-integration environment too.</li><li><strong>One plugin&#x27;s inventory dropped to zero after upgrade</strong>: a plugin that renders model thinking was wrongly placed in the tooling domain, hanging under an integration anchor. The upgrade fixture removed the anchor first, the whole tooling domain stopped loading with it, and the plugin&#x27;s inventory fell to zero. A fresh install never takes the &quot;remove the anchor first&quot; step, so the problem could not show itself.</li></ol>\n<p>Four problems, four different root causes: dependency declarations, lockfile sync, domain semantics. But they share one feature: they only appear on the path &quot;upgrading from the old version.&quot; Four fixes later, the release could proceed.</p>\n<h2>Why a Fresh Install Cannot Catch Them</h2>\n<p>A fresh install and an upgrade do not test the same thing.</p>\n<p>A fresh install starts from a blank sheet: no old configuration, no old plugin versions, no legacy declarations. Dependencies are computed fresh from the current manifest, state is built fresh from the current structure. Every joint between old and new simply does not exist, so it cannot be tested.</p>\n<p>An upgrade starts from an old state that really existed: old plugins still there, old configuration still there, the old dependency graph still there. The new version has far more to do than a fresh install: replace old plugin versions, migrate old configuration, regroup under new rules, handle retired declarations. Every joint is a failure point that does not exist in a fresh install. Missing dependency declarations, an expired lockfile, a misplaced domain: all of these are joint problems, not problems with the new features themselves.</p>\n<p>So &quot;fresh install all green&quot; only proves the new version can run on its own. It does not prove existing users can get there. And in reality, the vast majority of users take the upgrade path, not a fresh install. Testing only the fresh install tests the minority path and uses it to vouch for the majority one.</p>\n<h2>The Other Distribution: The Same Lesson, a Different Face</h2>\n<p>The other distribution confirmed the same lesson in the same upgrade round, with the problems wearing a different face.</p>\n<p>It moved the same plugin back to the base domain on semantic grounds — the move itself was correct — but that change introduced four test regressions: some assertions still looked the plugin up in its old standalone form, one expectation table was missing two rows for the new home, and one count was off by one, because the upstream entry had never updated the expectation in the first place. The fix changed no structure to make tests pass; every expectation was updated to the new domain contract. The contract is the yardstick and the test is the ruler: when the ruler is wrong, calibrate the ruler, do not alter what is being measured.</p>\n<p>The same round exposed two more failures from stale shared libraries: the library files lagged the source by several hours, and a targeted rebuild turned them green with zero changes. One extra lesson came along for free: rebuild before running tests. Running new tests against an old build artifact tests the build, not the code.</p>\n<p>Two distributions, two sets of problems, one conclusion: failures on the upgrade path live in a different set from failures in the new features themselves.</p>\n<h2>Acceptance: Both Lines Must Be Green, and the Checklists Must Match Exactly</h2>\n<p>After the four fixes, this distribution&#x27;s acceptance ran as follows:</p>\n<ul><li>Startup qualification split into two lines: 9 items for fresh install, 15 for upgrade, all passing.</li><li>The activation checklists of fresh install and upgrade were compared item by item: 11 plugins all active, zero difference.</li><li>A real old-version configuration was used as a seed, and the migration path was exercised to add the new plugins and activate them, verifying the upgrade path itself.</li><li>The official packaging command returned success in both scenarios.</li></ul>\n<p>The second item is the key. Comparing checklists item by item until the difference is zero pins the post-upgrade state to the fresh-install state: an upgrade is not &quot;roughly usable,&quot; it is &quot;identical to a fresh install.&quot; Each of the four upgrade-only problems would show up in this comparison: a failed import costs one activation entry, a missing dependency costs one, a misplaced domain costs one. Zero difference is the passing bar for the upgrade path.</p>\n<h2>Method: Three Rules for the Upgrade Path</h2>\n<ol><li><strong>Test fresh install and upgrade separately</strong>: each line gets its own qualification checklist, and the upgrade list is only longer, never shorter. Reporting only the fresh-install result does not count as passing acceptance.</li><li><strong>Compare post-upgrade state against fresh install, item by item</strong>: activation checklists, configuration state, plugin counts — the difference must be zero. The comparison is the passing bar for the upgrade path, not extra credit.</li><li><strong>Fix the joint, do not route around it</strong>: a missing dependency gets its declaration, an expired lockfile gets synced, a wrong home gets moved back on semantic grounds. Do not add a fallback switch to hide the problem: once the fallback is in, the problem is still there, waiting for the next upgrade to explode again.</li></ol>\n<h2>One Sentence to Close</h2>\n<p>A fresh install tests whether the new version can run on its own; an upgrade tests whether existing users can reach the new version: the two lines have their own sets of failures, and testing only the first leaves the road most users travel to luck; compare the post-upgrade state against a fresh install item by item, and only zero difference means the upgrade truly passed.</p>"}, "prev": {"url": "/writing/70-dispose-race-credential-guard", "t": {"zh": "上游把销毁改成异步，凭据防护悄悄失效", "en": "When Upstream Made Disposal Async, the Credential Guard Silently Broke"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
