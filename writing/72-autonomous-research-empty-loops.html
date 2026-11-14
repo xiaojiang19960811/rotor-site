@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>82 轮自主研究，81 轮没有新东西 — rotor</title>
+<meta name="description" content="自主研究 24 小时跑了 82 轮，81 轮没有新知识：无新增结果被写回成继续探索的意图，系统自己给自己派活；任务已完成、运行记录还显示在跑，状态收口也要单独验。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/72-autonomous-research-empty-loops">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "82 轮自主研究，81 轮没有新东西", "description": "自主研究 24 小时跑了 82 轮，81 轮没有新知识：无新增结果被写回成继续探索的意图，系统自己给自己派活；任务已完成、运行记录还显示在跑，状态收口也要单独验。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-15", "mainEntityOfPage": "https://www.rotor1996.top/writing/72-autonomous-research-empty-loops"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>82 轮自主研究，81 轮没有新东西</h1><p>结论先说：数字人 Agent 的自主研究 24 小时跑了 82 轮，81 轮没有新知识，只新增 1 条研究项。系统没有停，也没有报错：每轮都检索、保存探索记录、判断没有新东西，然后把&quot;没有新东西&quot;写回成一条&quot;继续了解这个主题&quot;的意图，下一轮又优先搜同一个主题。另一个问题同时出现：一条研究任务在队列里已经显示完成，对应的运行记录还显示在跑，3 分钟后才被孤儿恢复逻辑标记为失败。两个陷阱各管一头：一个让循环空转，一个让状态说谎。自主循环要能用，得同时管住这两头：产出要有疲劳和冷却，状态收口要有单独的断言。</p>
+<h2>82 轮，81 轮没有新东西</h2>
+<p>数字要先摆出来。开发环境的研究节奏是 2 到 5 分钟一轮，24 小时里跑了 82 轮，其中 81 轮的结果是没有新知识，只有 1 轮属于更新；同期只新增 1 条研究项，库里一共 14 条。</p>
+<p>重复不等于没有执行。每轮仍然会检索、保存探索记录，并按语义重复与内容指纹判断要不要升级为新的研究项或正式知识。当前主题长期集中在&quot;手帐与日常细节收集&quot;，来源与既有探索高度重叠，大部分轮次被正确降级为探索记录。判断本身没有错：没有新增主要由主题重复和新颖性门禁造成，不代表研究链路完全停止。</p>
+<p>更早的一次更能说明频率问题：10 小时跑了 133 次，主题全部是&quot;二手书与旧书店&quot;，113 次完成，20 次失败，主因是结构化输出超长被校验拒绝。开发环境默认 2 到 5 分钟一轮，还跳过睡眠门禁，频率对真实上游过高。空转不只没产出：每轮都在消耗上游额度，主题还全是同一个。</p>
+<p>产出少，一部分是新颖性门禁在正常工作；真正的问题在下一节：系统把&quot;没有新东西&quot;也当成了下一步行动的依据。</p>
+<h2>第一个陷阱：无新增写回成意图，系统自己给自己派活</h2>
+<p>闭环是这样形成的。研究收尾时不区分结果是否新增，只要有一条个人笔记，就创建或更新一条带主题键的活跃创作意图。下一轮选题时，确定性回退优先选择任意带主题键的活跃意图，直接返回同主题查询；只有不存在这类意图时，才按轮换去兴趣池里挑。</p>
+<p>于是出现一条自我强化的链：&quot;手帐检索无新增 → 写入继续了解手帐的意图 → 下一轮仍优先搜手帐&quot;。当时库里唯一的活跃意图，正是&quot;继续了解手帐与日常细节收集&quot;。最新一轮即使已经形成一条可验证的更新，仍然没有切换到其他兴趣。</p>
+<p>这个陷阱的本质是输入输出接错了线。意图是行动的输入，决定下一轮去研究什么；研究结果是行动的输出，告诉系统这一轮得到了什么。把&quot;没有产出&quot;的输出直接写回成输入，等于系统自己给自己派活，而且派的永远是同一件活。无新增的结果只能记为探索线索，不能直接锁定创作主题：探索线索是&quot;这里看过了，没新东西&quot;，创作意图是&quot;这里值得继续挖&quot;，两者不能混用一张表。</p>
+<h2>第二个陷阱：任务完了，运行记录还在跑</h2>
+<p>同一时期，状态的另一头也在出问题。一条自主研究任务在队列里 05:23:47 已经显示完成，对应的运行记录却仍为运行中，而且没有任何探索或研究项；05:26:47 才被后台的孤儿运行恢复逻辑标记为失败。</p>
+<p>根因是状态收口缺口：任务完成与运行记录完成之间没有一致性断言，后台重建或任务恢复窗口会留下表面运行中的任务，当时没有任何东西去拦它。</p>
+<p>这个陷阱的代价在显示层。后台把&quot;已检索但无新增&quot;和&quot;正在执行&quot;显示成同一种状态：都在跑。看到&quot;在跑&quot;以为正常，实际上任务早已结束，只是收口没写。状态是给人看的，状态说谎比任务失败更贵：失败能修，误读会让人对一个早已结束的任务继续等，还会把重复探索误读为持续卡住。修状态收口之前，先要把展示分开：已检索但无新增、正在执行、状态异常，是三种状态，不共用一个&quot;在跑&quot;。</p>
+<h2>修复：给主题加疲劳，给意图分层</h2>
+<p>修复分两路，各对一个陷阱。</p>
+<p>第一路对产出：给主题记疲劳。新增主题状态，记录连续无新增次数、冷却轮次、最近结果和查询。自主研究改为有限坚持：首次无新增可换角度复查，连续无新增后冷却；可靠更新清零疲劳，检索失败不计。历史&quot;继续了解&quot;意图在迁移时转为探索线索，当时开发库已生成 7 个主题状态，手帐意图已降为探索提议。</p>
+<p>第二路对意图：研究自动生成的意图改为探索或提议层级，自主创作只消费活跃的创作意图，研究不再直接锁定创作主题。分层的意思是：研究产出先经过一层&quot;提议&quot;，再决定是否成为&quot;创作任务&quot;。</p>
+<p>补一句后续：上述&quot;只消费活跃创作意图&quot;是收口当时的规则，后来放宽了一步，提议层级的创作意图满足条件时可进入自主草稿调度。规则是活的，分层没变：研究结果不能直通创作任务，中间必须有一层提议和判断。</p>
+<h2>做法：自主循环的三条规矩</h2>
+<ol><li><strong>无产出的结果不能自动生成行动意图</strong>：没有新增的结果只记探索线索；连续无新增达到阈值，冷却主题并强制轮换。</li><li><strong>给主题记疲劳</strong>：连续无新增计数、冷却轮次、最近结果都要落库；可靠更新清零疲劳，检索失败不计入疲劳。</li><li><strong>状态收口单独断言</strong>：任务完成与运行记录完成必须一致；后台把&quot;已检索但无新增&quot;、&quot;正在执行&quot;、&quot;状态异常&quot;分开展示，不共用一个&quot;在跑&quot;。</li></ol>
+<h2>一句话收束</h2>
+<p>自主循环最怕的不是停下来，而是停不下来还看起来很忙：无新增的结果别写回成意图，任务完了运行记录也要跟着完，产出和状态各有一本自己的账。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "82 轮自主研究，81 轮没有新东西", "en": "82 Autonomous Research Rounds, 81 With Nothing New"}, "body": {"zh": "<p>结论先说：数字人 Agent 的自主研究 24 小时跑了 82 轮，81 轮没有新知识，只新增 1 条研究项。系统没有停，也没有报错：每轮都检索、保存探索记录、判断没有新东西，然后把&quot;没有新东西&quot;写回成一条&quot;继续了解这个主题&quot;的意图，下一轮又优先搜同一个主题。另一个问题同时出现：一条研究任务在队列里已经显示完成，对应的运行记录还显示在跑，3 分钟后才被孤儿恢复逻辑标记为失败。两个陷阱各管一头：一个让循环空转，一个让状态说谎。自主循环要能用，得同时管住这两头：产出要有疲劳和冷却，状态收口要有单独的断言。</p>\n<h2>82 轮，81 轮没有新东西</h2>\n<p>数字要先摆出来。开发环境的研究节奏是 2 到 5 分钟一轮，24 小时里跑了 82 轮，其中 81 轮的结果是没有新知识，只有 1 轮属于更新；同期只新增 1 条研究项，库里一共 14 条。</p>\n<p>重复不等于没有执行。每轮仍然会检索、保存探索记录，并按语义重复与内容指纹判断要不要升级为新的研究项或正式知识。当前主题长期集中在&quot;手帐与日常细节收集&quot;，来源与既有探索高度重叠，大部分轮次被正确降级为探索记录。判断本身没有错：没有新增主要由主题重复和新颖性门禁造成，不代表研究链路完全停止。</p>\n<p>更早的一次更能说明频率问题：10 小时跑了 133 次，主题全部是&quot;二手书与旧书店&quot;，113 次完成，20 次失败，主因是结构化输出超长被校验拒绝。开发环境默认 2 到 5 分钟一轮，还跳过睡眠门禁，频率对真实上游过高。空转不只没产出：每轮都在消耗上游额度，主题还全是同一个。</p>\n<p>产出少，一部分是新颖性门禁在正常工作；真正的问题在下一节：系统把&quot;没有新东西&quot;也当成了下一步行动的依据。</p>\n<h2>第一个陷阱：无新增写回成意图，系统自己给自己派活</h2>\n<p>闭环是这样形成的。研究收尾时不区分结果是否新增，只要有一条个人笔记，就创建或更新一条带主题键的活跃创作意图。下一轮选题时，确定性回退优先选择任意带主题键的活跃意图，直接返回同主题查询；只有不存在这类意图时，才按轮换去兴趣池里挑。</p>\n<p>于是出现一条自我强化的链：&quot;手帐检索无新增 → 写入继续了解手帐的意图 → 下一轮仍优先搜手帐&quot;。当时库里唯一的活跃意图，正是&quot;继续了解手帐与日常细节收集&quot;。最新一轮即使已经形成一条可验证的更新，仍然没有切换到其他兴趣。</p>\n<p>这个陷阱的本质是输入输出接错了线。意图是行动的输入，决定下一轮去研究什么；研究结果是行动的输出，告诉系统这一轮得到了什么。把&quot;没有产出&quot;的输出直接写回成输入，等于系统自己给自己派活，而且派的永远是同一件活。无新增的结果只能记为探索线索，不能直接锁定创作主题：探索线索是&quot;这里看过了，没新东西&quot;，创作意图是&quot;这里值得继续挖&quot;，两者不能混用一张表。</p>\n<h2>第二个陷阱：任务完了，运行记录还在跑</h2>\n<p>同一时期，状态的另一头也在出问题。一条自主研究任务在队列里 05:23:47 已经显示完成，对应的运行记录却仍为运行中，而且没有任何探索或研究项；05:26:47 才被后台的孤儿运行恢复逻辑标记为失败。</p>\n<p>根因是状态收口缺口：任务完成与运行记录完成之间没有一致性断言，后台重建或任务恢复窗口会留下表面运行中的任务，当时没有任何东西去拦它。</p>\n<p>这个陷阱的代价在显示层。后台把&quot;已检索但无新增&quot;和&quot;正在执行&quot;显示成同一种状态：都在跑。看到&quot;在跑&quot;以为正常，实际上任务早已结束，只是收口没写。状态是给人看的，状态说谎比任务失败更贵：失败能修，误读会让人对一个早已结束的任务继续等，还会把重复探索误读为持续卡住。修状态收口之前，先要把展示分开：已检索但无新增、正在执行、状态异常，是三种状态，不共用一个&quot;在跑&quot;。</p>\n<h2>修复：给主题加疲劳，给意图分层</h2>\n<p>修复分两路，各对一个陷阱。</p>\n<p>第一路对产出：给主题记疲劳。新增主题状态，记录连续无新增次数、冷却轮次、最近结果和查询。自主研究改为有限坚持：首次无新增可换角度复查，连续无新增后冷却；可靠更新清零疲劳，检索失败不计。历史&quot;继续了解&quot;意图在迁移时转为探索线索，当时开发库已生成 7 个主题状态，手帐意图已降为探索提议。</p>\n<p>第二路对意图：研究自动生成的意图改为探索或提议层级，自主创作只消费活跃的创作意图，研究不再直接锁定创作主题。分层的意思是：研究产出先经过一层&quot;提议&quot;，再决定是否成为&quot;创作任务&quot;。</p>\n<p>补一句后续：上述&quot;只消费活跃创作意图&quot;是收口当时的规则，后来放宽了一步，提议层级的创作意图满足条件时可进入自主草稿调度。规则是活的，分层没变：研究结果不能直通创作任务，中间必须有一层提议和判断。</p>\n<h2>做法：自主循环的三条规矩</h2>\n<ol><li><strong>无产出的结果不能自动生成行动意图</strong>：没有新增的结果只记探索线索；连续无新增达到阈值，冷却主题并强制轮换。</li><li><strong>给主题记疲劳</strong>：连续无新增计数、冷却轮次、最近结果都要落库；可靠更新清零疲劳，检索失败不计入疲劳。</li><li><strong>状态收口单独断言</strong>：任务完成与运行记录完成必须一致；后台把&quot;已检索但无新增&quot;、&quot;正在执行&quot;、&quot;状态异常&quot;分开展示，不共用一个&quot;在跑&quot;。</li></ol>\n<h2>一句话收束</h2>\n<p>自主循环最怕的不是停下来，而是停不下来还看起来很忙：无新增的结果别写回成意图，任务完了运行记录也要跟着完，产出和状态各有一本自己的账。</p>", "en": "<p>The conclusion first: a digital human agent&#x27;s autonomous research ran 82 rounds in 24 hours, and 81 of them produced no new knowledge. Only one new research item was added. The system did not stop, and it did not error: each round retrieved, saved an exploration record, and judged there was nothing new, then wrote &quot;nothing new&quot; back as an intention to &quot;keep learning about this topic&quot;, so the next round went to search the same topic first. A second problem appeared at the same time: a research job already showed completed in the queue, while its run record still showed running, and only three minutes later was it marked failed by the orphan-run recovery logic. The two traps cover one end each: one lets the loop spin empty, the other lets the state lie. For an autonomous loop to be usable, both ends must be controlled: output needs fatigue and cooldown, and state reconciliation needs its own assertion.</p>\n<h2>82 rounds, 81 with nothing new</h2>\n<p>The numbers first. The dev environment runs research every 2 to 5 minutes. In 24 hours it ran 82 rounds, 81 of which ended with no new knowledge and only one counted as an update; one new research item was added in the same period, out of 14 in total.</p>\n<p>Repetition is not the same as no execution. Every round still retrieved, saved an exploration record, and judged by semantic repetition and content fingerprints whether to promote the result into a new research item or formal knowledge. The current topic stayed on &quot;handwritten journals and everyday detail collection&quot; for a long time, and its sources overlapped heavily with existing exploration, so most rounds were correctly downgraded to exploration records. The judgment itself was not wrong: the lack of new material came mostly from topic repetition and the novelty gate, not from a research pipeline that had fully stopped.</p>\n<p>An earlier case shows the frequency problem even better: 133 runs in 10 hours, all on the single topic &quot;secondhand books and old bookstores&quot;, 113 completed and 20 failed, mostly because structured output exceeded the length limit and was rejected by validation. The dev environment defaults to a round every 2 to 5 minutes and skips the sleep gate, a cadence too high for the real upstream. Spinning empty costs more than no output: every round consumes upstream quota, and the topic is still the same one.</p>\n<p>Little output is partly the novelty gate working as designed; the real problem is in the next section: the system also treated &quot;nothing new&quot; as the basis for its next action.</p>\n<h2>The first trap: no-new-result written back as an intention, the system assigning itself work</h2>\n<p>The closed loop formed like this. When research finalized, it did not distinguish whether the result added anything: as long as there was a personal note, it created or updated an active creation intention carrying the topic key. At the next round&#x27;s topic selection, the deterministic fallback picked any active intention carrying a topic key and returned a query on that same topic; only when no such intention existed did it rotate through the interest pool.</p>\n<p>So a self-reinforcing chain appeared: &quot;handbook search finds nothing new, writes an intention to keep learning about handbooks, the next round searches handbooks first.&quot; The only active intention in the store at the time was exactly &quot;keep learning about handwritten journals and everyday detail collection&quot;. Even when the latest round had produced a verifiable update, it still did not switch to another interest.</p>\n<p>The essence of this trap is an input wired to the wrong output. An intention is an input to action: it decides what the next round researches. A research result is an output of action: it reports what this round found. Writing a &quot;no output&quot; result straight back as an input means the system assigns itself work, and always the same work. A no-new-result outcome may only be recorded as an exploration lead, never used to lock in a creation topic: an exploration lead says &quot;this was checked, nothing new here&quot;, a creation intention says &quot;this is worth digging deeper&quot;, and the two must not share one table.</p>\n<h2>The second trap: the job finished, the run record still running</h2>\n<p>In the same period, the other end of state was also failing. A research job showed completed in the queue at 05:23:47, while its run record stayed running with no exploration or research item at all; only at 05:26:47 was it marked failed by the worker&#x27;s orphan-run recovery logic.</p>\n<p>The root cause was a state reconciliation gap: no consistency assertion existed between job completion and run-record completion. A worker rebuild or task recovery window can leave a task looking running on the surface, which should not be treated as a normal business result, but at the time nothing intercepted it.</p>\n<p>The cost of this trap sits in the display layer. The dashboard showed &quot;retrieved this round but nothing new&quot; and &quot;currently executing&quot; as the same state: both running. Seeing &quot;running&quot; looked normal, when in fact the job had long finished and only the reconciliation was missing. State is shown to people, and a lying state costs more than a failed job: a failure can be fixed, but a misreading keeps someone waiting on a job that already ended, and mistakes repeated exploration for being stuck. Before fixing state reconciliation, the display must be split: retrieved but nothing new, currently executing, and abnormal state are three states, not one shared &quot;running&quot;.</p>\n<h2>The fix: fatigue for topics, layers for intentions</h2>\n<p>The fix went two ways, one per trap.</p>\n<p>The first way targets output: give topics fatigue. A topic state was added, recording each topic&#x27;s consecutive no-new-result count, cooldown rounds, latest result, and query. Autonomous research became finite persistence: the first no-new-result round may still retry from a different angle, but after consecutive no-new results the topic cools down; a reliable update resets fatigue to zero, and a retrieval failure does not add to it. Legacy &quot;keep learning&quot; automatic intentions were converted to exploration leads during migration, and the dev store had already generated 7 topic states, with the handbook intention downgraded to an exploration proposal.</p>\n<p>The second way targets intentions: intentions auto-generated by research moved to the explore or proposal layer, and autonomous creation only consumes active creation intentions, so research no longer locks in a creation topic directly. Layering means a research output first passes through a &quot;proposal&quot; layer before it can become a &quot;creation task&quot;.</p>\n<p>One follow-up note: the &quot;only consumes active creation intentions&quot; rule above was the rule at the time of the fix, and it was later relaxed one step, so proposal-layer creation intentions meeting the conditions can enter autonomous draft scheduling. Rules are alive, but the layering did not change: a research result cannot go straight to a creation task; a layer of proposal and judgment must sit in between.</p>\n<h2>Rules: three rules for an autonomous loop</h2>\n<ol><li><strong>A result with no output must not auto-generate an action intention</strong>: a no-new-result outcome is recorded only as an exploration lead; once consecutive no-new results reach a threshold, cool the topic down and force a rotation.</li><li><strong>Record fatigue per topic</strong>: consecutive no-new-result counts, cooldown rounds, and latest results all go into the store; a reliable update resets fatigue, and a retrieval failure does not count toward it.</li><li><strong>Assert state reconciliation separately</strong>: job completion and run-record completion must agree; the dashboard shows &quot;retrieved but nothing new&quot;, &quot;currently executing&quot;, and &quot;abnormal state&quot; separately, never sharing one &quot;running&quot;.</li></ol>\n<h2>One line to close</h2>\n<p>What an autonomous loop should fear most is not stopping, but never stopping while looking busy: never write a no-new-result back as an intention, and when a job finishes, its run record must finish with it; output and state each keep their own ledger.</p>"}, "prev": {"url": "/writing/67-slot-takeover-inherits-the-cost", "t": {"zh": "接管一个槽位，就是接管它的全部代价", "en": "Taking Over a Slot Means Taking Over Its Full Cost"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
