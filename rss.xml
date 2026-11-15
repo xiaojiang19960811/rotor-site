@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>只改了 3 封，任务就被标成已完成</title>
+    <link>https://www.rotor1996.top/writing/73-false-completion-three-letters</link>
+    <guid>https://www.rotor1996.top/writing/73-false-completion-three-letters</guid>
+    <pubDate>Mon, 16 Nov 2026 00:00:00 GMT</pubDate>
+    <description>只改了 3 封就标已完成：锁过期、空结果当成功、幂等键堵死重试；失败会重试，假完成不会。</description>
+  </item>
+  <item>
     <title>82 轮自主研究，81 轮没有新东西</title>
     <link>https://www.rotor1996.top/writing/72-autonomous-research-empty-loops</link>
     <guid>https://www.rotor1996.top/writing/72-autonomous-research-empty-loops</guid>
