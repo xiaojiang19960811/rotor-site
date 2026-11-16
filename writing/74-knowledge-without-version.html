@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>写主表不建投影：47 条知识没有版本 — rotor</title>
+<meta name="description" content="新增条目只写主表、不建知识版本，详情页全是 404；兼容迁移只能补历史，不能当写入路径。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/74-knowledge-without-version">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "写主表不建投影：47 条知识没有版本", "description": "新增条目只写主表、不建知识版本，详情页全是 404；兼容迁移只能补历史，不能当写入路径。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-17", "mainEntityOfPage": "https://www.rotor1996.top/writing/74-knowledge-without-version"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>写主表不建投影：47 条知识没有版本</h1><p>结论先说：一个数字人 Agent 的知识库后台，大量条目显示&quot;未建版本&quot;，点进详情页全部返回找不到。数据没有丢，研究内容一条不少；丢的是另一张表里的投影。新增研究条目时，写入路径只写了主表，没有在同一事务里同步建知识资产、版本和证据。开发库里 156 条研究条目，有 47 条没有版本，接近三分之一。</p>
+<h2>详情页 404 的链条</h2>
+<p>列表页和详情页用的不是同一把钥匙。列表行只有研究条目的编号，没有知识资产的编号；详情接口只按知识资产编号查询。前端拿不到资产编号，就拿研究条目编号去顶：请求发过去，接口按资产编号一查，没有，返回找不到。条目明明存在，详情页却永远打不开。</p>
+<p>更麻烦的是这个回退看起来很合理：两个编号都是编号，拿一个顶另一个，代码不报错，页面只显示&quot;找不到&quot;。缺失被藏进了一次普通的 404，没有人会想到是写入时少了一步。</p>
+<p>列表页本身一切正常：条目都在，数量也对，只有&quot;点进去看&quot;这一步是坏的。坏在详情页，根在写入时，中间隔了整整一个编号映射，出问题时没有人会先怀疑写入。</p>
+<h2>为什么漏了这么久</h2>
+<p>系统里其实有一套补救机制：服务启动时，兼容迁移会批量给已有条目创建知识资产、版本和证据。但它只在启动时跑。服务不重启，新增条目就长期缺版本；重启一次，历史缺口被补上，新的缺口又从下一条新增开始攒。</p>
+<p>这就是问题所在：兼容迁移是补历史数据的，不能当写入路径用。它修的是&quot;过去漏掉的&quot;，不是&quot;现在正在写的&quot;。把补偿机制当成写入路径，等于默认新数据可以先残缺、以后再补，而&quot;以后&quot;只有重启才来。</p>
+<h2>修复：写入时一次写全</h2>
+<p>修复分三处，各堵一环：</p>
+<ol><li><strong>新条目同一事务写全</strong>：新增研究条目时，在同一个数据库事务里创建知识资产、v1 版本、证据和自动发布事件；任何一步失败，整批回滚，不留半条记录。</li><li><strong>启动迁移退回补偿位</strong>：启动时的兼容迁移保留，只负责补历史数据和异常中断留下的缺口，不再承担新写入的投影工作。</li><li><strong>写入闭环加单测</strong>：新增写入闭环测试，覆盖资产、版本、证据都在事务内写入；缺一环即失败。</li></ol>
+<p>修复后重建开发库并重新核对：156 条研究条目、156 个知识资产、156 个版本，未建版本 0，资产无版本 0。</p>
+<h2>做法：派生数据要和源数据同事务</h2>
+<ol><li><strong>派生写进写入路径</strong>：凡是&quot;写 A 时必须同时有 B&quot;的派生关系，B 的创建必须和 A 在同一个事务里；事后补、启动时补、定时任务补，都不是写入路径。</li><li><strong>补偿只补历史</strong>：迁移、回填、兼容逻辑的职责是收口旧数据和异常中断，写清楚它的边界；一旦它开始替新写入兜底，缺口就会悄悄攒。新增字段或状态规则时，启动迁移和写入单测要同步更新。</li><li><strong>缺关键编号是异常，不是回退理由</strong>：列表里拿不到详情要用的编号，应报数据异常；拿另一个编号去顶，只会把写入缺口藏成一次普通的 404。</li></ol>
+<h2>一句话收束</h2>
+<p>写主表不建投影，知识迟早缺版本：派生数据必须和源数据在同一个事务里出生，事后补救只能收口历史，不能当作写入路径。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "写主表不建投影：47 条知识没有版本", "en": "Wrote the Row, Skipped the Projection: 47 Knowledge Entries Without a Version"}, "body": {"zh": "<p>结论先说：一个数字人 Agent 的知识库后台，大量条目显示&quot;未建版本&quot;，点进详情页全部返回找不到。数据没有丢，研究内容一条不少；丢的是另一张表里的投影。新增研究条目时，写入路径只写了主表，没有在同一事务里同步建知识资产、版本和证据。开发库里 156 条研究条目，有 47 条没有版本，接近三分之一。</p>\n<h2>详情页 404 的链条</h2>\n<p>列表页和详情页用的不是同一把钥匙。列表行只有研究条目的编号，没有知识资产的编号；详情接口只按知识资产编号查询。前端拿不到资产编号，就拿研究条目编号去顶：请求发过去，接口按资产编号一查，没有，返回找不到。条目明明存在，详情页却永远打不开。</p>\n<p>更麻烦的是这个回退看起来很合理：两个编号都是编号，拿一个顶另一个，代码不报错，页面只显示&quot;找不到&quot;。缺失被藏进了一次普通的 404，没有人会想到是写入时少了一步。</p>\n<p>列表页本身一切正常：条目都在，数量也对，只有&quot;点进去看&quot;这一步是坏的。坏在详情页，根在写入时，中间隔了整整一个编号映射，出问题时没有人会先怀疑写入。</p>\n<h2>为什么漏了这么久</h2>\n<p>系统里其实有一套补救机制：服务启动时，兼容迁移会批量给已有条目创建知识资产、版本和证据。但它只在启动时跑。服务不重启，新增条目就长期缺版本；重启一次，历史缺口被补上，新的缺口又从下一条新增开始攒。</p>\n<p>这就是问题所在：兼容迁移是补历史数据的，不能当写入路径用。它修的是&quot;过去漏掉的&quot;，不是&quot;现在正在写的&quot;。把补偿机制当成写入路径，等于默认新数据可以先残缺、以后再补，而&quot;以后&quot;只有重启才来。</p>\n<h2>修复：写入时一次写全</h2>\n<p>修复分三处，各堵一环：</p>\n<ol><li><strong>新条目同一事务写全</strong>：新增研究条目时，在同一个数据库事务里创建知识资产、v1 版本、证据和自动发布事件；任何一步失败，整批回滚，不留半条记录。</li><li><strong>启动迁移退回补偿位</strong>：启动时的兼容迁移保留，只负责补历史数据和异常中断留下的缺口，不再承担新写入的投影工作。</li><li><strong>写入闭环加单测</strong>：新增写入闭环测试，覆盖资产、版本、证据都在事务内写入；缺一环即失败。</li></ol>\n<p>修复后重建开发库并重新核对：156 条研究条目、156 个知识资产、156 个版本，未建版本 0，资产无版本 0。</p>\n<h2>做法：派生数据要和源数据同事务</h2>\n<ol><li><strong>派生写进写入路径</strong>：凡是&quot;写 A 时必须同时有 B&quot;的派生关系，B 的创建必须和 A 在同一个事务里；事后补、启动时补、定时任务补，都不是写入路径。</li><li><strong>补偿只补历史</strong>：迁移、回填、兼容逻辑的职责是收口旧数据和异常中断，写清楚它的边界；一旦它开始替新写入兜底，缺口就会悄悄攒。新增字段或状态规则时，启动迁移和写入单测要同步更新。</li><li><strong>缺关键编号是异常，不是回退理由</strong>：列表里拿不到详情要用的编号，应报数据异常；拿另一个编号去顶，只会把写入缺口藏成一次普通的 404。</li></ol>\n<h2>一句话收束</h2>\n<p>写主表不建投影，知识迟早缺版本：派生数据必须和源数据在同一个事务里出生，事后补救只能收口历史，不能当作写入路径。</p>", "en": "<p>The conclusion first: in a digital human agent&#x27;s knowledge base admin, a large number of entries showed &quot;no version built&quot;, and every detail page returned not found. No data was lost; every research item was intact. What was missing was the projection in another table. When a new research item was written, the write path only wrote the main table; it never created the knowledge asset, version, and evidence in the same transaction. In the dev database, 47 of 156 research items had no version: close to a third.</p>\n<h2>The chain behind the 404 detail pages</h2>\n<p>The list page and the detail page do not use the same key. A list row carries only the research item&#x27;s ID, not the knowledge asset&#x27;s ID, while the detail API looks up by asset ID only. With no asset ID at hand, the frontend fell back to the research item ID: the request went out, the API looked it up as an asset ID, found nothing, and returned not found. The item existed, yet its detail page could never open.</p>\n<p>Worse, the fallback looked reasonable: both are IDs, substituting one for the other raised no error, and the page simply showed &quot;not found&quot;. The gap was hidden inside an ordinary 404, and nobody would guess that a write step had been skipped.</p>\n<p>The list page itself looked perfectly fine: every item was there, the counts matched, and only the &quot;click through to read&quot; step was broken. The breakage showed in the detail page, the root cause sat in the write path, and a whole ID mapping lay between them. When something failed, nobody suspected the write first.</p>\n<h2>Why it went unnoticed for so long</h2>\n<p>The system did have a safety net: on service startup, a compatibility migration bulk-created knowledge assets, versions, and evidence for existing items. But it only ran at startup. While the service kept running, new items stayed version-less; each restart patched the historical gap, and a new gap started accumulating from the next new item.</p>\n<p>That was the problem: a compatibility migration patches historical data; it is not a write path. It fixes &quot;what was missed in the past&quot;, not &quot;what is being written now&quot;. Treating a compensation mechanism as the write path means accepting that new data can start out incomplete and be fixed later, while &quot;later&quot; only arrives at the next restart.</p>\n<h2>The fix: write everything at once</h2>\n<p>The fix closed the gap in three places:</p>\n<ol><li><strong>New items written in full, in one transaction</strong>: when a new research item is added, the knowledge asset, v1 version, evidence, and auto-publish event are created in the same database transaction; if any step fails, the whole batch rolls back, leaving no half-written record.</li><li><strong>Startup migration back to compensation duty</strong>: the startup compatibility migration stays, but only patches historical data and gaps left by interrupted runs; it no longer carries projection work for new writes.</li><li><strong>Closed-loop tests for writes</strong>: new write tests cover asset, version, and evidence all being written inside the transaction; missing any one of them fails the test.</li></ol>\n<p>After the fix, the dev database was rebuilt and rechecked: 156 research items, 156 knowledge assets, 156 versions, zero items without a version, zero assets without a version.</p>\n<h2>The practice: derived data shares a transaction with its source</h2>\n<ol><li><strong>Derivation belongs in the write path</strong>: whenever &quot;writing A must also create B&quot;, B&#x27;s creation must happen in the same transaction as A. Patching it afterwards, at startup, or in a scheduled job is not a write path.</li><li><strong>Compensation only patches history</strong>: migrations, backfills, and compatibility logic exist to close out old data and interrupted runs; state their boundary clearly. Once they start covering for new writes, gaps accumulate quietly. When a new field or status rule is added, the startup migration and the write tests must be updated together.</li><li><strong>A missing key ID is an anomaly, not a reason to fall back</strong>: when the list cannot supply the ID the detail page needs, report a data anomaly. Substituting a different ID only hides a write gap as an ordinary 404.</li></ol>\n<h2>One line to close</h2>\n<p>Write the main table without building the projection, and knowledge will end up version-less sooner or later: derived data must be born in the same transaction as its source. Later fixes can only close out history; they cannot serve as the write path.</p>"}, "prev": {"url": "/writing/73-false-completion-three-letters", "t": {"zh": "只改了 3 封，任务就被标成已完成", "en": "Only 3 Letters Fixed, Yet the Job Was Marked Complete"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

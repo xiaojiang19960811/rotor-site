@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>写主表不建投影：47 条知识没有版本</title>
+    <link>https://www.rotor1996.top/writing/74-knowledge-without-version</link>
+    <guid>https://www.rotor1996.top/writing/74-knowledge-without-version</guid>
+    <pubDate>Tue, 17 Nov 2026 00:00:00 GMT</pubDate>
+    <description>新增条目只写主表、不建知识版本，详情页全是 404；兼容迁移只能补历史，不能当写入路径。</description>
+  </item>
+  <item>
     <title>只改了 3 封，任务就被标成已完成</title>
     <link>https://www.rotor1996.top/writing/73-false-completion-three-letters</link>
     <guid>https://www.rotor1996.top/writing/73-false-completion-three-letters</guid>
