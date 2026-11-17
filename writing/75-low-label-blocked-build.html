@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>构建报权限被拒，标签却在仓库根 — rotor</title>
+<meta name="description" content="发布构建两次稳定失败在 esbuild 写临时文件，报错指向临时目录，逐层核验才发现仓库根带了 Low 完整性标签；标签覆盖为 Medium 后 1089 个模块 33 秒通过。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/75-low-label-blocked-build">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "构建报权限被拒，标签却在仓库根", "description": "发布构建两次稳定失败在 esbuild 写临时文件，报错指向临时目录，逐层核验才发现仓库根带了 Low 完整性标签；标签覆盖为 Medium 后 1089 个模块 33 秒通过。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-18", "mainEntityOfPage": "https://www.rotor1996.top/writing/75-low-label-blocked-build"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>构建报权限被拒，标签却在仓库根</h1><p>结论先说：一次发布构建连续两次稳定失败，报错是 esbuild 写临时文件时&quot;访问被拒绝&quot;，矛头直指临时目录。但逐层核验后发现，真正的根子在仓库根：整个仓库带了一个显式的 Low 完整性标签，所有文件都继承了它，构建进程因此以低完整性运行，写删临时文件被系统拒绝。把标签覆盖为 Medium 之后，构建一次通过：1089 个模块，33 秒。报错的地方不一定是出错的地方；权限问题先问&quot;谁的权限&quot;，再问&quot;哪里的权限&quot;。</p>
+<h2>报错指向临时目录</h2>
+<p>发布构建在前端构建的&quot;渲染分块&quot;阶段两次失败，错误都一样：esbuild 在写临时文件时被拒绝访问，错误由 esbuild 的服务进程带回。第一反应自然是临时目录：权限、空间、残留文件，都是现成的嫌疑人。</p>
+<p>但有一个细节对不上：如果问题在临时目录，为什么上一版本验证过的规避方案也失败了？上一版本用的是独立的 esbuild 副本，绕开了旧的包管理器硬链接问题；这次同样的副本方案一样失败。临时目录没有变，规避方案没有变，变的是别处。两次稳定失败，说明这不是偶发抖动，而是一个稳定的、可复现的阻塞点。</p>
+<p>只影响本仓库的前端构建验证，已发布产物不受影响；修复后该版本最终构建通过并完成发布。</p>
+<h2>逐层核验找到仓库根</h2>
+<p>排查没有从报错的地方开始，而是从仓库的各级目录逐层核验完整性标签。</p>
+<p>父级目录链是干净的，都没有标签。仓库根本身带了一个显式的 Low 强制标签，并且没有继承标记、可以向子对象传播。于是全仓库文件都继承了这个 Low 标签，包括前端目录和独立的 esbuild 副本。构建进程按可执行文件的标签以低完整性运行，写、删临时目录下的临时文件时被系统拒绝。</p>
+<p>时间线也对得上：同一脚本、同一副本，在上一版本构建成功，说明 Low 标签是之后才被显式设置到仓库根的。设置者是谁没有查到，不作推断——这一点同样要写进结论：不知道就是不知道。</p>
+<p>这里有两个容易踩的坑。第一，删除拒绝项的命令报了&quot;成功&quot;却不生效：它只作用于拒绝类访问控制项，管不到强制标签这类访问控制项，命令成功不等于标签被去掉。第二，标签的设置来源未查明，如果复发，需要从访问控制项的来源去定位引入者，而不是再怀疑一次临时目录。</p>
+<h2>修复：备份在先，覆盖在后</h2>
+<p>修复分两步，顺序不能反。</p>
+<ol><li><strong>先备份访问控制列表</strong>：把仓库根的访问控制列表存一份备份，再动手改标签。标签改错了可以恢复，没备份就只能凭记忆猜。</li><li><strong>覆盖标签为 Medium</strong>：把仓库根的完整性标签覆盖为 Medium，与系统默认行为等效；子对象继承的标签同步更新。修复后完整跑一遍前端构建脚本：类型检查、构建全过，1089 个模块 33 秒。</li></ol>
+<p>Medium 不是&quot;放宽权限&quot;，而是回到系统默认：Medium 完整性的进程操作同级对象没有额外限制。Low 标签的本意是限制不可信代码，能跑到仓库根上，本身就是一次误标。</p>
+<h2>做法：权限报错先分层，再定位</h2>
+<ol><li><strong>报错位置不是根因位置</strong>：构建报错在临时目录，根子在仓库根。先问&quot;谁的权限被拒&quot;，再问&quot;哪里报的错&quot;；沿着报错的字面意思修，修的是症状。</li><li><strong>稳定的失败先排除偶发，再怀疑环境</strong>：连续两次同样失败，先排除抖动；上一版本验证过的规避方案也失败，说明变化不在方案本身，在它之外的环境。</li><li><strong>权限问题逐层核验，不要只查报错的那一级</strong>：目录、父目录、仓库根，一级一级查完整性标签。标签可以继承，也可以显式设置在某一层；只查报错的那一级，查不到上一级的显式标签。</li><li><strong>命令&quot;成功&quot;不等于生效</strong>：删拒绝项的命令报成功，但它管不到强制标签。每个修复命令都有自己的作用域，执行成功只证明命令跑完了，不证明目标状态变了；改完要重新核验状态。</li><li><strong>改系统属性之前先备份</strong>：改标签之前先存一份访问控制列表备份。回滚能力不是事后补的，动手之前就得有。</li></ol>
+<h2>一句话收束</h2>
+<p>构建报权限被拒，标签却在仓库根：权限报错先分层定位，报错的地方只是症状，标签长在哪一级，根子就在哪一级。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "构建报权限被拒，标签却在仓库根", "en": "Build Denied on Permissions, but the Label Sat on the Repo Root"}, "body": {"zh": "<p>结论先说：一次发布构建连续两次稳定失败，报错是 esbuild 写临时文件时&quot;访问被拒绝&quot;，矛头直指临时目录。但逐层核验后发现，真正的根子在仓库根：整个仓库带了一个显式的 Low 完整性标签，所有文件都继承了它，构建进程因此以低完整性运行，写删临时文件被系统拒绝。把标签覆盖为 Medium 之后，构建一次通过：1089 个模块，33 秒。报错的地方不一定是出错的地方；权限问题先问&quot;谁的权限&quot;，再问&quot;哪里的权限&quot;。</p>\n<h2>报错指向临时目录</h2>\n<p>发布构建在前端构建的&quot;渲染分块&quot;阶段两次失败，错误都一样：esbuild 在写临时文件时被拒绝访问，错误由 esbuild 的服务进程带回。第一反应自然是临时目录：权限、空间、残留文件，都是现成的嫌疑人。</p>\n<p>但有一个细节对不上：如果问题在临时目录，为什么上一版本验证过的规避方案也失败了？上一版本用的是独立的 esbuild 副本，绕开了旧的包管理器硬链接问题；这次同样的副本方案一样失败。临时目录没有变，规避方案没有变，变的是别处。两次稳定失败，说明这不是偶发抖动，而是一个稳定的、可复现的阻塞点。</p>\n<p>只影响本仓库的前端构建验证，已发布产物不受影响；修复后该版本最终构建通过并完成发布。</p>\n<h2>逐层核验找到仓库根</h2>\n<p>排查没有从报错的地方开始，而是从仓库的各级目录逐层核验完整性标签。</p>\n<p>父级目录链是干净的，都没有标签。仓库根本身带了一个显式的 Low 强制标签，并且没有继承标记、可以向子对象传播。于是全仓库文件都继承了这个 Low 标签，包括前端目录和独立的 esbuild 副本。构建进程按可执行文件的标签以低完整性运行，写、删临时目录下的临时文件时被系统拒绝。</p>\n<p>时间线也对得上：同一脚本、同一副本，在上一版本构建成功，说明 Low 标签是之后才被显式设置到仓库根的。设置者是谁没有查到，不作推断——这一点同样要写进结论：不知道就是不知道。</p>\n<p>这里有两个容易踩的坑。第一，删除拒绝项的命令报了&quot;成功&quot;却不生效：它只作用于拒绝类访问控制项，管不到强制标签这类访问控制项，命令成功不等于标签被去掉。第二，标签的设置来源未查明，如果复发，需要从访问控制项的来源去定位引入者，而不是再怀疑一次临时目录。</p>\n<h2>修复：备份在先，覆盖在后</h2>\n<p>修复分两步，顺序不能反。</p>\n<ol><li><strong>先备份访问控制列表</strong>：把仓库根的访问控制列表存一份备份，再动手改标签。标签改错了可以恢复，没备份就只能凭记忆猜。</li><li><strong>覆盖标签为 Medium</strong>：把仓库根的完整性标签覆盖为 Medium，与系统默认行为等效；子对象继承的标签同步更新。修复后完整跑一遍前端构建脚本：类型检查、构建全过，1089 个模块 33 秒。</li></ol>\n<p>Medium 不是&quot;放宽权限&quot;，而是回到系统默认：Medium 完整性的进程操作同级对象没有额外限制。Low 标签的本意是限制不可信代码，能跑到仓库根上，本身就是一次误标。</p>\n<h2>做法：权限报错先分层，再定位</h2>\n<ol><li><strong>报错位置不是根因位置</strong>：构建报错在临时目录，根子在仓库根。先问&quot;谁的权限被拒&quot;，再问&quot;哪里报的错&quot;；沿着报错的字面意思修，修的是症状。</li><li><strong>稳定的失败先排除偶发，再怀疑环境</strong>：连续两次同样失败，先排除抖动；上一版本验证过的规避方案也失败，说明变化不在方案本身，在它之外的环境。</li><li><strong>权限问题逐层核验，不要只查报错的那一级</strong>：目录、父目录、仓库根，一级一级查完整性标签。标签可以继承，也可以显式设置在某一层；只查报错的那一级，查不到上一级的显式标签。</li><li><strong>命令&quot;成功&quot;不等于生效</strong>：删拒绝项的命令报成功，但它管不到强制标签。每个修复命令都有自己的作用域，执行成功只证明命令跑完了，不证明目标状态变了；改完要重新核验状态。</li><li><strong>改系统属性之前先备份</strong>：改标签之前先存一份访问控制列表备份。回滚能力不是事后补的，动手之前就得有。</li></ol>\n<h2>一句话收束</h2>\n<p>构建报权限被拒，标签却在仓库根：权限报错先分层定位，报错的地方只是症状，标签长在哪一级，根子就在哪一级。</p>", "en": "<p>The conclusion first: a release build failed twice in a row at the same step, with esbuild reporting &quot;access denied&quot; while writing temp files — the error pointed straight at the temp directory. But layer-by-layer checks found the real cause at the repository root: the whole repository carried an explicit Low integrity label, every file inherited it, and the build process therefore ran at low integrity, with the system refusing its writes and deletes of temp files. Raising the label to Medium fixed it in one pass: 1,089 modules in 33 seconds. Where an error is reported is not necessarily where the fault lies; with a permissions failure, ask whose permissions first, then where.</p>\n<h2>The error pointed at the temp directory</h2>\n<p>The release build failed twice at the frontend build&#x27;s &quot;rendering chunks&quot; stage, with the same error both times: esbuild was denied access while writing a temp file, the error carried back by esbuild&#x27;s service process. The natural first suspect was the temp directory: its permissions, its free space, its leftover files.</p>\n<p>But one detail did not fit: if the problem were the temp directory, why did the workaround verified in the previous release fail too? That release had used a standalone esbuild binary to sidestep an old package-manager hard-link problem; this time the same standalone binary failed identically. The temp directory had not changed, the workaround had not changed — something else had. Two stable failures meant this was not a flake, but a reproducible blocking point.</p>\n<p>Only the repository&#x27;s own frontend build verification was affected; already-released artifacts were untouched, and after the fix the release built cleanly and shipped.</p>\n<h2>Layer-by-layer checks found the repo root</h2>\n<p>The investigation did not start at the place the error named. It checked integrity labels level by level, from the repository&#x27;s parent directories down.</p>\n<p>The parent chain was clean — no labels anywhere. The repository root itself carried an explicit Low mandatory label, with no inheritance marker, able to propagate to child objects. Every file in the repository inherited that Low label, including the frontend directory and the standalone esbuild binary. The build process ran at low integrity, matching the executable&#x27;s label, and the system refused its writes and deletes of temp files.</p>\n<p>The timeline fit as well: the same script with the same binary had built successfully in the previous release, so the Low label must have been set on the repo root afterwards. Who set it was never found out, and no guess is offered — that, too, belongs in the conclusion: unknown means unknown.</p>\n<p>Two traps are worth naming here. First, the command to remove deny entries reported &quot;success&quot; without taking effect: it only acts on deny-type access entries and cannot touch a mandatory label entry — a command succeeding does not mean the label was removed. Second, the source of the label remains unidentified; if it recurs, the introducer has to be traced from the access entries&#x27; origins, not by suspecting the temp directory a second time.</p>\n<h2>The fix: back up first, overwrite second</h2>\n<p>The fix had two steps, in an order that must not be reversed.</p>\n<ol><li><strong>Back up the access control list first</strong>: save a copy of the repo root&#x27;s access control list before touching the label. A label changed wrongly can be restored; without a backup, the only option is guessing from memory.</li><li><strong>Overwrite the label to Medium</strong>: set the repo root&#x27;s integrity label to Medium, equivalent to the system default, with child objects&#x27; inherited labels updating along with it. After the fix, the full frontend build script ran clean — type checks and the build all passed, 1,089 modules in 33 seconds.</li></ol>\n<p>Medium is not &quot;loosening permissions&quot; but returning to the system default: a Medium-integrity process faces no extra restriction when operating on objects at the same level. A Low label exists to constrain untrusted code; finding it on a repository root is itself a mislabeling.</p>\n<h2>The practice: locate a permissions error by layers</h2>\n<ol><li><strong>The reported location is not the root-cause location</strong>: the build error named the temp directory; the cause sat on the repo root. Ask whose permissions were denied before asking where the error was reported; fixing the literal wording of the error fixes the symptom.</li><li><strong>A stable failure rules out flakes before suspecting the environment</strong>: two identical failures rule out jitter; when a workaround verified in the previous release also fails, the change is not in the workaround but in the environment around it.</li><li><strong>Check permissions level by level, not only at the level the error names</strong>: directory, parent directory, repo root, one level at a time. A label can be inherited or set explicitly at one level; checking only the level the error names will never find an explicit label one level up.</li><li><strong>A command reporting success does not mean it took effect</strong>: the deny-removal command reported success, but it cannot reach mandatory labels. Every fix command has its own scope; a successful run only proves the command finished, not that the target state changed — re-verify the state after changing it.</li><li><strong>Back up before changing a system attribute</strong>: save a copy of the access control list before changing a label. The ability to roll back is not added afterwards; it has to exist before the change is made.</li></ol>\n<h2>One line to close</h2>\n<p>The build was denied on permissions, but the label sat on the repo root: locate a permissions error by layers — where the error is reported is only the symptom; the cause lives on whichever level carries the label.</p>"}, "prev": {"url": "/writing/71-fresh-passes-upgrade-fails", "t": {"zh": "全新安装全过，升级全炸：升级路径是另一条测试线", "en": "Fresh Install Passes, Upgrade Explodes: The Upgrade Path Is a Second Test Line"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

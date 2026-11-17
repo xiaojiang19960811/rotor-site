@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>构建报权限被拒，标签却在仓库根</title>
+    <link>https://www.rotor1996.top/writing/75-low-label-blocked-build</link>
+    <guid>https://www.rotor1996.top/writing/75-low-label-blocked-build</guid>
+    <pubDate>Wed, 18 Nov 2026 00:00:00 GMT</pubDate>
+    <description>发布构建两次稳定失败在 esbuild 写临时文件，报错指向临时目录，逐层核验才发现仓库根带了 Low 完整性标签；标签覆盖为 Medium 后 1089 个模块 33 秒通过。</description>
+  </item>
+  <item>
     <title>写主表不建投影：47 条知识没有版本</title>
     <link>https://www.rotor1996.top/writing/74-knowledge-without-version</link>
     <guid>https://www.rotor1996.top/writing/74-knowledge-without-version</guid>
