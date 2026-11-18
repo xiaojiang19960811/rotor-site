@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>Mock 测通了，不等于真链路通了</title>
+    <link>https://www.rotor1996.top/writing/76-mock-passed-not-proven</link>
+    <guid>https://www.rotor1996.top/writing/76-mock-passed-not-proven</guid>
+    <pubDate>Thu, 19 Nov 2026 00:00:00 GMT</pubDate>
+    <description>Mock 回归只证明页面和已模拟的请求结构；真实支付、签署与跨系统一致性，必须由真实业务链路验收。</description>
+  </item>
+  <item>
     <title>构建报权限被拒，标签却在仓库根</title>
     <link>https://www.rotor1996.top/writing/75-low-label-blocked-build</link>
     <guid>https://www.rotor1996.top/writing/75-low-label-blocked-build</guid>
