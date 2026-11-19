@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>改回排队，不等于重新入队 — rotor</title>
+<meta name="description" content="Worker 恢复只改了库里的状态，没把任务重新放回队列；两边状态分叉后，一条僵尸任务永久堵住了调度。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/77-recover-means-requeue">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "改回排队，不等于重新入队", "description": "Worker 恢复只改了库里的状态，没把任务重新放回队列；两边状态分叉后，一条僵尸任务永久堵住了调度。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-20", "mainEntityOfPage": "https://www.rotor1996.top/writing/77-recover-means-requeue"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>改回排队，不等于重新入队</h1><p>结论先说：恢复一个任务，不是把它的状态改回“排队中”，而是把它重新放回真正会执行的队列。数字人 Agent 的任务状态存在两处：任务记录库里的任务记录，和任务队列里的任务本身。Worker 重启恢复时只改了前者，没动后者：库里写着“排队中”，队列里的任务其实已经失败。更糟的是，调度器只看库里的状态，以为还有研究在跑，于是拒绝启动新的研究。一条谁也不执行的僵尸任务，就这样永久堵住了调度。</p>
+<h2>两处状态，没有一处是真相</h2>
+<p>任务记录库是账本，任务队列是执行。账本说任务在排队，执行侧说任务已失败，两边各说各话，系统里没有第三处能裁决谁对谁错。恢复逻辑只改账本，等于默认账本就是真相，但账本从来不是真相，它只是对执行的一次记录。</p>
+<p>分叉一旦出现，伤害是双向的。数据库为排队中、队列任务已失败时，调度器看到排队中的研究任务，会阻止新的自主研究启动；队列里没有任务可执行，库里的记录又永远等不到终态。系统没有报错，没有崩溃，只是悄悄停摆：从外面看一切正常，里面什么都没发生。</p>
+<p>这个陷阱的迷惑性在于，恢复动作本身看起来做完了。超时任务被找出来了，状态被改回去了，日志里也没有异常。改状态是最容易写的恢复，也是最容易自欺的恢复：它只动了最便宜的那一处。</p>
+<h2>第一次修复：收口了三种分叉，漏了第四种</h2>
+<p>第一次修复把恢复改成了以队列为准绳：恢复函数返回超时任务，逐条核对队列里的真实状态。失败或卡住的任务执行重试，队列里缺失的任务按原幂等键重新入队；重复投递与已被另一 Worker 占用的任务，按幂等结果收口，不会重复执行。恢复不再只在启动时做：每 60 秒巡检先恢复超时任务，再核对全部排队中的任务，避免运行期间出现的超时状态只能等下次重启。</p>
+<p>验证也做足了：任务队列定向测试增至 9 项，全量 54 个测试文件、232 项测试、类型检查与双端构建全部通过。清理之后，新一轮研究进入运行，状态接口返回正常。按当时的证据，这次修复是完整的。</p>
+<p>但它只覆盖了“没跑完”的分叉：队列缺失、队列失败、队列卡住。还有一种分叉不在这三类里：队列里的任务已经跑完了，库里的记录还停在排队中。第一次修复的核对逻辑只问“任务是不是还没跑完”，没问“任务是不是已经跑完了但没回写”。</p>
+<h2>两周后复现：已完成的一边，也会分叉</h2>
+<p>2026 年 9 月 13 日，同一类问题以另一副面孔复现：自主探索从 8 月 30 日之后不再产生新内容。查下来，任务记录库里留有一条排队中的研究任务，但队列里对应的任务实际已经完成。调度器因此永久认为有活动研究，新的研究一直启动不了。</p>
+<p>根因和第一次一模一样，只是方向反过来：启动与周期巡检只处理队列中缺失、失败或卡住的任务，没有收口“队列已完成、库仍排队中”的终态分叉。恢复逻辑的盲区不在代码细节上，而在枚举上：它列出的分叉少了一种。</p>
+<p>第二次修复补上了这一边：对队列已完成的任务，回写库里的完成状态及结果；同时给阻塞判断加上时间上限，超过 15 分钟未更新的排队或运行记录，不再永久阻塞调度。定向测试 29 项通过，旧僵尸任务收口之后，自主研究重新进入运行。</p>
+<p>两次修复合起来才是一次完整的恢复：第一次管“没跑完的要回来”，第二次管“已跑完的要落账”。只做一半，另一半迟早以复现的方式找上门。</p>
+<h2>做法：恢复按执行侧收口</h2>
+<ol><li><strong>恢复以执行侧为准</strong>：改库里的状态之前，先问队列里的任务到底在哪。库是记录，队列是事实；恢复的动作要落在事实上，不是落在记录上。</li><li><strong>收口覆盖全部终态组合</strong>：缺失、失败、卡住、已完成，四种分叉各要有对应的收口动作。漏掉一种，它就会换个方向复现，而复现时看起来像一个新问题。</li><li><strong>阻塞判断加时间上限</strong>：任何“有任务在跑，所以不启动新任务”的判断，都要给旧记录一个过期时间。没有上限的等待，就是永久阻塞；永久阻塞不需要报错，它只需要一条永远等不到终态的记录。</li><li><strong>恢复不能只在启动时做</strong>：运行期间也会出现超时状态，巡检要周期性做同样的收口。只在启动时恢复，等于只在开门时打扫，屋里随时会再乱。</li><li><strong>状态要让人分得清阶段</strong>：管理后台同时展示研究阶段和各阶段已写入的记录编号，区分检索、整理、投影、收尾。否则排障时连任务卡在哪一步都看不出来，恢复也就无从下手。</li></ol>
+<p>状态改回去不叫恢复，让任务重新回到能被执行、能被观测、能被终结的位置，才叫恢复。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "改回排队，不等于重新入队", "en": "Set Back to Queued Is Not Re-Enqueued"}, "body": {"zh": "<p>结论先说：恢复一个任务，不是把它的状态改回“排队中”，而是把它重新放回真正会执行的队列。数字人 Agent 的任务状态存在两处：任务记录库里的任务记录，和任务队列里的任务本身。Worker 重启恢复时只改了前者，没动后者：库里写着“排队中”，队列里的任务其实已经失败。更糟的是，调度器只看库里的状态，以为还有研究在跑，于是拒绝启动新的研究。一条谁也不执行的僵尸任务，就这样永久堵住了调度。</p>\n<h2>两处状态，没有一处是真相</h2>\n<p>任务记录库是账本，任务队列是执行。账本说任务在排队，执行侧说任务已失败，两边各说各话，系统里没有第三处能裁决谁对谁错。恢复逻辑只改账本，等于默认账本就是真相，但账本从来不是真相，它只是对执行的一次记录。</p>\n<p>分叉一旦出现，伤害是双向的。数据库为排队中、队列任务已失败时，调度器看到排队中的研究任务，会阻止新的自主研究启动；队列里没有任务可执行，库里的记录又永远等不到终态。系统没有报错，没有崩溃，只是悄悄停摆：从外面看一切正常，里面什么都没发生。</p>\n<p>这个陷阱的迷惑性在于，恢复动作本身看起来做完了。超时任务被找出来了，状态被改回去了，日志里也没有异常。改状态是最容易写的恢复，也是最容易自欺的恢复：它只动了最便宜的那一处。</p>\n<h2>第一次修复：收口了三种分叉，漏了第四种</h2>\n<p>第一次修复把恢复改成了以队列为准绳：恢复函数返回超时任务，逐条核对队列里的真实状态。失败或卡住的任务执行重试，队列里缺失的任务按原幂等键重新入队；重复投递与已被另一 Worker 占用的任务，按幂等结果收口，不会重复执行。恢复不再只在启动时做：每 60 秒巡检先恢复超时任务，再核对全部排队中的任务，避免运行期间出现的超时状态只能等下次重启。</p>\n<p>验证也做足了：任务队列定向测试增至 9 项，全量 54 个测试文件、232 项测试、类型检查与双端构建全部通过。清理之后，新一轮研究进入运行，状态接口返回正常。按当时的证据，这次修复是完整的。</p>\n<p>但它只覆盖了“没跑完”的分叉：队列缺失、队列失败、队列卡住。还有一种分叉不在这三类里：队列里的任务已经跑完了，库里的记录还停在排队中。第一次修复的核对逻辑只问“任务是不是还没跑完”，没问“任务是不是已经跑完了但没回写”。</p>\n<h2>两周后复现：已完成的一边，也会分叉</h2>\n<p>2026 年 9 月 13 日，同一类问题以另一副面孔复现：自主探索从 8 月 30 日之后不再产生新内容。查下来，任务记录库里留有一条排队中的研究任务，但队列里对应的任务实际已经完成。调度器因此永久认为有活动研究，新的研究一直启动不了。</p>\n<p>根因和第一次一模一样，只是方向反过来：启动与周期巡检只处理队列中缺失、失败或卡住的任务，没有收口“队列已完成、库仍排队中”的终态分叉。恢复逻辑的盲区不在代码细节上，而在枚举上：它列出的分叉少了一种。</p>\n<p>第二次修复补上了这一边：对队列已完成的任务，回写库里的完成状态及结果；同时给阻塞判断加上时间上限，超过 15 分钟未更新的排队或运行记录，不再永久阻塞调度。定向测试 29 项通过，旧僵尸任务收口之后，自主研究重新进入运行。</p>\n<p>两次修复合起来才是一次完整的恢复：第一次管“没跑完的要回来”，第二次管“已跑完的要落账”。只做一半，另一半迟早以复现的方式找上门。</p>\n<h2>做法：恢复按执行侧收口</h2>\n<ol><li><strong>恢复以执行侧为准</strong>：改库里的状态之前，先问队列里的任务到底在哪。库是记录，队列是事实；恢复的动作要落在事实上，不是落在记录上。</li><li><strong>收口覆盖全部终态组合</strong>：缺失、失败、卡住、已完成，四种分叉各要有对应的收口动作。漏掉一种，它就会换个方向复现，而复现时看起来像一个新问题。</li><li><strong>阻塞判断加时间上限</strong>：任何“有任务在跑，所以不启动新任务”的判断，都要给旧记录一个过期时间。没有上限的等待，就是永久阻塞；永久阻塞不需要报错，它只需要一条永远等不到终态的记录。</li><li><strong>恢复不能只在启动时做</strong>：运行期间也会出现超时状态，巡检要周期性做同样的收口。只在启动时恢复，等于只在开门时打扫，屋里随时会再乱。</li><li><strong>状态要让人分得清阶段</strong>：管理后台同时展示研究阶段和各阶段已写入的记录编号，区分检索、整理、投影、收尾。否则排障时连任务卡在哪一步都看不出来，恢复也就无从下手。</li></ol>\n<p>状态改回去不叫恢复，让任务重新回到能被执行、能被观测、能被终结的位置，才叫恢复。</p>", "en": "<p>The conclusion first: recovering a job does not mean setting its status back to &quot;queued&quot; — it means putting it back into a queue that will actually execute it. A digital human Agent&#x27;s job state lives in two places: the job record in the job record store, and the job itself in the task queue. On Worker restart, recovery only touched the former and left the latter alone: the store said &quot;queued&quot; while the job in the queue had already failed. Worse, the scheduler only reads the store, so it believed a research job was still running and refused to start a new one. A zombie job that nobody executes blocked scheduling permanently.</p>\n<h2>Two Places Hold State, Neither Holds the Truth</h2>\n<p>The job record store is a ledger; the task queue is execution. The ledger says the job is queued, the execution side says it has failed, and nothing in the system can adjudicate which one is right. Recovery logic that only rewrites the ledger assumes the ledger is the truth — but the ledger never was the truth, only a record of execution.</p>\n<p>Once the two diverge, the damage runs both ways. With the database showing queued and the queue job failed, the scheduler sees a queued research job and blocks any new autonomous research from starting; there is no job in the queue to execute, and the record in the store never reaches a terminal state. Nothing errors, nothing crashes — the system just quietly stalls: normal from the outside, nothing happening inside.</p>\n<p>The trap is deceptive because the recovery itself looks done. The stale jobs were found, their status was set back, and the logs show no errors. Rewriting status is the cheapest recovery to write, and the easiest to fool yourself with: it only moves the cheapest of the two places.</p>\n<h2>The First Fix: Three Divergences Reconciled, a Fourth Missed</h2>\n<p>The first fix changed recovery to take the queue as the source of truth: the recovery function returns stale jobs and checks each one against its real state in the queue. Failed or stuck jobs are retried; jobs missing from the queue are re-added under their original idempotency key; duplicate deliveries and jobs already claimed by another Worker are settled by their idempotency result, never executed twice. Recovery also stopped being a startup-only act: a check every 60 seconds first recovers stale jobs, then reconciles every queued job, so stale states that appear mid-run no longer wait for the next restart.</p>\n<p>Verification was thorough: targeted queue tests grew to 9 cases, and the full suite — 54 test files, 232 tests, type checks, and builds on both ends — passed. After cleanup, a new research round entered running and the status endpoint returned healthy. By the evidence available then, the fix was complete.</p>\n<p>But it only covered the &quot;not finished&quot; divergences: queue-missing, queue-failed, queue-stuck. One more divergence sat outside those three: the job in the queue had already finished, while the record in the store still said queued. The first fix&#x27;s reconciliation logic only asked &quot;is the job unfinished&quot; — it never asked &quot;is the job finished but never written back.&quot;</p>\n<h2>Two Weeks Later, It Came Back: The Finished Side Diverges Too</h2>\n<p>On September 13, 2026, the same class of problem returned wearing a different face: autonomous exploration had produced nothing new since August 30. Investigation found a research job still marked queued in the job record store, while the corresponding job in the queue had actually completed. The scheduler therefore believed forever that a research job was active, and no new research ever started.</p>\n<p>The root cause was identical to the first time, only in the opposite direction: startup and periodic checks handled jobs that were missing, failed, or stuck in the queue, but never reconciled the terminal divergence of &quot;queue completed, store still queued.&quot; The blind spot in the recovery logic was not in a code detail but in the enumeration: one divergence was missing from the list.</p>\n<p>The second fix closed that side: for jobs completed in the queue, it writes the completed state and result back into the store; and it puts a time limit on the blocking check, so queued or running records untouched for more than 15 minutes no longer block scheduling forever. Twenty-nine targeted tests passed, and once the old zombie jobs were reconciled, autonomous research entered running again.</p>\n<p>Only the two fixes together make one complete recovery: the first brings back &quot;the unfinished,&quot; the second settles &quot;the finished.&quot; Do half, and the other half will come back as a recurrence sooner or later.</p>\n<h2>Practice: Reconcile Recovery Against the Execution Side</h2>\n<ol><li><strong>Let the execution side decide</strong>: before rewriting the store&#x27;s status, ask where the job actually is in the queue. The store is a record; the queue is the fact. Recovery must act on the fact, not on the record.</li><li><strong>Cover every terminal combination</strong>: missing, failed, stuck, completed — each divergence needs its own reconciliation action. Miss one, and it will recur from the other direction, looking like a brand-new problem.</li><li><strong>Put a time limit on blocking checks</strong>: any &quot;a job is running, so don&#x27;t start a new one&quot; rule needs an expiry for stale records. Waiting without a limit is blocking forever; permanent blocking needs no error, only one record that never reaches a terminal state.</li><li><strong>Don&#x27;t recover only at startup</strong>: stale states appear mid-run too, so the periodic check must do the same reconciliation. Recovering only at startup is cleaning only when the door opens — the room gets messy again at any time.</li><li><strong>Make state readable by stage</strong>: the admin console should show the research stage alongside the record IDs written at each stage, distinguishing retrieval, organization, projection, and wrap-up. Otherwise, when troubleshooting, you cannot even tell which step a job is stuck at — and recovery has nowhere to start.</li></ol>\n<p>Setting a status back is not recovery. Recovery means putting the job back where it can be executed, observed, and brought to an end.</p>"}, "prev": {"url": "/writing/74-knowledge-without-version", "t": {"zh": "写主表不建投影：47 条知识没有版本", "en": "Wrote the Row, Skipped the Projection: 47 Knowledge Entries Without a Version"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

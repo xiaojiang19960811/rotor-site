@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>改回排队，不等于重新入队</title>
+    <link>https://www.rotor1996.top/writing/77-recover-means-requeue</link>
+    <guid>https://www.rotor1996.top/writing/77-recover-means-requeue</guid>
+    <pubDate>Fri, 20 Nov 2026 00:00:00 GMT</pubDate>
+    <description>Worker 恢复只改了库里的状态，没把任务重新放回队列；两边状态分叉后，一条僵尸任务永久堵住了调度。</description>
+  </item>
+  <item>
     <title>Mock 测通了，不等于真链路通了</title>
     <link>https://www.rotor1996.top/writing/76-mock-passed-not-proven</link>
     <guid>https://www.rotor1996.top/writing/76-mock-passed-not-proven</guid>
