@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>左侧显示 50，实际有 106：别把当页条数当总数</title>
+    <link>https://www.rotor1996.top/writing/78-page-count-is-not-total</link>
+    <guid>https://www.rotor1996.top/writing/78-page-count-is-not-total</guid>
+    <pubDate>Sat, 21 Nov 2026 00:00:00 GMT</pubDate>
+    <description>左侧把第一页返回的 50 条当成了总数，实际有 106 条；总数只认服务端 total，不认本地数组长度。</description>
+  </item>
+  <item>
     <title>改回排队，不等于重新入队</title>
     <link>https://www.rotor1996.top/writing/77-recover-means-requeue</link>
     <guid>https://www.rotor1996.top/writing/77-recover-means-requeue</guid>
