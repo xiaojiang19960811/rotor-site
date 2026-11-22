@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>菜单权限给了，接口还是 403 — rotor</title>
+<meta name="description" content="后台加了新路由，权限映射表没跟上：有权限的账号被 403 拦住，没挂权限中间件的支付接口却敞着；路由与映射表是两份事实来源，新增路由必须同步登记，未知接口默认拒绝。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/80-rbac-mapping-drift-403">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "菜单权限给了，接口还是 403", "description": "后台加了新路由，权限映射表没跟上：有权限的账号被 403 拦住，没挂权限中间件的支付接口却敞着；路由与映射表是两份事实来源，新增路由必须同步登记，未知接口默认拒绝。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-23", "mainEntityOfPage": "https://www.rotor1996.top/writing/80-rbac-mapping-drift-403"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">工程工具</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>菜单权限给了，接口还是 403</h1><p>结论先说：后台加了新路由，权限映射表没跟上，同一个缺口会同时朝着两个方向出错：有权限的账号被 403 拦在门外，没挂权限检查的接口却敞着。根因不在权限设计，而在路由注册与权限映射是两份事实来源，改了一边没改另一边。</p>
+<h2>同一个缺口，两个方向</h2>
+<p>管理员在角色管理里给普通账号分配了后台菜单权限，账号进对应功能时，部分子接口仍然返回 403，提示需要管理员菜单权限。权限给了，界面进了，接口不认。</p>
+<p>另一边是反方向的缺口：支付管理接口只挂了管理员认证和审计，没有挂权限中间件。也就是说，一条敏感接口的放行条件是“登录的是管理员”，而不是“这个账号有没有对应权限”。菜单上看不见，不等于接口调不到。</p>
+<h2>根因：映射表漂移了</h2>
+<p>权限中间件的工作方式，是按请求路径推导它属于哪个菜单，再查账号有没有这个菜单的权限。路径在映射表里找不到时，只有一条路能走通：账号本身是内置管理员。普通账号哪怕绑了包含目标菜单的角色，也会被拒绝。</p>
+<p>漂移是这样攒出来的：新子路由不断加进来，有的本该归入账号管理，有的本该归入设置，有的和旧映射里的名字对不上。路由注册表长了，映射表没同步长。两份事实来源一旦分叉，系统就进入一半新、一半旧的状态：新路由要么找不到权限归属，要么根本没人想起要给它挂权限检查。</p>
+<h2>菜单隐藏不是权限</h2>
+<p>这次复盘里最值得单独拎出来的一点，是前端菜单隐藏和接口权限之间的区别。菜单上不显示某个功能，只是界面没给入口；接口有没有权限检查，是另一回事。把“菜单看不见”等同于“接口调不到”，是把体验当成了边界。</p>
+<p>支付接口就是这句话的反例：它在菜单体系里有位置，认证和审计也都挂着，唯独缺了权限中间件。单独看每一步都没错，合起来就是一条没有权限归属的敏感接口。权限的真相不在菜单上，在映射表里。</p>
+<h2>修复与验证</h2>
+<p>修复分三步：把漂移的子路由分别归入已有的菜单权限；给支付管理路由挂上权限中间件，统一继承订单权限；审计日志继续保持内置管理员专属，不新增可分配的菜单键。未知接口继续默认拒绝，是否新增可分配权限键，要单独确认，不能顺手加上。</p>
+<p>回归测试覆盖了两个方向：有对应权限的普通账号能访问子接口，不相关角色返回 403；有订单权限的账号能通过支付接口的权限检查；未知路径与审计日志不向自定义角色开放。</p>
+<p>留了一个缺口要如实记下：当时没有用真实受限账号在浏览器里走一遍页面级验证。测试通过不等于真人走通过，这是两份证据，缺的那份要补。</p>
+<h2>防复发：让映射表跟着路由走</h2>
+<p>三条措施，都是为了让两份事实来源不再分叉：</p>
+<ol><li><strong>新增或改名后台顶层路由时，同步补充映射断言</strong>：路由表变了，映射表的测试也要跟着变，缺映射就让测试先失败。</li><li><strong>独立注册的后台路由，必须同时挂三件套</strong>：管理员认证、审计、权限检查，缺一不可，不能只依赖前端菜单隐藏。</li><li><strong>无法归入现有菜单的敏感接口，保持默认拒绝</strong>：先拦住，再单独确认要不要新增可分配权限键。</li></ol>
+<p>一句话收束：权限映射表是跟着路由走的活表，不是写一次就能忘的配置；它停在哪天，403 和越权就从哪天开始各来一次。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "菜单权限给了，接口还是 403", "en": "The Menu Granted Access. The API Still Said 403."}, "body": {"zh": "<p>结论先说：后台加了新路由，权限映射表没跟上，同一个缺口会同时朝着两个方向出错：有权限的账号被 403 拦在门外，没挂权限检查的接口却敞着。根因不在权限设计，而在路由注册与权限映射是两份事实来源，改了一边没改另一边。</p>\n<h2>同一个缺口，两个方向</h2>\n<p>管理员在角色管理里给普通账号分配了后台菜单权限，账号进对应功能时，部分子接口仍然返回 403，提示需要管理员菜单权限。权限给了，界面进了，接口不认。</p>\n<p>另一边是反方向的缺口：支付管理接口只挂了管理员认证和审计，没有挂权限中间件。也就是说，一条敏感接口的放行条件是“登录的是管理员”，而不是“这个账号有没有对应权限”。菜单上看不见，不等于接口调不到。</p>\n<h2>根因：映射表漂移了</h2>\n<p>权限中间件的工作方式，是按请求路径推导它属于哪个菜单，再查账号有没有这个菜单的权限。路径在映射表里找不到时，只有一条路能走通：账号本身是内置管理员。普通账号哪怕绑了包含目标菜单的角色，也会被拒绝。</p>\n<p>漂移是这样攒出来的：新子路由不断加进来，有的本该归入账号管理，有的本该归入设置，有的和旧映射里的名字对不上。路由注册表长了，映射表没同步长。两份事实来源一旦分叉，系统就进入一半新、一半旧的状态：新路由要么找不到权限归属，要么根本没人想起要给它挂权限检查。</p>\n<h2>菜单隐藏不是权限</h2>\n<p>这次复盘里最值得单独拎出来的一点，是前端菜单隐藏和接口权限之间的区别。菜单上不显示某个功能，只是界面没给入口；接口有没有权限检查，是另一回事。把“菜单看不见”等同于“接口调不到”，是把体验当成了边界。</p>\n<p>支付接口就是这句话的反例：它在菜单体系里有位置，认证和审计也都挂着，唯独缺了权限中间件。单独看每一步都没错，合起来就是一条没有权限归属的敏感接口。权限的真相不在菜单上，在映射表里。</p>\n<h2>修复与验证</h2>\n<p>修复分三步：把漂移的子路由分别归入已有的菜单权限；给支付管理路由挂上权限中间件，统一继承订单权限；审计日志继续保持内置管理员专属，不新增可分配的菜单键。未知接口继续默认拒绝，是否新增可分配权限键，要单独确认，不能顺手加上。</p>\n<p>回归测试覆盖了两个方向：有对应权限的普通账号能访问子接口，不相关角色返回 403；有订单权限的账号能通过支付接口的权限检查；未知路径与审计日志不向自定义角色开放。</p>\n<p>留了一个缺口要如实记下：当时没有用真实受限账号在浏览器里走一遍页面级验证。测试通过不等于真人走通过，这是两份证据，缺的那份要补。</p>\n<h2>防复发：让映射表跟着路由走</h2>\n<p>三条措施，都是为了让两份事实来源不再分叉：</p>\n<ol><li><strong>新增或改名后台顶层路由时，同步补充映射断言</strong>：路由表变了，映射表的测试也要跟着变，缺映射就让测试先失败。</li><li><strong>独立注册的后台路由，必须同时挂三件套</strong>：管理员认证、审计、权限检查，缺一不可，不能只依赖前端菜单隐藏。</li><li><strong>无法归入现有菜单的敏感接口，保持默认拒绝</strong>：先拦住，再单独确认要不要新增可分配权限键。</li></ol>\n<p>一句话收束：权限映射表是跟着路由走的活表，不是写一次就能忘的配置；它停在哪天，403 和越权就从哪天开始各来一次。</p>", "en": "<p>Conclusion first: new admin routes shipped while the permission map stood still, and the same gap failed in both directions at once — authorized accounts were stopped by 403, while an endpoint with no permission check stood open. The root cause was not the permission design. Route registration and the permission map are two sources of truth, and one changed without the other.</p>\n<h2>One gap, two directions</h2>\n<p>An admin assigned a backend menu role to an ordinary account. The account opened the feature, but some of its sub-endpoints still returned 403, demanding an admin menu permission. The permission was granted, the page loaded, and the API refused.</p>\n<p>The gap ran the other way too: the payment admin endpoints carried admin authentication and auditing, but no permission middleware. In other words, the condition for passing a sensitive endpoint was &quot;logged in as an admin,&quot; not &quot;this account holds the matching permission.&quot; Invisible in the menu is not the same as unreachable through the API.</p>\n<h2>Root cause: the map drifted</h2>\n<p>The permission middleware works by deriving a menu key from the request path, then checking whether the account holds that menu&#x27;s permission. When a path has no entry in the map, only one way through remains: the account must itself be a built-in admin. An ordinary account, even one bound to a role containing the target menu, is refused.</p>\n<p>The drift accumulated like this: new sub-routes kept arriving — some belonged under account management, some under settings, some named differently from the old map entries. The route registry grew; the map did not grow with it. Once the two sources of truth diverge, the system sits half new and half old: new routes either find no permission home, or nobody remembers they need a permission check at all.</p>\n<h2>Hiding a menu item is not a permission</h2>\n<p>The point worth pulling out on its own is the difference between hiding a menu item and enforcing a permission on the API. A feature absent from the menu simply has no entrance in the interface; whether the API checks permission is a separate question. Treating &quot;not visible in the menu&quot; as &quot;not callable&quot; mistakes user experience for a boundary.</p>\n<p>The payment endpoints are the counterexample: they had a place in the menu system, authentication and auditing were attached, and only the permission middleware was missing. Each step looked right on its own; together they made a sensitive endpoint with no permission home. The truth about permissions lives in the map, not in the menu.</p>\n<h2>Fix and verification</h2>\n<p>The fix came in three steps: the drifted sub-routes were assigned to existing menu permissions; the payment admin routes got the permission middleware, inheriting the orders permission; audit logs stayed exclusive to built-in admins, with no new assignable menu key. Unknown endpoints keep failing closed, and whether to add a new assignable permission key is a separate decision, never a side effect.</p>\n<p>Regression tests covered both directions: an ordinary account with the matching permission can reach the sub-endpoints, an unrelated role gets 403; an account with the orders permission passes the payment RBAC check; unknown paths and audit logs stay closed to custom roles.</p>\n<p>One gap remains, and it should be recorded honestly: no restricted account was ever walked through the pages in a real browser. Tests passing is not the same as a person walking through it — two pieces of evidence, and the missing one still needs doing.</p>\n<h2>Prevention: make the map follow the routes</h2>\n<p>Three measures, all aimed at keeping the two sources of truth from diverging again:</p>\n<ol><li><strong>When an admin top-level route is added or renamed, add the mapping assertion with it</strong>: if the route table changes, the map&#x27;s tests change too, and a missing mapping fails the test first.</li><li><strong>An independently registered admin route must carry all three</strong>: admin authentication, auditing, and the permission check. None may be missing, and the frontend menu hiding counts for none of them.</li><li><strong>A sensitive endpoint that fits no existing menu stays denied by default</strong>: block it first, then decide separately whether a new assignable permission key is warranted.</li></ol>\n<p>One line to close: the permission map is a living table that follows the routes, not a configuration written once and forgotten; from the day it stops moving, 403s and over-permission arrive one after the other.</p>"}, "prev": {"url": "/writing/78-page-count-is-not-total", "t": {"zh": "左侧显示 50，实际有 106：别把当页条数当总数", "en": "50 Shown, 106 Real: Page Count Is Not the Total"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"工程工具", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Engineering", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
