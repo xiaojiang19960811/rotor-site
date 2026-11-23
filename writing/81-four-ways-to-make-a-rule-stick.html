@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>规则想常驻，有四种办法 — rotor</title>
+<meta name="description" content="常驻指令、Skill、记忆与定时是四种固化机制，各有边界：全局规则放指令文件，分步流程放 Skill，跨会话事实放记忆；放错位置的代价，是每次请求都付预算、同一条规则在多处漂移。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/81-four-ways-to-make-a-rule-stick">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "规则想常驻，有四种办法", "description": "常驻指令、Skill、记忆与定时是四种固化机制，各有边界：全局规则放指令文件，分步流程放 Skill，跨会话事实放记忆；放错位置的代价，是每次请求都付预算、同一条规则在多处漂移。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-24", "mainEntityOfPage": "https://www.rotor1996.top/writing/81-four-ways-to-make-a-rule-stick"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">Agent 与数字人</span><span class="col-tag">知识花园</span></div>
+  <div class="reader-body" id="reader-body"><h1>规则想常驻，有四种办法</h1><p>结论先说：想让一条规则&quot;以后每次都生效&quot;，有四种办法：常驻指令文件、Skill、跨会话记忆、定时与持久目标。它们不是同一机制的四种写法，而是四个不同的落点：全局规则、某类任务的长流程、跨会话的事实、到点自动做的事，各有各的位置。放错位置的代价很具体：长流程塞进常驻指令，每次请求都付提示词预算；同一份内容在两处维护，规则迟早漂移；项目专属约定写进全局文件，会污染其他项目的会话。</p>
+<h2>四种办法，各管一摊</h2>
+<table><thead><tr><th>需求</th><th>机制</th><th>落点</th></tr></thead><tbody><tr><td>每次都遵守的规则</td><td>常驻指令文件</td><td>工作区指令文件</td></tr><tr><td>某类任务的长流程、清单、脚本</td><td>Skill</td><td>技能文件</td></tr><tr><td>跨会话的事实、偏好、决定</td><td>记忆</td><td>按作用域分的记忆文件</td></tr><tr><td>到点自动做、需要跨轮续跑</td><td>定时提醒、持久目标</td><td>会话内定时项与目标</td></tr></tbody></table>
+<p>分工的第一条线是时间：常驻指令与 Skill 管&quot;每次&quot;，记忆管&quot;跨会话&quot;，定时与目标管&quot;到点&quot;与&quot;跨轮&quot;。第二条线是粒度：指令文件管规则，Skill 管流程，记忆管事实。两条线交叉，才是每种机制的落点。</p>
+<h2>常驻指令：每次都带，但有预算</h2>
+<p>常驻指令文件分两层：用户全局与项目级。项目级按目录从项目根叠加到会话工作目录，更具体的文件优先级更高；内容一致的重复候选只渲染一次。全局文件只写跨项目通用的部分，项目专属约定写进项目级文件，这是第一条防污染的线。</p>
+<p>常驻指令有三条边界值得记住。第一，它有总字节预算：超预算时先整体省略较宽泛的文件，再截断最具体的文件。长流程写进来，等于每次请求都为它付预算，且无法按任务选择。第二，它没有监听器：改了文件不会立刻生效，要等一次成功的文件读写触达更深的目录，下一次请求才带上新文件；在命令行里切换目录不触发发现。第三，它不覆盖用户当次的直接要求：冲突时以用户当前指令为准，常驻指令的优先级低于当次指令。</p>
+<h2>Skill：按需加载，描述就是触发器</h2>
+<p>Skill 的形态很克制：技能根目录顶层的一个技能文件，只发现一层，不支持嵌套。文件头必须写清名称与描述，字段非法会让整个技能被跳过。技能根按优先级排列：项目级在前，用户全局在后，配置还能再加。</p>
+<p>调用有两条路：模型按精确名称加载；用户在输入框里用斜杠加名称直接召唤。还有一条刻意的窄门：标记为模型不可调用的技能不进目录、模型看不到，只能由用户手动召唤，这是最接近&quot;自定义提示词&quot;的用法，适合只想由人触发、不想模型自作主张的流程。</p>
+<p>Skill 的目录被监听，新增、改名、删除无需重启；只改正文时，加载的是文件当前内容。判断原则里最重要的一条与此有关：Skill 描述要有明确的触发边界，否则模型会在不相关的任务上加载它。描述写得越像&quot;什么时候用&quot;，误触发越少。</p>
+<h2>记忆与定时：事实与时间的固化</h2>
+<p>记忆按作用域分：团队与各成员各有自己的记忆文件与主题文件。跨会话的事实、偏好、决定放这里，而不是写进指令文件。指令文件管&quot;怎么做&quot;，记忆管&quot;是什么&quot;，前者是规则，后者是事实。</p>
+<p>定时与目标是&quot;常态化&quot;在时间维度上的实现：定时项支持间隔、每日、每周与定时表达式，到点把提示词投回该会话；持久目标用于跨轮续跑的长期任务，与一次性提示词不同。两者都不解决&quot;每次都遵守&quot;的问题，只解决&quot;到点记得做&quot;与&quot;长期别断线&quot;。</p>
+<h2>判断原则：三条线，别互相顶替</h2>
+<p>全局规则、验收要求、禁止事项放指令文件；某类任务的分步流程、清单、脚本放 Skill；跨会话事实放记忆。三者不要互相顶替。</p>
+<p>同一份内容只维护一个主位置：Skill 正文重复长期规则，会让规则在多处漂移。项目级文件优先于用户全局文件，用户全局文件只写跨项目通用的部分。Skill 描述要有明确触发边界，否则模型会在不相关任务上加载它。指令文件不覆盖用户当次直接要求，冲突时以用户当前指令为准。</p>
+<p>两个正例说明分工怎么落地：把&quot;长期沉淀加汇报格式&quot;写进用户全局指令文件，此后每个会话自动带上；把&quot;整理知识库&quot;的整套流程做成 Skill，按名称召唤。两者配套，不互相复制内容。文档产出统一走对应的 Skill，而不是在指令文件里描述每一步。</p>
+<h2>两个反例</h2>
+<p>反例一：把整套长流程写进常驻指令文件。代价是每次请求都付提示词预算，且无法按任务选择。流程本该按需加载，却被提成了每次必付的固定成本。</p>
+<p>反例二：把项目专属约定写进用户全局指令文件。约定跟着全局文件走进每一个会话，影响其他项目。全局文件只该装跨项目通用的部分。</p>
+<p>一句话收束：常驻之前先问一句：这条内容是每次都要的规则、某类任务的流程、跨会话的事实，还是到点要做的事：答案不同，落点就不同；落点错了，付出的不是一次性的代价，是每次请求、每个会话都在付的税。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "规则想常驻，有四种办法", "en": "Four Ways to Make a Rule Stick"}, "body": {"zh": "<p>结论先说：想让一条规则&quot;以后每次都生效&quot;，有四种办法：常驻指令文件、Skill、跨会话记忆、定时与持久目标。它们不是同一机制的四种写法，而是四个不同的落点：全局规则、某类任务的长流程、跨会话的事实、到点自动做的事，各有各的位置。放错位置的代价很具体：长流程塞进常驻指令，每次请求都付提示词预算；同一份内容在两处维护，规则迟早漂移；项目专属约定写进全局文件，会污染其他项目的会话。</p>\n<h2>四种办法，各管一摊</h2>\n<table><thead><tr><th>需求</th><th>机制</th><th>落点</th></tr></thead><tbody><tr><td>每次都遵守的规则</td><td>常驻指令文件</td><td>工作区指令文件</td></tr><tr><td>某类任务的长流程、清单、脚本</td><td>Skill</td><td>技能文件</td></tr><tr><td>跨会话的事实、偏好、决定</td><td>记忆</td><td>按作用域分的记忆文件</td></tr><tr><td>到点自动做、需要跨轮续跑</td><td>定时提醒、持久目标</td><td>会话内定时项与目标</td></tr></tbody></table>\n<p>分工的第一条线是时间：常驻指令与 Skill 管&quot;每次&quot;，记忆管&quot;跨会话&quot;，定时与目标管&quot;到点&quot;与&quot;跨轮&quot;。第二条线是粒度：指令文件管规则，Skill 管流程，记忆管事实。两条线交叉，才是每种机制的落点。</p>\n<h2>常驻指令：每次都带，但有预算</h2>\n<p>常驻指令文件分两层：用户全局与项目级。项目级按目录从项目根叠加到会话工作目录，更具体的文件优先级更高；内容一致的重复候选只渲染一次。全局文件只写跨项目通用的部分，项目专属约定写进项目级文件，这是第一条防污染的线。</p>\n<p>常驻指令有三条边界值得记住。第一，它有总字节预算：超预算时先整体省略较宽泛的文件，再截断最具体的文件。长流程写进来，等于每次请求都为它付预算，且无法按任务选择。第二，它没有监听器：改了文件不会立刻生效，要等一次成功的文件读写触达更深的目录，下一次请求才带上新文件；在命令行里切换目录不触发发现。第三，它不覆盖用户当次的直接要求：冲突时以用户当前指令为准，常驻指令的优先级低于当次指令。</p>\n<h2>Skill：按需加载，描述就是触发器</h2>\n<p>Skill 的形态很克制：技能根目录顶层的一个技能文件，只发现一层，不支持嵌套。文件头必须写清名称与描述，字段非法会让整个技能被跳过。技能根按优先级排列：项目级在前，用户全局在后，配置还能再加。</p>\n<p>调用有两条路：模型按精确名称加载；用户在输入框里用斜杠加名称直接召唤。还有一条刻意的窄门：标记为模型不可调用的技能不进目录、模型看不到，只能由用户手动召唤，这是最接近&quot;自定义提示词&quot;的用法，适合只想由人触发、不想模型自作主张的流程。</p>\n<p>Skill 的目录被监听，新增、改名、删除无需重启；只改正文时，加载的是文件当前内容。判断原则里最重要的一条与此有关：Skill 描述要有明确的触发边界，否则模型会在不相关的任务上加载它。描述写得越像&quot;什么时候用&quot;，误触发越少。</p>\n<h2>记忆与定时：事实与时间的固化</h2>\n<p>记忆按作用域分：团队与各成员各有自己的记忆文件与主题文件。跨会话的事实、偏好、决定放这里，而不是写进指令文件。指令文件管&quot;怎么做&quot;，记忆管&quot;是什么&quot;，前者是规则，后者是事实。</p>\n<p>定时与目标是&quot;常态化&quot;在时间维度上的实现：定时项支持间隔、每日、每周与定时表达式，到点把提示词投回该会话；持久目标用于跨轮续跑的长期任务，与一次性提示词不同。两者都不解决&quot;每次都遵守&quot;的问题，只解决&quot;到点记得做&quot;与&quot;长期别断线&quot;。</p>\n<h2>判断原则：三条线，别互相顶替</h2>\n<p>全局规则、验收要求、禁止事项放指令文件；某类任务的分步流程、清单、脚本放 Skill；跨会话事实放记忆。三者不要互相顶替。</p>\n<p>同一份内容只维护一个主位置：Skill 正文重复长期规则，会让规则在多处漂移。项目级文件优先于用户全局文件，用户全局文件只写跨项目通用的部分。Skill 描述要有明确触发边界，否则模型会在不相关任务上加载它。指令文件不覆盖用户当次直接要求，冲突时以用户当前指令为准。</p>\n<p>两个正例说明分工怎么落地：把&quot;长期沉淀加汇报格式&quot;写进用户全局指令文件，此后每个会话自动带上；把&quot;整理知识库&quot;的整套流程做成 Skill，按名称召唤。两者配套，不互相复制内容。文档产出统一走对应的 Skill，而不是在指令文件里描述每一步。</p>\n<h2>两个反例</h2>\n<p>反例一：把整套长流程写进常驻指令文件。代价是每次请求都付提示词预算，且无法按任务选择。流程本该按需加载，却被提成了每次必付的固定成本。</p>\n<p>反例二：把项目专属约定写进用户全局指令文件。约定跟着全局文件走进每一个会话，影响其他项目。全局文件只该装跨项目通用的部分。</p>\n<p>一句话收束：常驻之前先问一句：这条内容是每次都要的规则、某类任务的流程、跨会话的事实，还是到点要做的事：答案不同，落点就不同；落点错了，付出的不是一次性的代价，是每次请求、每个会话都在付的税。</p>", "en": "<p>Conclusion first: to make a rule apply &quot;every time from now on&quot;, there are four mechanisms: standing instruction files, Skills, cross-session memory, and schedules with persistent goals. They are not four spellings of the same mechanism, but four different places to put things: global rules, long flows for one kind of task, facts that span sessions, and work that must happen on schedule each have their own home. Putting one in the wrong place has concrete costs: a long flow stuffed into standing instructions taxes every request with prompt budget; the same content maintained in two places will drift; project-specific conventions written into the global file will pollute other projects&#x27; sessions.</p>\n<h2>Four mechanisms, four jobs</h2>\n<table><thead><tr><th>Need</th><th>Mechanism</th><th>Where it lives</th></tr></thead><tbody><tr><td>A rule to follow every time</td><td>Standing instruction file</td><td>Workspace instruction files</td></tr><tr><td>A long flow, checklist, or script for one kind of task</td><td>Skill</td><td>A skill file</td></tr><tr><td>Facts, preferences, and decisions that span sessions</td><td>Memory</td><td>Memory files split by scope</td></tr><tr><td>Work that runs on schedule or must continue across rounds</td><td>Scheduled reminders, persistent goals</td><td>In-session schedule items and goals</td></tr></tbody></table>\n<p>The first dividing line is time: instruction files and Skills cover &quot;every time&quot;, memory covers &quot;across sessions&quot;, schedules and goals cover &quot;on schedule&quot; and &quot;across rounds&quot;. The second line is granularity: instruction files hold rules, Skills hold flows, memory holds facts. The two lines crossed give each mechanism its home.</p>\n<h2>Standing instructions: carried every time, but on a budget</h2>\n<p>Standing instruction files come in two layers: user-global and project-level. Project-level files stack from the project root down to the session working directory, and the more specific file wins; identical duplicates are rendered only once. The global file holds only content shared across projects, while project-specific conventions go in project-level files — that is the first line against pollution.</p>\n<p>Standing instructions have three boundaries worth remembering. First, they have a total byte budget: over budget, the broader files are dropped whole first, then the most specific file is truncated. A long flow written in here means paying for it on every request, with no way to select by task. Second, there is no watcher: editing a file does not take effect immediately. Only after a successful first-party file read or write reaches a deeper directory does the next request pick up the new file; changing directory in a shell triggers no discovery. Third, they do not override the user&#x27;s direct instruction of the moment: on conflict, the current instruction wins, and standing instructions rank below it.</p>\n<h2>Skills: loaded on demand, and the description is the trigger</h2>\n<p>A Skill is deliberately restrained in shape: one skill file at the top level of a skill root, discovered one level deep only, with no nesting. Its header must state a name and a description; an invalid field skips the whole skill. Skill roots are ordered by priority: project-level first, user-global after, with more roots addable by configuration.</p>\n<p>There are two ways to invoke one: the model loads it by exact name; the user summons it in the input box with a slash plus the name. There is also a deliberately narrow door: a skill marked model-uninvocable never enters the catalog and the model cannot see it — only the user can summon it by hand. That is the closest thing to a &quot;custom prompt&quot;, suited to flows that should be triggered by a person, not volunteered by the model.</p>\n<p>Skill directories are watched: adding, renaming, or deleting needs no restart, and editing the body alone loads the file&#x27;s current content. The most important rule follows from this: a Skill&#x27;s description needs a clear trigger boundary, or the model will load it for unrelated tasks. The more the description reads like &quot;when to use this&quot;, the fewer false triggers.</p>\n<h2>Memory and schedules: fixing facts and time in place</h2>\n<p>Memory is split by scope: the team and each member have their own memory files and topic files. Cross-session facts, preferences, and decisions go here, not into instruction files. Instruction files say &quot;how to do it&quot;; memory says &quot;what is true&quot; — the former holds rules, the latter holds facts.</p>\n<p>Schedules and goals are &quot;making things stick&quot; in the time dimension: a schedule item supports intervals, daily, weekly, and cron expressions, and on schedule it drops its prompt back into its session; a persistent goal serves long tasks that continue across rounds, unlike a one-off prompt. Neither solves &quot;follow this every time&quot; — they solve &quot;remember to do it on time&quot; and &quot;don&#x27;t let a long task drop&quot;.</p>\n<h2>The rule of thumb: three lines, don&#x27;t let them stand in for each other</h2>\n<p>Global rules, acceptance requirements, and prohibitions go in instruction files; step-by-step flows, checklists, and scripts for one kind of task go in Skills; cross-session facts go in memory. The three must not stand in for each other.</p>\n<p>Maintain each piece of content in exactly one canonical place: a Skill body repeating a long-term rule lets the rule drift across copies. Project-level files take priority over user-global files, and the user-global file holds only content shared across projects. A Skill description needs a clear trigger boundary, or the model will load it for unrelated tasks. Instruction files do not override the user&#x27;s direct instruction of the moment; on conflict, the current instruction wins.</p>\n<p>Two positive examples show the split in practice: writing &quot;long-term knowledge capture plus the reporting format&quot; into the user-global instruction file means every session after that carries it; turning the whole &quot;organize the knowledge base&quot; flow into a Skill means summoning it by name. The two work as a pair, without copying each other&#x27;s content. Document output goes through the matching Skill, not through step-by-step description inside the instruction file.</p>\n<h2>Two counterexamples</h2>\n<p>Counterexample one: writing a whole long flow into the standing instruction file. The cost is prompt budget on every request, with no way to select by task. A flow that should load on demand has been promoted into a fixed cost paid every time.</p>\n<p>Counterexample two: writing project-specific conventions into the user-global instruction file. The conventions ride the global file into every session and affect other projects. The global file should hold only content shared across projects.</p>\n<p>One line to close: before making something stick, ask one question — is this a rule needed every time, a flow for one kind of task, a fact that spans sessions, or work that must happen on schedule? The answer differs, so the home differs; and a wrong home is not a one-time cost, it is a tax paid on every request and every session.</p>"}, "prev": {"url": "/writing/79-generated-is-not-approved", "t": {"zh": "「已生成」不等于「已审批」", "en": "\"Generated\" Is Not \"Approved\""}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"Agent 与数字人", column:"知识花园", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"Agents & Digital Humans", column:"Garden", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

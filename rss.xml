@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>规则想常驻，有四种办法</title>
+    <link>https://www.rotor1996.top/writing/81-four-ways-to-make-a-rule-stick</link>
+    <guid>https://www.rotor1996.top/writing/81-four-ways-to-make-a-rule-stick</guid>
+    <pubDate>Tue, 24 Nov 2026 00:00:00 GMT</pubDate>
+    <description>常驻指令、Skill、记忆与定时是四种固化机制，各有边界：全局规则放指令文件，分步流程放 Skill，跨会话事实放记忆；放错位置的代价，是每次请求都付预算、同一条规则在多处漂移。</description>
+  </item>
+  <item>
     <title>菜单权限给了，接口还是 403</title>
     <link>https://www.rotor1996.top/writing/80-rbac-mapping-drift-403</link>
     <guid>https://www.rotor1996.top/writing/80-rbac-mapping-drift-403</guid>
