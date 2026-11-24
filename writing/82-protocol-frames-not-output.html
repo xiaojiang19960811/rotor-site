@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>协议帧写出去了，不等于输出开始了 — rotor</title>
+<meta name="description" content="上游说过载，网关却按普通失败返回：瞬时错误没认全，空结构事件又提前堵死了换号；切号的边界要按真实语义输出划，不按写没写过协议帧划。">
+<link rel="canonical" href="https://www.rotor1996.top/writing/82-protocol-frames-not-output">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Article", "headline": "协议帧写出去了，不等于输出开始了", "description": "上游说过载，网关却按普通失败返回：瞬时错误没认全，空结构事件又提前堵死了换号；切号的边界要按真实语义输出划，不按写没写过协议帧划。", "inLanguage": "zh-CN", "author": {"@type": "Person", "name": "rotor"}, "datePublished": "2026-11-25", "mainEntityOfPage": "https://www.rotor1996.top/writing/82-protocol-frames-not-output"}</script>
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<div class="cursor-dot" id="cdot"></div>
+<div class="cursor-trail" id="ctrail1"></div>
+<div class="cursor-trail" id="ctrail2"></div>
+<div class="cursor-trail" id="ctrail3"></div>
+<div class="cursor-ring" id="cring"></div>
+<nav class="art-nav">
+  <a class="logo" href="/">rotor<sup>®</sup></a>
+  <div class="mid">
+    <a class="lnk" href="/#writing" data-i18n="back">← 写作</a>
+    <div class="lang"><button id="btn-zh" class="on">中文</button><button id="btn-en">EN</button></div>
+  </div>
+</nav>
+<article class="art-wrap">
+  <div class="reader-top" id="reader-meta"><span class="col-tag">AI 基础设施</span><span class="col-tag">实验日志</span></div>
+  <div class="reader-body" id="reader-body"><h1>协议帧写出去了，不等于输出开始了</h1><p>结论先说：上游说&quot;服务器过载，请稍后再试&quot;，这不是一次普通失败，而是一次应该换号重试的瞬时错误。网关当时把它按普通失败直接返回了，原因有三层：瞬时错误的识别规则没认全这句文案；失败事件的处理顺序让通用规则抢在了故障转移前面；流式响应里先到的空结构事件被当成了有效输出，提前堵死了换号的路。修完之后，切号的判断标准变了：不再看&quot;写没写过协议帧&quot;，而看&quot;写没写出真实语义输出&quot;。</p>
+<h2>现象：一句报错，走了错路</h2>
+<p>用户反馈里，上游那句&quot;Our servers are currently overloaded. Please try again later.&quot;还在以普通失败的形式返回。受影响的入口有三处：普通 HTTP 请求、Chat 与 Responses 兼容层、以及流式响应里的失败事件故障转移。同一句报错，在 WebSocket 路径的映射里已经被覆盖，说明漏点不在状态码映射，而在 HTTP 与流式共用的瞬时判定：规则是按入口各写一份的，漏一处就漏一条路。</p>
+<h2>三层根因</h2>
+<ol><li>识别规则没认全：瞬时判定覆盖了处理中、容量不足、服务器过载、降速这几类文案，却没显式包含&quot;Our servers are currently overloaded&quot;这句原话。规则按枚举维护，厂商换一句说法，就多一个漏网的。</li><li>处理顺序排错了：流式响应里上游以失败事件报告过载时，通用透传规则可能先于故障转移规则提交失败事件。错误分类对了也不够，顺序错了，正确的分支根本轮不到。</li><li>空结构事件提前占了位置：流式路径里，上游会先发 output_item.added、content_part.added 这类空结构事件：它们不含真实 token，只是协议壳子。但网关把它们当作客户端的有效输出写了出去。等到真正的过载失败事件到达时，响应&quot;已经开始了&quot;，换号的窗口已经关闭。</li></ol>
+<p>第三层最值得展开：网关原来用&quot;是否已经向客户端写过东西&quot;判断能不能切号。协议帧也是&quot;东西&quot;，于是几个空壳事件就把路堵死了。</p>
+<h2>修复：四处改动，一个新标尺</h2>
+<ol><li>瞬时判定补上两个匹配：完整的过载文案，以及&quot;请稍后再试&quot;加&quot;过载&quot;的组合。</li><li>失败分支调换顺序：过载、容量不足、限流先进入故障转移，再考虑通用透传。</li><li>空结构事件延迟提交：只有携带真实内容时，才算第一个有效输出。</li><li>切号判断改看新标记：是否已写出真实语义输出。协议壳子、SSE 心跳、空结构帧都不阻止切号；文本增量、工具参数、图片结果这些真实输出写出后，才停止切号。</li></ol>
+<p>前三处是补漏，第四处是换标尺：继续维护&quot;哪些结构事件算输出&quot;的黑名单只会越列越长，不如直接问一句：真东西写出去了吗。</p>
+<p>还有两条防复发措施值得记：长期策略是优先判断真实语义输出是否开始，而不是继续枚举所有协议结构事件；WebSocket 路径保留独立的状态码解析，不把一句文案只修到一个入口：同一错误，修一处不等于修全了。</p>
+<h2>验证与边界</h2>
+<p>回归测试覆盖了三点：过载文案能被识别、失败事件优先走故障转移、空结构事件之后再来过载仍然可以切号。修复随一次蓝绿发布上线，发布后 90 秒观察窗口里，那句过载报错、转发失败标记与崩溃类日志都没有再出现。</p>
+<p>两个边界要说清楚。第一，第一次发布本身就出了岔子：手工构建漏了一个嵌入前端的参数，首页直接返回 404，靠同版本二次蓝绿发布才修复。修故障转移的版本，自己发布时也要先过一遍发布流程。第二，发布后上游真实的过载响应仍在出现：修的是&quot;认不认得出来&quot;，不是&quot;让上游不再过载&quot;。上游容量问题还会发生，但现在它会走进瞬时处理路径，而不是被当成普通失败直接返回。</p>
+<p>还有一个未解的收尾：如果真实输出已经写出去了，之后再来过载，流内只能以失败事件合规终止，无法无缝换号。这是切号机制的硬边界，不是下一个补丁能解决的。</p>
+<p>一句话收束：判断能不能切号，别数写过几个协议帧，问一句真东西写出去了没有：没写出，就可以换；写出了，就只能认。</p></div>
+  <div class="prev-next" id="prev-next"></div>
+</article>
+<div class="art-foot"><span>© 2026 rotor®</span><span><a href="https://github.com/xiaojiang19960811/rotor-site" target="_blank" rel="noopener" style="color:var(--muted)">GitHub 开源</a></span><span id="busuanzi_container_site_pv" style="display:none">PV&nbsp;<span id="busuanzi_value_site_pv"></span></span><span id="busuanzi_container_site_uv" style="display:none">UV&nbsp;<span id="busuanzi_value_site_uv"></span></span><span data-i18n="license">CC BY-NC-ND · 转载请注明出处</span></div>
+<script>
+const LANG0 = localStorage.getItem('rotor-lang') || 'zh';
+let LANG = LANG0;
+const DATA = {"t": {"zh": "协议帧写出去了，不等于输出开始了", "en": "Protocol Frames Are Not Output"}, "body": {"zh": "<p>结论先说：上游说&quot;服务器过载，请稍后再试&quot;，这不是一次普通失败，而是一次应该换号重试的瞬时错误。网关当时把它按普通失败直接返回了，原因有三层：瞬时错误的识别规则没认全这句文案；失败事件的处理顺序让通用规则抢在了故障转移前面；流式响应里先到的空结构事件被当成了有效输出，提前堵死了换号的路。修完之后，切号的判断标准变了：不再看&quot;写没写过协议帧&quot;，而看&quot;写没写出真实语义输出&quot;。</p>\n<h2>现象：一句报错，走了错路</h2>\n<p>用户反馈里，上游那句&quot;Our servers are currently overloaded. Please try again later.&quot;还在以普通失败的形式返回。受影响的入口有三处：普通 HTTP 请求、Chat 与 Responses 兼容层、以及流式响应里的失败事件故障转移。同一句报错，在 WebSocket 路径的映射里已经被覆盖，说明漏点不在状态码映射，而在 HTTP 与流式共用的瞬时判定：规则是按入口各写一份的，漏一处就漏一条路。</p>\n<h2>三层根因</h2>\n<ol><li>识别规则没认全：瞬时判定覆盖了处理中、容量不足、服务器过载、降速这几类文案，却没显式包含&quot;Our servers are currently overloaded&quot;这句原话。规则按枚举维护，厂商换一句说法，就多一个漏网的。</li><li>处理顺序排错了：流式响应里上游以失败事件报告过载时，通用透传规则可能先于故障转移规则提交失败事件。错误分类对了也不够，顺序错了，正确的分支根本轮不到。</li><li>空结构事件提前占了位置：流式路径里，上游会先发 output_item.added、content_part.added 这类空结构事件：它们不含真实 token，只是协议壳子。但网关把它们当作客户端的有效输出写了出去。等到真正的过载失败事件到达时，响应&quot;已经开始了&quot;，换号的窗口已经关闭。</li></ol>\n<p>第三层最值得展开：网关原来用&quot;是否已经向客户端写过东西&quot;判断能不能切号。协议帧也是&quot;东西&quot;，于是几个空壳事件就把路堵死了。</p>\n<h2>修复：四处改动，一个新标尺</h2>\n<ol><li>瞬时判定补上两个匹配：完整的过载文案，以及&quot;请稍后再试&quot;加&quot;过载&quot;的组合。</li><li>失败分支调换顺序：过载、容量不足、限流先进入故障转移，再考虑通用透传。</li><li>空结构事件延迟提交：只有携带真实内容时，才算第一个有效输出。</li><li>切号判断改看新标记：是否已写出真实语义输出。协议壳子、SSE 心跳、空结构帧都不阻止切号；文本增量、工具参数、图片结果这些真实输出写出后，才停止切号。</li></ol>\n<p>前三处是补漏，第四处是换标尺：继续维护&quot;哪些结构事件算输出&quot;的黑名单只会越列越长，不如直接问一句：真东西写出去了吗。</p>\n<p>还有两条防复发措施值得记：长期策略是优先判断真实语义输出是否开始，而不是继续枚举所有协议结构事件；WebSocket 路径保留独立的状态码解析，不把一句文案只修到一个入口：同一错误，修一处不等于修全了。</p>\n<h2>验证与边界</h2>\n<p>回归测试覆盖了三点：过载文案能被识别、失败事件优先走故障转移、空结构事件之后再来过载仍然可以切号。修复随一次蓝绿发布上线，发布后 90 秒观察窗口里，那句过载报错、转发失败标记与崩溃类日志都没有再出现。</p>\n<p>两个边界要说清楚。第一，第一次发布本身就出了岔子：手工构建漏了一个嵌入前端的参数，首页直接返回 404，靠同版本二次蓝绿发布才修复。修故障转移的版本，自己发布时也要先过一遍发布流程。第二，发布后上游真实的过载响应仍在出现：修的是&quot;认不认得出来&quot;，不是&quot;让上游不再过载&quot;。上游容量问题还会发生，但现在它会走进瞬时处理路径，而不是被当成普通失败直接返回。</p>\n<p>还有一个未解的收尾：如果真实输出已经写出去了，之后再来过载，流内只能以失败事件合规终止，无法无缝换号。这是切号机制的硬边界，不是下一个补丁能解决的。</p>\n<p>一句话收束：判断能不能切号，别数写过几个协议帧，问一句真东西写出去了没有：没写出，就可以换；写出了，就只能认。</p>", "en": "<p>Conclusion first: when upstream says &quot;Our servers are currently overloaded. Please try again later.&quot;, that is not an ordinary failure. It is a transient error that should trigger a switch to another account and a retry. The gateway returned it as a plain failure, for three reasons: the transient-error matcher did not recognize that exact wording; the failure-event ordering let the generic rule fire before failover; and empty structural events arriving early in the stream were treated as real output, closing the swap window before the failure arrived. After the fix, the swap decision changed: it no longer asks &quot;have we written any protocol frames&quot;, it asks &quot;have we written real semantic output&quot;.</p>\n<h2>What happened: one error message, the wrong path</h2>\n<p>A user report showed the upstream sentence &quot;Our servers are currently overloaded. Please try again later.&quot; still coming back as a plain failure. Three entries were affected: plain HTTP requests, the Chat and Responses compatibility layer, and failover on failure events in streaming responses. The same wording was already covered in the WebSocket path&#x27;s mapping, so the gap was not in status-code mapping: it was in the transient check shared by HTTP and streaming. The rules were written per entry, so one missed entry meant one missed path.</p>\n<h2>Three layers of root cause</h2>\n<ol><li>The matcher was incomplete: the transient check covered processing, capacity, server overload, and slow-down wordings, but did not explicitly include the sentence &quot;Our servers are currently overloaded&quot;. Rules maintained by enumeration miss one every time the vendor phrases it differently.</li><li>The ordering was wrong: when upstream reports overload with a failure event in a stream, the generic passthrough rule could commit the failure event before the failover rule ran. Correct classification is not enough: with the wrong order, the right branch never gets its turn.</li><li>Empty structural events took the slot first: upstream sends structural events such as output_item.added and content_part.added early in a stream. They carry no real tokens; they are protocol scaffolding. But the gateway wrote them out as client output. By the time the real overload failure arrived, the response had &quot;already started&quot;, and the swap window was closed.</li></ol>\n<p>The third layer deserves a closer look: the gateway used &quot;have we written anything to the client&quot; to decide whether a swap was still possible. Protocol frames count as &quot;something&quot;, so a few empty shells blocked the way.</p>\n<h2>The fix: four changes, one new yardstick</h2>\n<ol><li>Two new matches in the transient check: the full overloaded sentence, and the combination of &quot;please try again later&quot; with &quot;overloaded&quot;.</li><li>Reordered failure handling: overload, capacity, and rate-limit errors enter failover first, and generic passthrough is considered only after.</li><li>Delayed submission of empty structural events: they count as the first real output only when they carry real payload.</li><li>The swap decision now reads a new marker: whether real semantic output has started. Protocol scaffolding, SSE keepalives, and empty structural frames do not block a swap; only real output, text deltas, tool arguments, image results, stops it.</li></ol>\n<p>The first three are patches. The fourth is a new yardstick: keeping a denylist of &quot;which structural events count as output&quot; only grows longer, so ask the direct question instead: has anything real been written yet.</p>\n<p>Two more anti-recurrence measures are worth noting: the long-term strategy is to judge whether real semantic output has started first, rather than keep enumerating protocol structural events; and the WebSocket path keeps its own status-code parsing, so a single wording is not fixed in only one entry: fixing one place is not fixing all of them.</p>\n<h2>Verification and boundaries</h2>\n<p>Regression tests cover three points: the overloaded wording is recognized, failure events take failover first, and a swap still works when overload arrives after empty structural events. The fix shipped in a blue-green release; in the 90-second observation window after release, the overloaded error, the forward-failed marker, and crash-class logs did not reappear.</p>\n<p>Two boundaries need stating. First, the first release itself went wrong: a manual build missed the flag that embeds the frontend, and the homepage returned 404 until the same version was released a second time through blue-green. The release that fixed failover had to go through its own failover process. Second, real upstream overload responses still appear after the release: the fix is about recognizing them, not about making upstream stop overloading. Upstream capacity problems will keep happening, but now they enter the transient path instead of returning as plain failures.</p>\n<p>One loose end remains: if real output has already been written and overload arrives after it, the stream can only be terminated in place with the failure event; a seamless swap is impossible. That is a hard boundary of the swap mechanism, not something the next patch can fix.</p>\n<p>One line to close: to decide whether a swap is still possible, don&#x27;t count protocol frames written. Ask whether anything real has been written: if not, swap; if yes, accept it.</p>"}, "prev": {"url": "/writing/66-package-present-not-loaded", "t": {"zh": "「包在」不等于「已加载」：一次升级后插件静默缺席", "en": "\"Package Present\" Is Not \"Loaded\": A Plugin That Silently Vanished After an Upgrade"}}};
+const STR = {
+  zh: {back:"← 写作", license:"CC BY-NC-ND · 转载请注明出处", prev:"← 上一篇", next:"下一篇 →", col:"AI 基础设施", column:"实验日志", soon:"即将发布 · 敬请期待"},
+  en: {back:"← Writing", license:"CC BY-NC-ND · attribution required", prev:"← Prev", next:"Next →", col:"AI Infrastructure", column:"Lab Log", soon:"Coming soon"}
+};
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+let firstRender = true; /* 首屏中文由服务端直出,首次中文渲染时跳过正文注入 */
+function render(){
+  const t = STR[LANG], a = DATA;
+  document.documentElement.lang = LANG==='zh' ? 'zh-CN' : 'en';
+  document.getElementById('btn-zh').classList.toggle('on', LANG==='zh');
+  document.getElementById('btn-en').classList.toggle('on', LANG==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k = el.getAttribute('data-i18n'); if(t[k]!==undefined) el.innerHTML = t[k];
+  });
+  document.title = esc(a.t[LANG]) + ' — rotor';
+  if(!firstRender || LANG!=='zh'){
+    document.getElementById('reader-meta').innerHTML =
+      '<span class="col-tag">'+esc(t.col)+'</span><span class="col-tag">'+esc(t.column)+'</span>';
+    document.getElementById('reader-body').innerHTML =
+      '<h1>'+esc(a.t[LANG])+'</h1>' + a.body[LANG];
+  }
+  firstRender = false;
+  const pn = document.getElementById('prev-next');
+  let h = '';
+  if(a.prev) h += '<a href="'+a.prev.url+'"><span>'+t.prev+'</span>'+esc(a.prev.t[LANG])+'</a>';
+  if(a.next) h += '<a class="nx" href="'+a.next.url+'"><span>'+t.next+'</span>'+esc(a.next.t[LANG])+'</a>';
+  pn.innerHTML = h;
+  pn.style.display = h ? 'flex' : 'none';
+}
+document.getElementById('btn-zh').onclick = ()=>{ LANG='zh'; localStorage.setItem('rotor-lang','zh'); render(); };
+document.getElementById('btn-en').onclick = ()=>{ LANG='en'; localStorage.setItem('rotor-lang','en'); render(); };
+render();
+</script>
+<script src="/assets/cursor.js" defer></script>
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "6190442ea18c4decaf7f82dde003bc6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

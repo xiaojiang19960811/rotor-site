@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>协议帧写出去了，不等于输出开始了</title>
+    <link>https://www.rotor1996.top/writing/82-protocol-frames-not-output</link>
+    <guid>https://www.rotor1996.top/writing/82-protocol-frames-not-output</guid>
+    <pubDate>Wed, 25 Nov 2026 00:00:00 GMT</pubDate>
+    <description>上游说过载，网关却按普通失败返回：瞬时错误没认全，空结构事件又提前堵死了换号；切号的边界要按真实语义输出划，不按写没写过协议帧划。</description>
+  </item>
+  <item>
     <title>规则想常驻，有四种办法</title>
     <link>https://www.rotor1996.top/writing/81-four-ways-to-make-a-rule-stick</link>
     <guid>https://www.rotor1996.top/writing/81-four-ways-to-make-a-rule-stick</guid>
