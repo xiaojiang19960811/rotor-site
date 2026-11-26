@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>SQL 一字未改，校验和却变了</title>
+    <link>https://www.rotor1996.top/writing/84-migration-checksum-crlf</link>
+    <guid>https://www.rotor1996.top/writing/84-migration-checksum-crlf</guid>
+    <pubDate>Fri, 27 Nov 2026 00:00:00 GMT</pubDate>
+    <description>校验和校验的是字节不是语义：行尾一换，同一份迁移就成了“被篡改”的文件；修它只能逐文件逐哈希窄兼容，绝不能把校验关掉。</description>
+  </item>
+  <item>
     <title>显示有新版，不等于能下载到新版</title>
     <link>https://www.rotor1996.top/writing/83-update-available-not-downloadable</link>
     <guid>https://www.rotor1996.top/writing/83-update-available-not-downloadable</guid>
