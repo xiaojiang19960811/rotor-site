@@ -6,6 +6,13 @@
   <description>rotor 的写作存档：建造复盘、知识花园、实验日志。</description>
   <language>zh-CN</language>
   <item>
+    <title>构建成功了，切流却失败了</title>
+    <link>https://www.rotor1996.top/writing/85-first-auto-cutover-rollback</link>
+    <guid>https://www.rotor1996.top/writing/85-first-auto-cutover-rollback</guid>
+    <pubDate>Sat, 28 Nov 2026 00:00:00 GMT</pubDate>
+    <description>第二次自动构建直连验收全过，切流后公网版本检查却失败，40 毫秒内回切原槽才没断服务；切流的裁判是公网版本不是构建状态，回得来才是切得动的前提。</description>
+  </item>
+  <item>
     <title>SQL 一字未改，校验和却变了</title>
     <link>https://www.rotor1996.top/writing/84-migration-checksum-crlf</link>
     <guid>https://www.rotor1996.top/writing/84-migration-checksum-crlf</guid>
